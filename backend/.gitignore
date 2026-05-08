@@ -12,6 +12,10 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+# Access keys
+/keys
+*-firebase-adminsdk-*.json
+
 # OS
 .DS_Store
 

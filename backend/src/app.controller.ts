@@ -1,12 +1,17 @@
 import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service';
+import { FirebaseService } from './firebase/firebase.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly firebaseService: FirebaseService) {}
 
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  @Get('firebase-test')
+  async testFirebase() {
+    const db = this.firebaseService.getFirestore();
+    const collections = await db.listCollections();
+    return {
+      status: 'connected',
+      collections: collections.map(c => c.id),
+    };
   }
 }
