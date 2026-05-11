@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, InternalServerErrorException } from '@nestjs/common';
+import {
+  ConflictException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { AuthService } from '../auth.service';
 import { FirebaseService } from '../../firebase/firebase.service';
 import { UsersService } from '../../users/users.service';
@@ -37,7 +40,6 @@ describe('AuthService', () => {
   // ─── Registration ────────────────────────────────────────────────────────────
 
   describe('register()', () => {
-
     it('should return uid and email on successful registration', async () => {
       mockCreateUser.mockResolvedValue({ uid: 'firebase-uid-123' });
       mockUsersServiceCreate.mockResolvedValue(undefined);
@@ -48,7 +50,10 @@ describe('AuthService', () => {
         displayName: 'Test User',
       });
 
-      expect(result).toEqual({ uid: 'firebase-uid-123', email: 'test@example.com' });
+      expect(result).toEqual({
+        uid: 'firebase-uid-123',
+        email: 'test@example.com',
+      });
     });
 
     it('should call Firebase createUser with the correct data', async () => {
@@ -83,7 +88,7 @@ describe('AuthService', () => {
           uid: 'firebase-uid-123',
           email: 'test@example.com',
           displayName: 'Test User',
-          createdAt: expect.any(Date),
+          createdAt: expect.any(Date) as Date,
         }),
       );
     });

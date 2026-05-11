@@ -11,7 +11,7 @@ async function bootstrap() {
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
   );
 
-  app.useGlobalFilters(new HttpExceptionFilter);
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   // Swagger UI available at http://localhost:{port}/api
   const config = new DocumentBuilder()

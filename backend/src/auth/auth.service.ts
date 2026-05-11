@@ -1,45 +1,55 @@
-import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
+import * as admin from 'firebase-admin';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { User } from '../common/interfaces/user.interface';
+import { FirebaseError } from '../common/interfaces/firebase-error.interface';
+
+function isFirebaseError(err: unknown): err is FirebaseError {
+  return typeof err === 'object' && err !== null && 'code' in err;
+}
 
 @Injectable()
 export class AuthService {
-    constructor(
-        private readonly firebaseService: FirebaseService,
-        private readonly usersService: UsersService, 
-    ) {}
+  constructor(
+    private readonly firebaseService: FirebaseService,
+    private readonly usersService: UsersService,
+  ) {}
 
-    async register(dto: RegisterDto): Promise<{ uid: string; email: string }> {
-        let userRecord;
+  async register(dto: RegisterDto): Promise<{ uid: string; email: string }> {
+    let userRecord: admin.auth.UserRecord;
 
-        try {
-            userRecord = await this.firebaseService.getAuth().createUser({
-                email: dto.email,
-                password: dto.password,
-                displayName: dto.displayName,
-            });
-        } catch (err) {
-            //console.log('Firebase error code:', (err as any).code);
-            //console.log('Firebase error message:', (err as any).message);
-            //console.log('Full error:', err);
-            
-            if ((err as any).code === 'auth/email-already-exists') {
-                throw new ConflictException('Email already registered');
-        }
-            throw new InternalServerErrorException('Registration failed');
-        }
+    try {
+      userRecord = await this.firebaseService.getAuth().createUser({
+        email: dto.email,
+        password: dto.password,
+        displayName: dto.displayName,
+      });
+    } catch (err) {
+      //console.log('Firebase error code:', (err as any).code);
+      //console.log('Firebase error message:', (err as any).message);
+      //console.log('Full error:', err);
 
-        const user: User = {
-            uid: userRecord.uid,
-            email: dto.email,
-            displayName: dto.displayName,
-            createdAt: new Date(),
-        };
-
-        await this.usersService.createUser(user);
-
-        return { uid: user.uid, email: user.email };
+      if (isFirebaseError(err) && err.code === 'auth/email-already-exists') {
+        throw new ConflictException('Email already registered');
+      }
+      throw new InternalServerErrorException('Registration failed');
     }
+
+    const user: User = {
+      uid: userRecord.uid,
+      email: dto.email,
+      displayName: dto.displayName,
+      createdAt: new Date(),
+    };
+
+    await this.usersService.createUser(user);
+
+    return { uid: user.uid, email: user.email };
+  }
 }
