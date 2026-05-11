@@ -1,0 +1,45 @@
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { FirebaseService } from '../firebase/firebase.service';
+import { UsersService } from '../users/users.service';
+import { RegisterDto } from './dto/register.dto';
+import { User } from '../common/interfaces/user.interface';
+
+@Injectable()
+export class AuthService {
+    constructor(
+        private readonly firebaseService: FirebaseService,
+        private readonly usersService: UsersService, 
+    ) {}
+
+    async register(dto: RegisterDto): Promise<{ uid: string; email: string }> {
+        let userRecord;
+
+        try {
+            userRecord = await this.firebaseService.getAuth().createUser({
+                email: dto.email,
+                password: dto.password,
+                displayName: dto.displayName,
+            });
+        } catch (err) {
+            //console.log('Firebase error code:', (err as any).code);
+            //console.log('Firebase error message:', (err as any).message);
+            //console.log('Full error:', err);
+            
+            if ((err as any).code === 'auth/email-already-exists') {
+                throw new ConflictException('Email already registered');
+        }
+            throw new InternalServerErrorException('Registration failed');
+        }
+
+        const user: User = {
+            uid: userRecord.uid,
+            email: dto.email,
+            displayName: dto.displayName,
+            createdAt: new Date(),
+        };
+
+        await this.usersService.createUser(user);
+
+        return { uid: user.uid, email: user.email };
+    }
+}
