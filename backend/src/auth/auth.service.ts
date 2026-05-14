@@ -21,7 +21,9 @@ export class AuthService {
     private readonly usersService: UsersService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<{ uid: string; email: string }> {
+  async register(
+    dto: RegisterDto,
+  ): Promise<{ uid: string; email: string; role: string }> {
     let userRecord: admin.auth.UserRecord;
 
     try {
@@ -45,11 +47,14 @@ export class AuthService {
       uid: userRecord.uid,
       email: dto.email,
       displayName: dto.displayName,
+      // TODO: resolve role from inviteToken once InvitesModule is built
+      role: 'participant',
+      profileStatus: 'incomplete',
       createdAt: new Date(),
     };
 
     await this.usersService.createUser(user);
 
-    return { uid: user.uid, email: user.email };
+    return { uid: user.uid, email: user.email, role: user.role };
   }
 }

@@ -6,6 +6,6 @@ import { UsersRepository } from './users.repository';
 @Module({
   imports: [FirebaseModule],
   providers: [UsersService, UsersRepository],
-  exports: [UsersService],
+  exports: [UsersService, UsersRepository],
 })
 export class UsersModule {}
