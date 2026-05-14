@@ -13,6 +13,8 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
+  app.enableCors({ origin: true });
+
   // Swagger UI available at http://localhost:{port}/api
   const config = new DocumentBuilder()
     .setTitle('API')
