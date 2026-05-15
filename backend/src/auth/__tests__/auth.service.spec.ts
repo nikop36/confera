@@ -53,6 +53,7 @@ describe('AuthService', () => {
       expect(result).toEqual({
         uid: 'firebase-uid-123',
         email: 'test@example.com',
+        role: 'participant',
       });
     });
 
@@ -73,7 +74,7 @@ describe('AuthService', () => {
       });
     });
 
-    it('should save the user profile to Firestore after Firebase Auth creation', async () => {
+    it('should save user with participant role and incomplete profile status', async () => {
       mockCreateUser.mockResolvedValue({ uid: 'firebase-uid-123' });
       mockUsersServiceCreate.mockResolvedValue(undefined);
 
@@ -88,6 +89,8 @@ describe('AuthService', () => {
           uid: 'firebase-uid-123',
           email: 'test@example.com',
           displayName: 'Test User',
+          role: 'participant',
+          profileStatus: 'incomplete',
           createdAt: expect.any(Date) as Date,
         }),
       );

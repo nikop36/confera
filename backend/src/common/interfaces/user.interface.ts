@@ -1,4 +1,4 @@
-export type UserRole = 'participant' | 'organizer' | 'industry' | 'admin';
+import { UserRoleEnum } from '../enums/roles.enum';
 export type ProfileStatus = 'incomplete' | 'complete';
 export type MeetingType = 'online' | 'in-person' | 'both';
 
@@ -6,7 +6,7 @@ export interface User {
   uid: string;
   email: string;
   displayName: string;
-  role: UserRole;
+  role: UserRoleEnum;
   profileStatus: ProfileStatus;
   createdAt: Date;
 }

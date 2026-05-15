@@ -31,6 +31,13 @@ export class UsersRepository {
 
   async updateProfile(uid: string, data: Partial<UserProfile>): Promise<void> {
     const db = this.firebaseService.getFirestore();
-    await db.collection('users').doc(uid).update(data);
+
+    const cleanData = Object.fromEntries(
+      Object.entries(data).filter(([, value]) => value !== undefined),
+    );
+
+    await db.collection('users').doc(uid).update(cleanData);
   }
+
+  async updateUserRole() {}
 }
