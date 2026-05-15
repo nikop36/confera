@@ -6,6 +6,7 @@ import {
 import { AuthService } from '../auth.service';
 import { FirebaseService } from '../../firebase/firebase.service';
 import { UsersService } from '../../users/users.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -27,6 +28,12 @@ describe('AuthService', () => {
           provide: UsersService,
           useValue: {
             createUser: mockUsersServiceCreate,
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue('fake-api-key'),
           },
         },
       ],

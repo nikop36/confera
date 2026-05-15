@@ -12,6 +12,7 @@ import { User } from '../common/interfaces/user.interface';
 import { FirebaseError } from '../common/interfaces/firebase-error.interface';
 import { LoginDto } from './dto/login.dto';
 import { ConfigService } from '@nestjs/config';
+import { UserRoleEnum } from '../common/enums/roles.enum';
 
 function isFirebaseError(err: unknown): err is FirebaseError {
   return typeof err === 'object' && err !== null && 'code' in err;
@@ -52,7 +53,7 @@ export class AuthService {
       email: dto.email,
       displayName: dto.displayName,
       // TODO: resolve role from inviteToken once InvitesModule is built
-      role: 'participant',
+      role: UserRoleEnum.PARTICIPANT,
       profileStatus: 'incomplete',
       createdAt: new Date(),
     };
