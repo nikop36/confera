@@ -1,19 +1,29 @@
 import {
   Body,
+  BadRequestException,
   Controller,
+  FileTypeValidator,
   Get,
   HttpCode,
   HttpStatus,
+  MaxFileSizeValidator,
   NotFoundException,
   Param,
   Patch,
+  ParseFilePipe,
+  Post,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -53,6 +63,45 @@ export class ProfileController {
   ) {
     await this.profileService.updateProfile(user.uid, dto);
     return { message: 'Profile updated successfully' };
+  }
+
+  // POST /profile/images
+  @Post('images')
+  @UseGuards(FirebaseAuthGuard)
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['profile', 'background'] },
+        image: { type: 'string', format: 'binary' },
+      },
+      required: ['type', 'image'],
+    },
+  })
+  @ApiOperation({ summary: 'Upload profile or background image' })
+  @ApiResponse({ status: 201, description: 'Image uploaded' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  async uploadProfileImage(
+    @CurrentUser() user: FirebaseUser,
+    @Body('type') type: 'profile' | 'background',
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp|gif)$/ }),
+        ],
+      }),
+    )
+    image: Express.Multer.File,
+  ) {
+    if (type !== 'profile' && type !== 'background') {
+      throw new BadRequestException('Invalid image type');
+    }
+
+    return this.profileService.uploadProfileImage(user.uid, image, type);
   }
 
   // GET /profile/:uid

@@ -20,6 +20,7 @@ type UserProfile = {
   meetingType?: MeetingType;
   competencies?: string[];
   researchKeywords?: string[];
+  roleProfile?: Record<string, unknown>;
 };
 
 type ProfileForm = {
@@ -30,6 +31,25 @@ type ProfileForm = {
   meetingType: MeetingType;
   competencies: string[];
   researchKeywords: string[];
+  profileImageUrl: string;
+  backgroundImageUrl: string;
+  profileImagePositionX: number;
+  profileImagePositionY: number;
+  backgroundImagePositionX: number;
+  backgroundImagePositionY: number;
+  profileImageZoom: number;
+  backgroundImageZoom: number;
+};
+
+type CropTarget = 'profile' | 'background';
+
+type CropDraft = {
+  target: CropTarget;
+  imageUrl: string;
+  file?: File;
+  positionX: number;
+  positionY: number;
+  zoom: number;
 };
 
 const TABS = ['Srečanja', 'Dogodki', 'Povabila', 'Sledilci'];
@@ -49,7 +69,17 @@ const DEFAULT_FORM: ProfileForm = {
   meetingType: 'both',
   competencies: [],
   researchKeywords: [],
+  profileImageUrl: '',
+  backgroundImageUrl: '',
+  profileImagePositionX: 50,
+  profileImagePositionY: 50,
+  backgroundImagePositionX: 50,
+  backgroundImagePositionY: 50,
+  profileImageZoom: 115,
+  backgroundImageZoom: 115,
 };
+
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const INTEREST_GROUPS = [
   {
@@ -288,6 +318,26 @@ const MEETING_TYPES: Array<{ value: MeetingType; label: string }> = [
   { value: 'online', label: 'Spletno' },
 ];
 
+function profileImageValue(profile: UserProfile | null | undefined, key: 'profileImageUrl' | 'backgroundImageUrl') {
+  const value = profile?.roleProfile?.[key];
+  return typeof value === 'string' ? value : '';
+}
+
+function profilePositionValue(
+  profile: UserProfile | null | undefined,
+  key:
+    | 'profileImagePositionX'
+    | 'profileImagePositionY'
+    | 'backgroundImagePositionX'
+    | 'backgroundImagePositionY'
+    | 'profileImageZoom'
+    | 'backgroundImageZoom',
+) {
+  const value = profile?.roleProfile?.[key];
+  if (typeof value === 'number') return value;
+  return key.includes('Zoom') ? 115 : 50;
+}
+
 function profileToForm(profile?: UserProfile): ProfileForm {
   return {
     bio: profile?.bio ?? '',
@@ -297,6 +347,14 @@ function profileToForm(profile?: UserProfile): ProfileForm {
     meetingType: profile?.meetingType ?? 'both',
     competencies: profile?.competencies ?? [],
     researchKeywords: profile?.researchKeywords ?? [],
+    profileImageUrl: profileImageValue(profile, 'profileImageUrl'),
+    backgroundImageUrl: profileImageValue(profile, 'backgroundImageUrl'),
+    profileImagePositionX: profilePositionValue(profile, 'profileImagePositionX'),
+    profileImagePositionY: profilePositionValue(profile, 'profileImagePositionY'),
+    backgroundImagePositionX: profilePositionValue(profile, 'backgroundImagePositionX'),
+    backgroundImagePositionY: profilePositionValue(profile, 'backgroundImagePositionY'),
+    profileImageZoom: profilePositionValue(profile, 'profileImageZoom'),
+    backgroundImageZoom: profilePositionValue(profile, 'backgroundImageZoom'),
   };
 }
 
@@ -310,11 +368,18 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [cropDraft, setCropDraft] = useState<CropDraft | null>(null);
 
   const token = user?.idToken;
   const displayName = profile?.displayName ?? user?.displayName ?? 'Udeleženec';
   const email = profile?.email ?? user?.email ?? '';
   const bio = profile?.bio || 'Udeleženec konference Confera 2026. Dopolnite profil za boljša priporočila srečanj in povežite se z udeleženci iz vaše branže.';
+  const profileImageUrl = form.profileImageUrl || profileImageValue(profile, 'profileImageUrl');
+  const backgroundImageUrl = form.backgroundImageUrl || profileImageValue(profile, 'backgroundImageUrl');
+  const profileImagePosition = `${form.profileImagePositionX}% ${form.profileImagePositionY}%`;
+  const backgroundImagePosition = `${form.backgroundImagePositionX}% ${form.backgroundImagePositionY}%`;
+  const profileImageSize = `${form.profileImageZoom}%`;
+  const backgroundImageSize = `${form.backgroundImageZoom}%`;
 
   useEffect(() => {
     if (!user?.idToken) return;
@@ -380,6 +445,122 @@ export default function ProfilePage() {
     setSuccess('');
   }
 
+  function closeEditMode() {
+    setEditMode(false);
+    setForm(profileToForm(profile ?? undefined));
+    setSuccess('');
+    setError('');
+  }
+
+  async function handleImageChange(
+    key: 'profileImageUrl' | 'backgroundImageUrl',
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Izberite slikovno datoteko.');
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setError('Slika je prevelika. Izberite sliko manjšo od 5 MB.');
+      return;
+    }
+
+    setCropDraft({
+      target: key === 'profileImageUrl' ? 'profile' : 'background',
+      imageUrl: URL.createObjectURL(file),
+      file,
+      positionX: 50,
+      positionY: 50,
+      zoom: 115,
+    });
+    setError('');
+    setSuccess('');
+  }
+
+  function openCropEditor(target: CropTarget) {
+    const isProfile = target === 'profile';
+    const imageUrl = isProfile ? form.profileImageUrl : form.backgroundImageUrl;
+    if (!imageUrl) return;
+
+    setCropDraft({
+      target,
+      imageUrl,
+      file: undefined,
+      positionX: isProfile ? form.profileImagePositionX : form.backgroundImagePositionX,
+      positionY: isProfile ? form.profileImagePositionY : form.backgroundImagePositionY,
+      zoom: isProfile ? form.profileImageZoom : form.backgroundImageZoom,
+    });
+  }
+
+  async function uploadProfileImage(file: File, type: CropTarget) {
+    if (!token) throw new Error('Prijavna seja nima veljavnega žetona. Ponovno se prijavite.');
+
+    const body = new FormData();
+    body.append('type', type);
+    body.append('image', file);
+
+    const res = await fetch(`${API}/profile/images`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body,
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const msg = Array.isArray(data.message) ? data.message[0] : data.message;
+      throw new Error(msg ?? 'Nalaganje slike ni uspelo');
+    }
+
+    const data = (await res.json()) as { url?: string };
+    if (!data.url) throw new Error('Backend ni vrnil povezave do slike');
+    return data.url;
+  }
+
+  async function applyCropDraft() {
+    if (!cropDraft) return;
+
+    setSaving(true);
+    setError('');
+
+    let imageUrl = cropDraft.imageUrl;
+    try {
+      if (cropDraft.file) {
+        imageUrl = await uploadProfileImage(cropDraft.file, cropDraft.target);
+        URL.revokeObjectURL(cropDraft.imageUrl);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nalaganje slike ni uspelo');
+      setSaving(false);
+      return;
+    }
+
+    setForm((prev) => (
+      cropDraft.target === 'profile'
+        ? {
+          ...prev,
+          profileImageUrl: imageUrl,
+          profileImagePositionX: cropDraft.positionX,
+          profileImagePositionY: cropDraft.positionY,
+          profileImageZoom: cropDraft.zoom,
+        }
+        : {
+          ...prev,
+          backgroundImageUrl: imageUrl,
+          backgroundImagePositionX: cropDraft.positionX,
+          backgroundImagePositionY: cropDraft.positionY,
+          backgroundImageZoom: cropDraft.zoom,
+        }
+    ));
+    setCropDraft(null);
+    setSuccess('');
+    setSaving(false);
+  }
+
   async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!token) {
@@ -399,6 +580,17 @@ export default function ProfilePage() {
       meetingType: form.meetingType,
       competencies: form.competencies,
       researchKeywords: form.researchKeywords,
+      roleProfile: {
+        ...(profile?.roleProfile ?? {}),
+        profileImageUrl: form.profileImageUrl,
+        backgroundImageUrl: form.backgroundImageUrl,
+        profileImagePositionX: form.profileImagePositionX,
+        profileImagePositionY: form.profileImagePositionY,
+        backgroundImagePositionX: form.backgroundImagePositionX,
+        backgroundImagePositionY: form.backgroundImagePositionY,
+        profileImageZoom: form.profileImageZoom,
+        backgroundImageZoom: form.backgroundImageZoom,
+      },
     };
 
     try {
@@ -436,25 +628,49 @@ export default function ProfilePage() {
     <AppShell>
       {/* Cover */}
       <div className="rounded-2xl rounded-b-none overflow-hidden h-[164px] relative">
-        <div className="absolute inset-0 bg-[#a8d8f0]" />
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 600 164" preserveAspectRatio="none" fill="none">
-          <path d="M-60 220 Q80 80 260 120 T660 90" stroke="#ffd166" strokeWidth="38" fill="none" />
-          <path d="M-60 220 Q80 80 260 120 T660 90" stroke="#1d1d1f" strokeWidth="1.5" fill="none" opacity="0.25" />
-          <path d="M-60 245 Q100 95 280 135 T660 108" stroke="#ef476f" strokeWidth="32" fill="none" />
-          <path d="M-60 245 Q100 95 280 135 T660 108" stroke="#1d1d1f" strokeWidth="1.5" fill="none" opacity="0.25" />
-          <path d="M-60 262 Q120 108 300 148 T660 122" stroke="#06d6a0" strokeWidth="28" fill="none" />
-          <path d="M-60 262 Q120 108 300 148 T660 122" stroke="#1d1d1f" strokeWidth="1.5" fill="none" opacity="0.2" />
-          <path d="M-60 276 Q140 120 320 158 T660 134" stroke="#118ab2" strokeWidth="24" fill="none" />
-          <path d="M-60 276 Q140 120 320 158 T660 134" stroke="#1d1d1f" strokeWidth="1.5" fill="none" opacity="0.2" />
-          <path d="M-60 288 Q160 132 340 168 T660 145" stroke="#ffc8dd" strokeWidth="20" fill="none" />
-          <path d="M-60 288 Q160 132 340 168 T660 145" stroke="#1d1d1f" strokeWidth="1" fill="none" opacity="0.15" />
-        </svg>
+        {backgroundImageUrl ? (
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${backgroundImageUrl})`,
+              backgroundPosition: backgroundImagePosition,
+              backgroundSize: backgroundImageSize,
+            }}
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-[#a8d8f0]" />
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 600 164" preserveAspectRatio="none" fill="none">
+              <path d="M-60 220 Q80 80 260 120 T660 90" stroke="#ffd166" strokeWidth="38" fill="none" />
+              <path d="M-60 220 Q80 80 260 120 T660 90" stroke="#1d1d1f" strokeWidth="1.5" fill="none" opacity="0.25" />
+              <path d="M-60 245 Q100 95 280 135 T660 108" stroke="#ef476f" strokeWidth="32" fill="none" />
+              <path d="M-60 245 Q100 95 280 135 T660 108" stroke="#1d1d1f" strokeWidth="1.5" fill="none" opacity="0.25" />
+              <path d="M-60 262 Q120 108 300 148 T660 122" stroke="#06d6a0" strokeWidth="28" fill="none" />
+              <path d="M-60 262 Q120 108 300 148 T660 122" stroke="#1d1d1f" strokeWidth="1.5" fill="none" opacity="0.2" />
+              <path d="M-60 276 Q140 120 320 158 T660 134" stroke="#118ab2" strokeWidth="24" fill="none" />
+              <path d="M-60 276 Q140 120 320 158 T660 134" stroke="#1d1d1f" strokeWidth="1.5" fill="none" opacity="0.2" />
+              <path d="M-60 288 Q160 132 340 168 T660 145" stroke="#ffc8dd" strokeWidth="20" fill="none" />
+              <path d="M-60 288 Q160 132 340 168 T660 145" stroke="#1d1d1f" strokeWidth="1" fill="none" opacity="0.15" />
+            </svg>
+          </>
+        )}
       </div>
 
       {/* Avatar - overlapping cover */}
       <div className="-mt-9 pl-1 mb-3 relative z-30 flex w-full items-end">
-        <div className="w-[72px] h-[72px] shrink-0 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center text-[22px] font-bold border-4 border-white shadow-md">
-          {initials || '??'}
+        <div className="w-[72px] h-[72px] shrink-0 overflow-hidden rounded-full bg-[#1d1d1f] text-white flex items-center justify-center text-[22px] font-bold border-4 border-white shadow-md">
+          {profileImageUrl ? (
+            <div
+              className="h-full w-full bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${profileImageUrl})`,
+                backgroundPosition: profileImagePosition,
+                backgroundSize: profileImageSize,
+              }}
+            />
+          ) : (
+            initials || '??'
+          )}
         </div>
         <div className="flex items-center w-full">
           <div className="flex-1 flex flex-row gap-6">
@@ -471,7 +687,13 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => {
-                setEditMode((value) => !value);
+                setEditMode((value) => {
+                  if (value) {
+                    setForm(profileToForm(profile ?? undefined));
+                  }
+
+                  return !value;
+                });
                 setSuccess('');
                 setError('');
               }}
@@ -522,6 +744,48 @@ export default function ProfilePage() {
           </div>
 
           <div className="grid gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ImagePicker
+                label="Profilna slika"
+                description="Prikaže se v krogu ob vašem profilu."
+                imageUrl={form.profileImageUrl}
+                positionX={form.profileImagePositionX}
+                positionY={form.profileImagePositionY}
+                zoom={form.profileImageZoom}
+                fallback={initials || '??'}
+                variant="avatar"
+                onChange={(event) => handleImageChange('profileImageUrl', event)}
+                onEdit={() => openCropEditor('profile')}
+                onRemove={() => setForm((prev) => ({
+                  ...prev,
+                  profileImageUrl: '',
+                  profileImagePositionX: 50,
+                  profileImagePositionY: 50,
+                  profileImageZoom: 115,
+                }))}
+              />
+
+              <ImagePicker
+                label="Slika ozadja"
+                description="Prikaže se kot naslovna slika profila."
+                imageUrl={form.backgroundImageUrl}
+                positionX={form.backgroundImagePositionX}
+                positionY={form.backgroundImagePositionY}
+                zoom={form.backgroundImageZoom}
+                fallback="Privzeto ozadje"
+                variant="cover"
+                onChange={(event) => handleImageChange('backgroundImageUrl', event)}
+                onEdit={() => openCropEditor('background')}
+                onRemove={() => setForm((prev) => ({
+                  ...prev,
+                  backgroundImageUrl: '',
+                  backgroundImagePositionX: 50,
+                  backgroundImagePositionY: 50,
+                  backgroundImageZoom: 115,
+                }))}
+              />
+            </div>
+
             <FormField label="Organizacija / institucija">
               <input
                 value={form.affiliation}
@@ -590,7 +854,7 @@ export default function ProfilePage() {
           <div className="mt-5 flex justify-end gap-3">
             <button
               type="button"
-              onClick={() => setEditMode(false)}
+              onClick={closeEditMode}
               className="px-[18px] py-[8px] rounded-full text-[13px] font-semibold bg-[#f3f4f6] text-[#3d3d3d] border-0 cursor-pointer font-sans"
             >
               Prekliči
@@ -651,6 +915,19 @@ export default function ProfilePage() {
           </div>
         ))}
       </div>
+
+      {cropDraft && (
+        <ImageCropModal
+          draft={cropDraft}
+          uploading={saving}
+          onChange={setCropDraft}
+          onCancel={() => {
+            if (cropDraft.file) URL.revokeObjectURL(cropDraft.imageUrl);
+            setCropDraft(null);
+          }}
+          onApply={applyCropDraft}
+        />
+      )}
     </AppShell>
   );
 }
@@ -661,6 +938,209 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
       <span className="block text-xs font-semibold text-[#6e6e73] mb-1.5">{label}</span>
       {children}
     </label>
+  );
+}
+
+function ImagePicker({
+  label,
+  description,
+  imageUrl,
+  positionX,
+  positionY,
+  zoom,
+  fallback,
+  variant,
+  onChange,
+  onEdit,
+  onRemove,
+}: {
+  label: string;
+  description: string;
+  imageUrl: string;
+  positionX: number;
+  positionY: number;
+  zoom: number;
+  fallback: string;
+  variant: 'avatar' | 'cover';
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onEdit: () => void;
+  onRemove: () => void;
+}) {
+  const isAvatar = variant === 'avatar';
+
+  return (
+    <div className="rounded-[16px] border border-[#f0f0f0] bg-[#fcfcfd] p-4">
+      <div className="mb-3">
+        <p className="text-sm font-bold text-[#1d1d1f]">{label}</p>
+        <p className="text-[12px] text-[#8e8e93] mt-1">{description}</p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div
+          className={`shrink-0 overflow-hidden border border-[#eceff3] bg-white ${
+            isAvatar
+              ? 'h-[72px] w-[72px] rounded-full'
+              : 'h-[72px] w-[128px] rounded-[14px]'
+          }`}
+        >
+          {imageUrl ? (
+            <div
+              className="h-full w-full bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${imageUrl})`,
+                backgroundPosition: `${positionX}% ${positionY}%`,
+                backgroundSize: `${zoom}%`,
+              }}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-[#f3f4f6] px-3 text-center text-[12px] font-semibold text-[#8e8e93]">
+              {fallback}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <label className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#4b5563] transition-colors hover:bg-[#f7f7f7] cursor-pointer">
+            Izberi sliko
+            <input type="file" accept="image/*" onChange={onChange} className="sr-only" />
+          </label>
+          {imageUrl && (
+            <>
+              <button
+                type="button"
+                onClick={onEdit}
+                className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#4b5563] transition-colors hover:bg-[#f7f7f7]"
+              >
+                Uredi prikaz
+              </button>
+              <button
+                type="button"
+                onClick={onRemove}
+                className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#8e3d3d] transition-colors hover:bg-[#fff5f5]"
+              >
+                Odstrani
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      <p className="mt-3 text-[11px] text-[#a1a1aa]">
+        Priporočena je slika do 5 MB.
+      </p>
+    </div>
+  );
+}
+
+function ImageCropModal({
+  draft,
+  uploading,
+  onChange,
+  onCancel,
+  onApply,
+}: {
+  draft: CropDraft;
+  uploading: boolean;
+  onChange: (draft: CropDraft) => void;
+  onCancel: () => void;
+  onApply: () => void | Promise<void>;
+}) {
+  const isAvatar = draft.target === 'profile';
+  const title = isAvatar ? 'Uredi profilno sliko' : 'Uredi sliko ozadja';
+
+  function updatePosition(event: React.PointerEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100));
+    onChange({ ...draft, positionX: Math.round(x), positionY: Math.round(y) });
+  }
+
+  function startDrag(event: React.PointerEvent<HTMLDivElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    updatePosition(event);
+  }
+
+  function drag(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.buttons !== 1) return;
+    updatePosition(event);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4">
+      <div className="w-full max-w-[560px] rounded-[24px] bg-white p-5 shadow-2xl">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-[#1d1d1f]">{title}</h3>
+            <p className="mt-1 text-sm text-[#8e8e93]">
+              Povlecite sliko in nastavite povečavo pred potrditvijo.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={uploading}
+            className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#4b5563] hover:bg-[#f7f7f7]"
+          >
+            Zapri
+          </button>
+        </div>
+
+        <div className="flex justify-center">
+          <div
+            onPointerDown={startDrag}
+            onPointerMove={drag}
+            className={`relative overflow-hidden bg-[#f3f4f6] cursor-move touch-none ${
+              isAvatar
+                ? 'h-[280px] w-[280px] rounded-full'
+                : 'h-[220px] w-full rounded-[18px]'
+            }`}
+          >
+            <div
+              className="absolute inset-0 bg-center bg-no-repeat"
+              style={{
+                backgroundImage: `url(${draft.imageUrl})`,
+                backgroundPosition: `${draft.positionX}% ${draft.positionY}%`,
+                backgroundSize: `${draft.zoom}%`,
+              }}
+            />
+            <div className="pointer-events-none absolute inset-0 border-2 border-white/80" />
+          </div>
+        </div>
+
+        <label className="mt-5 block">
+          <div className="mb-2 flex items-center justify-between text-[13px] font-semibold text-[#6e6e73]">
+            <span>Povečava</span>
+            <span>{draft.zoom}%</span>
+          </div>
+          <input
+            type="range"
+            min="100"
+            max="220"
+            value={draft.zoom}
+            onChange={(event) => onChange({ ...draft, zoom: Number(event.target.value) })}
+            className="w-full accent-[#0d0d0d]"
+          />
+        </label>
+
+        <div className="mt-5 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={uploading}
+            className="rounded-full border-0 bg-[#f3f4f6] px-[18px] py-[8px] text-[13px] font-semibold text-[#3d3d3d]"
+          >
+            Prekliči
+          </button>
+          <button
+            type="button"
+            onClick={onApply}
+            disabled={uploading}
+            className="rounded-full border-0 bg-[#0d0d0d] px-[18px] py-[8px] text-[13px] font-semibold text-white disabled:opacity-50"
+          >
+            {uploading ? 'Nalaganje...' : 'Potrdi prikaz'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
