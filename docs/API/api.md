@@ -1,46 +1,255 @@
-# API Documentation
+# API Dokumentacija
 
-Base URL: `http://localhost:3000`
-Interactive docs: `http://localhost:3000/api` (Swagger)
+Osnovni URL: `http://localhost:{port}`
+Interaktivna dokumentacija: `http://localhost:{port}/api` (Swagger)
+
+Vse zaščitene poti zahtevajo Firebase ID žeton v glavi zahteve:
+```
+Authorization: Bearer <firebase-id-token>
+```
 
 ---
 
-## Auth
+## Avtentikacija
 
 ### POST /auth/register
-Register a new user.
+Registracija novega uporabnika.
 
-**Body**
-| Field | Type | Rules |
+**Zahteva avtentikacijo:** Ne
+
+**Telo zahteve**
+| Polje | Tip | Pravila |
 |---|---|---|
-| email | string | valid email format |
-| password | string | min 8 chars, 1 uppercase, 1 number |
-| displayName | string | required |
+| email | string | veljaven e-poštni naslov |
+| password | string | najmanj 12 znakov, 1 velika črka, 1 številka, 1 poseben znak |
+| displayName | string | obvezno |
+| inviteToken | string | neobvezno — za dodelitev vloge ob registraciji |
 
-**Responses**
-| Status | Meaning |
+**Odgovori**
+| Status | Pomen |
 |---|---|
-| 201 | User created successfully |
-| 400 | Validation failed (bad email, weak password, missing field) |
-| 409 | Email already registered |
-| 500 | Unexpected server error |
+| 201 | Uporabnik uspešno ustvarjen |
+| 400 | Napaka pri validaciji |
+| 409 | E-poštni naslov že obstaja |
+| 500 | Nepričakovana napaka strežnika |
 
-**Success response**
+**Uspešen odgovor**
 ```json
 {
-  "uid": "firebase-generated-uid",
-  "email": "user@example.com"
+  "uid": "firebase-uid",
+  "email": "uporabnik@primer.com",
+  "role": "participant"
 }
 ```
 
 ---
 
-## Health
+### POST /auth/login
+Prijava in pridobitev Firebase ID žetona.
+
+**Zahteva avtentikacijo:** Ne
+
+**Opomba:** Ta endpoint je namenjen razvoju in testiranju. V produkciji se prijava izvaja neposredno prek Firebase klientske knjižnice.
+
+**Telo zahteve**
+| Polje | Tip | Pravila |
+|---|---|---|
+| email | string | veljaven e-poštni naslov |
+| password | string | obvezno |
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Prijava uspešna, vrne žeton |
+| 401 | Napačne poverilnice |
+
+**Uspešen odgovor**
+```json
+{
+  "idToken": "firebase-id-token",
+  "uid": "firebase-uid"
+}
+```
+
+---
+
+## Profil
+
+### GET /profile/me
+Pridobitev profila trenutno prijavljenega uporabnika.
+
+**Zahteva avtentikacijo:** Da
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Profil uspešno vrnjen |
+| 401 | Ni avtentikacije |
+| 404 | Profil ni najden |
+
+**Uspešen odgovor**
+```json
+{
+  "uid": "firebase-uid",
+  "email": "uporabnik@primer.com",
+  "displayName": "Janez Novak",
+  "role": "participant",
+  "profileStatus": "incomplete",
+  "bio": "Researcher at FRI",
+  "affiliation": "Univerza v Ljubljani",
+  "interests": ["AI", "Machine Learning"],
+  "goals": ["Mreženje z investitorji"],
+  "meetingType": "both",
+  "competencies": ["TypeScript", "NestJS"],
+  "researchKeywords": ["nevronske mreže"],
+  "roleProfile": {},
+  "createdAt": "2026-05-14T16:06:06.576Z"
+}
+```
+
+---
+
+### PATCH /profile/me
+Posodobitev profila — sprejme lahko katerokoli kombinacijo polj.
+
+**Zahteva avtentikacijo:** Da
+
+**Telo zahteve** — vsa polja so neobvezna
+| Polje | Tip | Opis |
+|---|---|---|
+| bio | string | Kratka predstavitev |
+| affiliation | string | Organizacija ali institucija |
+| interests | string[] | Seznam interesov |
+| goals | string[] | Cilji udeležbe |
+| meetingType | string | `online`, `in-person` ali `both` |
+| competencies | string[] | Kompetence in veščine |
+| researchKeywords | string[] | Ključne besede raziskovanja |
+| roleProfile | object | Fleksibilna polja specifična za vlogo |
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Profil uspešno posodobljen |
+| 400 | Napaka pri validaciji |
+| 401 | Ni avtentikacije |
+
+**Uspešen odgovor**
+```json
+{
+  "message": "Profile updated successfully"
+}
+```
+
+---
+
+### GET /profile/:uid
+Javni profil kateregakoli uporabnika.
+
+**Zahteva avtentikacijo:** Ne
+
+**Parametri URL**
+| Parameter | Opis |
+|---|---|
+| uid | Firebase UID uporabnika |
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Profil uspešno vrnjen |
+| 404 | Profil ni najden |
+
+---
+
+## Prošnja za vlogo
+
+### POST /role-requests
+Oddaja prošnje za spremembo vloge. Samo udeleženci (`participant`) lahko oddajo zahtevek.
+
+**Zahteva avtentikacijo:** Da
+
+**Telo zahteve**
+| Polje | Tip | Pravila |
+|---|---|---|
+| requestedRole | string | `organizer` ali `industry` |
+| reason | string | Neobvezno — razlog za zahtevek, največ 500 znakov |
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 201 | Zahtevek uspešno oddan |
+| 400 | Napaka pri validaciji ali zahtevek že obstaja |
+| 403 | Uporabnik nima vloge participant |
+| 404 | Uporabnik ni najden |
+
+**Uspešen odgovor**
+```json
+{
+  "id": "firestore-generated-id",
+  "uid": "firebase-uid",
+  "email": "uporabnik@primer.com",
+  "requestedRole": "organizer",
+  "reason": "Organiziram konferenco v juniju",
+  "status": "pending",
+  "createdAt": "2026-05-16T09:05:03.112Z"
+}
+```
+
+---
+
+### GET /role-requests
+Seznam vseh zahtevkov s statusom `pending`. Samo admini.
+
+**Zahteva avtentikacijo:** Da (samo admin)
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Seznam zahtevkov |
+| 403 | Ni dovoljenja |
+
+---
+
+### PATCH /role-requests/:id/approve
+Odobritev zahtevka za vlogo. Samo admini.
+
+**Zahteva avtentikacijo:** Da (samo admin)
+
+**Parametri URL**
+| Parameter | Opis |
+|---|---|
+| id | ID zahtevka |
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Zahtevek odobren, vloga posodobljena |
+| 400 | Zahtevek je bil že obravnavan |
+| 404 | Zahtevek ni najden |
+
+---
+
+### PATCH /role-requests/:id/reject
+Zavrnitev zahtevka za vlogo. Samo admini.
+
+**Zahteva avtentikacijo:** Da (samo admin)
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Zahtevek zavrnjen |
+| 400 | Zahtevek je bil že obravnavan |
+| 404 | Zahtevek ni najden |
+
+---
+
+## Zdravje sistema
 
 ### GET /health
-Check the server is running.
+Preverjanje delovanja strežnika.
 
-**Response**
+**Zahteva avtentikacijo:** Ne
+
+**Uspešen odgovor**
 ```json
 { "status": "ok" }
 ```
