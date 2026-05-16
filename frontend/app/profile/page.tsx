@@ -25,11 +25,11 @@ type UserProfile = {
 type ProfileForm = {
   bio: string;
   affiliation: string;
-  interests: string;
-  goals: string;
+  interests: string[];
+  goals: string[];
   meetingType: MeetingType;
-  competencies: string;
-  researchKeywords: string;
+  competencies: string[];
+  researchKeywords: string[];
 };
 
 const TABS = ['Srečanja', 'Dogodki', 'Povabila', 'Sledilci'];
@@ -44,12 +44,243 @@ const CARDS = [
 const DEFAULT_FORM: ProfileForm = {
   bio: '',
   affiliation: '',
-  interests: '',
-  goals: '',
+  interests: [],
+  goals: [],
   meetingType: 'both',
-  competencies: '',
-  researchKeywords: '',
+  competencies: [],
+  researchKeywords: [],
 };
+
+const INTEREST_GROUPS = [
+  {
+    title: 'Tehnologija',
+    options: [
+      'Umetna inteligenca',
+      'Strojno učenje',
+      'Robotika',
+      'Podatkovna znanost',
+      'Kibernetska varnost',
+      'Razvoj programske opreme',
+      'Digitalizacija',
+      'Pametne naprave',
+      'Računalniški vid',
+      'NLP',
+      'Blockchain',
+      'Internet stvari',
+    ],
+  },
+  {
+    title: 'Naravoslovje',
+    options: [
+      'Kemija',
+      'Biologija',
+      'Fizika',
+      'Matematika',
+      'Biotehnologija',
+      'Materiali',
+      'Okoljske znanosti',
+      'Laboratorijske raziskave',
+    ],
+  },
+  {
+    title: 'Medicina in zdravje',
+    options: [
+      'Medicina',
+      'Farmacija',
+      'Digitalno zdravje',
+      'Javno zdravje',
+      'Psihologija',
+      'Prehrana',
+      'Rehabilitacija',
+      'Zdravstvena nega',
+    ],
+  },
+  {
+    title: 'Pravo in regulativa',
+    options: [
+      'Pravo',
+      'Varstvo podatkov',
+      'Intelektualna lastnina',
+      'Regulativa AI',
+      'Delovno pravo',
+      'Javna naročila',
+      'Skladnost poslovanja',
+      'Etika in zakonodaja',
+    ],
+  },
+  {
+    title: 'Družba in javni sektor',
+    options: [
+      'Javna uprava',
+      'Izobraževanje',
+      'Zdravstvo',
+      'Pametna mesta',
+      'Mobilnost',
+      'Dostopnost',
+      'Etika tehnologije',
+      'Skupnostni projekti',
+    ],
+  },
+  {
+    title: 'Humanistika in kultura',
+    options: [
+      'Jeziki',
+      'Zgodovina',
+      'Filozofija',
+      'Mediji',
+      'Komuniciranje',
+      'Kultura',
+      'Umetnost',
+      'Kreativne industrije',
+    ],
+  },
+  {
+    title: 'Posel in kariera',
+    options: [
+      'Podjetništvo',
+      'Industrija 4.0',
+      'Marketing',
+      'Prodaja',
+      'Finance',
+      'Kadrovanje',
+      'Vodenje ekip',
+      'Inovacije',
+    ],
+  },
+  {
+    title: 'Življenje in vrednote',
+    options: [
+      'Vzdržnost',
+      'Okolje',
+      'Kultura',
+      'Umetnost',
+      'Šport',
+      'Dobro počutje',
+      'Potovanja',
+      'Osebni razvoj',
+    ],
+  },
+  {
+    title: 'Inženirstvo in proizvodnja',
+    options: [
+      'Strojništvo',
+      'Elektrotehnika',
+      'Gradbeništvo',
+      'Logistika',
+      'Avtomatizacija proizvodnje',
+      'Energetika',
+      'Kakovost',
+      'Varnost pri delu',
+    ],
+  },
+];
+
+const GOAL_GROUPS = [
+  {
+    title: 'Sodelovanje',
+    options: [
+      'Raziskovalno sodelovanje',
+      'Industrijsko partnerstvo',
+      'Pilotni projekt',
+      'Skupna prijava na razpis',
+      'Razvoj nove ideje',
+    ],
+  },
+  {
+    title: 'Kariera',
+    options: [
+      'Karierne priložnosti',
+      'Iskanje mentorja',
+      'Iskanje kandidatov',
+      'Praksa',
+      'Zaposlitev',
+    ],
+  },
+  {
+    title: 'Mreženje',
+    options: [
+      'Izmenjava znanja',
+      'Akademsko mreženje',
+      'Spoznavanje ljudi iz drugih sektorjev',
+      'Predstavitev projekta',
+      'Investitorji',
+    ],
+  },
+];
+
+const COMPETENCY_GROUPS = [
+  {
+    title: 'Tehnične',
+    options: [
+      'Razvoj programske opreme',
+      'Frontend',
+      'Backend',
+      'Podatkovna analiza',
+      'Strojno učenje',
+      'DevOps',
+      'Sistemska arhitektura',
+    ],
+  },
+  {
+    title: 'Raziskovalne in strokovne',
+    options: [
+      'Raziskovalno delo',
+      'Pisanje člankov',
+      'Analiza potreb',
+      'Evalvacija rešitev',
+      'Delo z uporabniki',
+      'Javne politike',
+    ],
+  },
+  {
+    title: 'Mehke veščine',
+    options: [
+      'Vodenje projektov',
+      'Produktno vodenje',
+      'Poslovni razvoj',
+      'Javno nastopanje',
+      'Mentorstvo',
+      'Komunikacija',
+      'Organizacija dogodkov',
+    ],
+  },
+];
+
+const KEYWORD_GROUPS = [
+  {
+    title: 'AI in podatki',
+    options: [
+      'LLM',
+      'Generativna AI',
+      'Priporočilni sistemi',
+      'Vektorske baze',
+      'Semantično iskanje',
+      'Analitika',
+    ],
+  },
+  {
+    title: 'Uporaba v praksi',
+    options: [
+      'Optimizacija procesov',
+      'E-uprava',
+      'Pametna industrija',
+      'Avtomatizacija',
+      'Digitalna transformacija',
+      'Kadrovanje',
+    ],
+  },
+  {
+    title: 'Širši kontekst',
+    options: [
+      'Trajnost',
+      'Varnost',
+      'Etika',
+      'Uporabniška izkušnja',
+      'Družbeni vpliv',
+      'Medsektorsko sodelovanje',
+    ],
+  },
+];
 
 const MEETING_TYPES: Array<{ value: MeetingType; label: string }> = [
   { value: 'both', label: 'Oboje' },
@@ -57,26 +288,15 @@ const MEETING_TYPES: Array<{ value: MeetingType; label: string }> = [
   { value: 'online', label: 'Spletno' },
 ];
 
-function listToText(value?: string[]) {
-  return value?.join(', ') ?? '';
-}
-
-function textToList(value: string) {
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 function profileToForm(profile?: UserProfile): ProfileForm {
   return {
     bio: profile?.bio ?? '',
     affiliation: profile?.affiliation ?? '',
-    interests: listToText(profile?.interests),
-    goals: listToText(profile?.goals),
+    interests: profile?.interests ?? [],
+    goals: profile?.goals ?? [],
     meetingType: profile?.meetingType ?? 'both',
-    competencies: listToText(profile?.competencies),
-    researchKeywords: listToText(profile?.researchKeywords),
+    competencies: profile?.competencies ?? [],
+    researchKeywords: profile?.researchKeywords ?? [],
   };
 }
 
@@ -148,6 +368,18 @@ export default function ProfilePage() {
     };
   }
 
+  function toggleListField(key: 'interests' | 'goals' | 'competencies' | 'researchKeywords', value: string) {
+    setForm((prev) => {
+      const current = prev[key];
+      const next = current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value];
+
+      return { ...prev, [key]: next };
+    });
+    setSuccess('');
+  }
+
   async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!token) {
@@ -162,11 +394,11 @@ export default function ProfilePage() {
     const payload = {
       bio: form.bio.trim() || undefined,
       affiliation: form.affiliation.trim() || undefined,
-      interests: textToList(form.interests),
-      goals: textToList(form.goals),
+      interests: form.interests,
+      goals: form.goals,
       meetingType: form.meetingType,
-      competencies: textToList(form.competencies),
-      researchKeywords: textToList(form.researchKeywords),
+      competencies: form.competencies,
+      researchKeywords: form.researchKeywords,
     };
 
     try {
@@ -309,43 +541,37 @@ export default function ProfilePage() {
               />
             </FormField>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Področja interesa">
-                <input
-                  value={form.interests}
-                  onChange={field('interests')}
-                  placeholder="AI, robotika, javna uprava"
-                  className="profile-input"
-                />
-              </FormField>
+            <MultiChoiceField
+              label="Področja interesa"
+              description="Izberite teme, ki vas najbolj zanimajo."
+              groups={INTEREST_GROUPS}
+              value={form.interests}
+              onToggle={(value) => toggleListField('interests', value)}
+            />
 
-              <FormField label="Cilji mreženja">
-                <input
-                  value={form.goals}
-                  onChange={field('goals')}
-                  placeholder="partnerji, raziskovalci"
-                  className="profile-input"
-                />
-              </FormField>
+            <MultiChoiceField
+              label="Cilji mreženja"
+              description="Izberite, kaj želite doseči na konferenci."
+              groups={GOAL_GROUPS}
+              value={form.goals}
+              onToggle={(value) => toggleListField('goals', value)}
+            />
 
-              <FormField label="Kompetence">
-                <input
-                  value={form.competencies}
-                  onChange={field('competencies')}
-                  placeholder="vodenje projektov, ML"
-                  className="profile-input"
-                />
-              </FormField>
+            <MultiChoiceField
+              label="Kompetence"
+              description="Izberite znanja, izkušnje ali vloge, ki vas dobro opišejo."
+              groups={COMPETENCY_GROUPS}
+              value={form.competencies}
+              onToggle={(value) => toggleListField('competencies', value)}
+            />
 
-              <FormField label="Ključne besede">
-                <input
-                  value={form.researchKeywords}
-                  onChange={field('researchKeywords')}
-                  placeholder="LLM, digitalizacija"
-                  className="profile-input"
-                />
-              </FormField>
-            </div>
+            <MultiChoiceField
+              label="Ključne besede"
+              description="Izberite konkretne izraze, ki bodo kasneje pomagali pri AI ujemanju."
+              groups={KEYWORD_GROUPS}
+              value={form.researchKeywords}
+              onToggle={(value) => toggleListField('researchKeywords', value)}
+            />
 
             <FormField label="Način srečanja">
               <select value={form.meetingType} onChange={field('meetingType')} className="profile-input">
@@ -435,5 +661,158 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
       <span className="block text-xs font-semibold text-[#6e6e73] mb-1.5">{label}</span>
       {children}
     </label>
+  );
+}
+
+function MultiChoiceField({
+  label,
+  description,
+  groups,
+  value,
+  onToggle,
+}: {
+  label: string;
+  description: string;
+  groups: Array<{ title: string; options: string[] }>;
+  value: string[];
+  onToggle: (value: string) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  const [customInput, setCustomInput] = useState('');
+  const normalizedQuery = query.trim().toLocaleLowerCase('sl-SI');
+  const visibleLimit = 3;
+
+  const filteredGroups = groups
+    .map((group) => ({
+      ...group,
+      options: normalizedQuery
+        ? group.options.filter((option) => option.toLocaleLowerCase('sl-SI').includes(normalizedQuery))
+        : group.options,
+    }))
+    .filter((group) => group.options.length > 0);
+
+  function toggleGroup(title: string) {
+    setExpandedGroups((current) => (
+      current.includes(title)
+        ? current.filter((item) => item !== title)
+        : [...current, title]
+    ));
+  }
+
+  function addCustomOption() {
+    const option = customInput.trim();
+    if (!option) return;
+
+    const normalizedOption = option.toLocaleLowerCase('sl-SI');
+    const alreadySelected = value.some((item) => item.toLocaleLowerCase('sl-SI') === normalizedOption);
+
+    if (!alreadySelected) {
+      onToggle(option);
+    }
+
+    setCustomInput('');
+  }
+
+  return (
+    <div className="rounded-[16px] border border-[#f0f0f0] bg-[#fcfcfd] p-4">
+      <div className="mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-bold text-[#1d1d1f]">{label}</p>
+          <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Poišči možnost..."
+              className="min-w-[180px] max-w-[260px] flex-1 rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[12px] text-[#1d1d1f] outline-none transition-colors placeholder:text-[#a1a1aa] focus:border-[#0d0d0d]"
+            />
+            {value.length > 0 && (
+              <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#6e6e73] border border-[#eceff3]">
+                {value.length} izbrano
+              </span>
+            )}
+          </div>
+        </div>
+        <p className="text-[12px] text-[#8e8e93] mt-1">{description}</p>
+      </div>
+      <div className="grid gap-3">
+        {filteredGroups.map((group) => {
+          const expanded = expandedGroups.includes(group.title) || normalizedQuery.length > 0;
+          const hiddenCount = Math.max(group.options.length - visibleLimit, 0);
+          const visibleOptions = expanded ? group.options : group.options.slice(0, visibleLimit);
+
+          return (
+            <div key={group.title}>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#a1a1aa]">
+                {group.title}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {visibleOptions.map((option) => {
+                  const selected = value.includes(option);
+
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => onToggle(option)}
+                      aria-pressed={selected}
+                      className={`rounded-full px-3 py-1.5 text-[13px] border transition-colors ${
+                        selected
+                          ? 'bg-[#0d0d0d] text-white border-[#0d0d0d]'
+                          : 'bg-white text-[#4b5563] border-[#e5e7eb] hover:bg-[#f7f7f7]'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+                {!normalizedQuery && hiddenCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.title)}
+                    className="rounded-full border border-[#e5e7eb] bg-[#f7f7f7] px-3 py-1.5 text-[13px] font-semibold text-[#4b5563] transition-colors hover:bg-[#eef2f7]"
+                  >
+                    {expanded ? 'Prikaži manj' : `Prikaži več (${hiddenCount})`}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#a1a1aa]">
+            Drugo
+          </p>
+          <div className="flex max-w-[520px] gap-2">
+            <input
+              type="text"
+              value={customInput}
+              onChange={(event) => setCustomInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  addCustomOption();
+                }
+              }}
+              placeholder="Dodaj svojo možnost..."
+              className="min-w-0 flex-1 rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] text-[#1d1d1f] outline-none transition-colors placeholder:text-[#a1a1aa] focus:border-[#0d0d0d]"
+            />
+            <button
+              type="button"
+              onClick={addCustomOption}
+              className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#4b5563] transition-colors hover:bg-[#f7f7f7]"
+            >
+              Dodaj
+            </button>
+          </div>
+        </div>
+        {filteredGroups.length === 0 && (
+          <p className="rounded-[12px] bg-white px-3 py-2 text-[13px] text-[#8e8e93] border border-[#eceff3]">
+            Ni zadetkov za ta iskalni izraz.
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
