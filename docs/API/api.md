@@ -142,35 +142,6 @@ Posodobitev profila — sprejme lahko katerokoli kombinacijo polj.
 
 ---
 
-### POST /profile/images
-Nalaganje profilne ali naslovne slike v Firebase Storage. Firestore ne hrani slike, ampak samo URL in nastavitve prikaza znotraj `roleProfile`.
-
-**Zahteva avtentikacijo:** Da
-
-**Tip zahteve:** `multipart/form-data`
-
-| Polje | Tip | Opis |
-|---|---|---|
-| type | string | `profile` ali `background` |
-| image | file | Slika `jpeg`, `png`, `webp` ali `gif`, največ 5 MB |
-
-**Odgovori**
-| Status | Pomen |
-|---|---|
-| 201 | Slika uspešno naložena |
-| 400 | Napačen tip slike, velikost ali manjkajoča datoteka |
-| 401 | Ni avtentikacije |
-
-**Uspešen odgovor**
-```json
-{
-  "url": "https://firebasestorage.googleapis.com/v0/b/...",
-  "path": "users/firebase-uid/profile-1760000000000.jpeg"
-}
-```
-
----
-
 ### GET /profile/:uid
 Javni profil kateregakoli uporabnika.
 

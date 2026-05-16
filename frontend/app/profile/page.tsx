@@ -46,7 +46,6 @@ type CropTarget = 'profile' | 'background';
 type CropDraft = {
   target: CropTarget;
   imageUrl: string;
-  file?: File;
   positionX: number;
   positionY: number;
   zoom: number;
@@ -79,7 +78,16 @@ const DEFAULT_FORM: ProfileForm = {
   backgroundImageZoom: 115,
 };
 
-const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_SIZE_BYTES = 500 * 1024;
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Slike ni bilo mogoče prebrati.'));
+    reader.readAsDataURL(file);
+  });
+}
 
 const INTEREST_GROUPS = [
   {
@@ -466,14 +474,21 @@ export default function ProfilePage() {
     }
 
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setError('Slika je prevelika. Izberite sliko manjšo od 5 MB.');
+      setError('Slika je prevelika. Za začasno shranjevanje izberite sliko manjšo od 500 KB.');
+      return;
+    }
+
+    let imageUrl = '';
+    try {
+      imageUrl = await fileToDataUrl(file);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Slike ni bilo mogoče prebrati.');
       return;
     }
 
     setCropDraft({
       target: key === 'profileImageUrl' ? 'profile' : 'background',
-      imageUrl: URL.createObjectURL(file),
-      file,
+      imageUrl,
       positionX: 50,
       positionY: 50,
       zoom: 115,
@@ -490,75 +505,37 @@ export default function ProfilePage() {
     setCropDraft({
       target,
       imageUrl,
-      file: undefined,
       positionX: isProfile ? form.profileImagePositionX : form.backgroundImagePositionX,
       positionY: isProfile ? form.profileImagePositionY : form.backgroundImagePositionY,
       zoom: isProfile ? form.profileImageZoom : form.backgroundImageZoom,
     });
   }
 
-  async function uploadProfileImage(file: File, type: CropTarget) {
-    if (!token) throw new Error('Prijavna seja nima veljavnega žetona. Ponovno se prijavite.');
-
-    const body = new FormData();
-    body.append('type', type);
-    body.append('image', file);
-
-    const res = await fetch(`${API}/profile/images`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body,
-    });
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-      throw new Error(msg ?? 'Nalaganje slike ni uspelo');
-    }
-
-    const data = (await res.json()) as { url?: string };
-    if (!data.url) throw new Error('Backend ni vrnil povezave do slike');
-    return data.url;
-  }
-
-  async function applyCropDraft() {
+  function applyCropDraft() {
     if (!cropDraft) return;
 
-    setSaving(true);
     setError('');
-
-    let imageUrl = cropDraft.imageUrl;
-    try {
-      if (cropDraft.file) {
-        imageUrl = await uploadProfileImage(cropDraft.file, cropDraft.target);
-        URL.revokeObjectURL(cropDraft.imageUrl);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nalaganje slike ni uspelo');
-      setSaving(false);
-      return;
-    }
 
     setForm((prev) => (
       cropDraft.target === 'profile'
         ? {
           ...prev,
-          profileImageUrl: imageUrl,
+          profileImageUrl: cropDraft.imageUrl,
           profileImagePositionX: cropDraft.positionX,
           profileImagePositionY: cropDraft.positionY,
           profileImageZoom: cropDraft.zoom,
         }
         : {
           ...prev,
-          backgroundImageUrl: imageUrl,
+          backgroundImageUrl: cropDraft.imageUrl,
           backgroundImagePositionX: cropDraft.positionX,
           backgroundImagePositionY: cropDraft.positionY,
           backgroundImageZoom: cropDraft.zoom,
         }
     ));
+
     setCropDraft(null);
     setSuccess('');
-    setSaving(false);
   }
 
   async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
@@ -572,28 +549,28 @@ export default function ProfilePage() {
     setError('');
     setSuccess('');
 
-    const payload = {
-      bio: form.bio.trim() || undefined,
-      affiliation: form.affiliation.trim() || undefined,
-      interests: form.interests,
-      goals: form.goals,
-      meetingType: form.meetingType,
-      competencies: form.competencies,
-      researchKeywords: form.researchKeywords,
-      roleProfile: {
-        ...(profile?.roleProfile ?? {}),
-        profileImageUrl: form.profileImageUrl,
-        backgroundImageUrl: form.backgroundImageUrl,
-        profileImagePositionX: form.profileImagePositionX,
-        profileImagePositionY: form.profileImagePositionY,
-        backgroundImagePositionX: form.backgroundImagePositionX,
-        backgroundImagePositionY: form.backgroundImagePositionY,
-        profileImageZoom: form.profileImageZoom,
-        backgroundImageZoom: form.backgroundImageZoom,
-      },
-    };
-
     try {
+      const payload = {
+        bio: form.bio.trim() || undefined,
+        affiliation: form.affiliation.trim() || undefined,
+        interests: form.interests,
+        goals: form.goals,
+        meetingType: form.meetingType,
+        competencies: form.competencies,
+        researchKeywords: form.researchKeywords,
+        roleProfile: {
+          ...(profile?.roleProfile ?? {}),
+          profileImageUrl: form.profileImageUrl,
+          backgroundImageUrl: form.backgroundImageUrl,
+          profileImagePositionX: form.profileImagePositionX,
+          profileImagePositionY: form.profileImagePositionY,
+          backgroundImagePositionX: form.backgroundImagePositionX,
+          backgroundImagePositionY: form.backgroundImagePositionY,
+          profileImageZoom: form.profileImageZoom,
+          backgroundImageZoom: form.backgroundImageZoom,
+        },
+      };
+
       const res = await fetch(`${API}/profile/me`, {
         method: 'PATCH',
         headers: {
@@ -756,13 +733,15 @@ export default function ProfilePage() {
                 variant="avatar"
                 onChange={(event) => handleImageChange('profileImageUrl', event)}
                 onEdit={() => openCropEditor('profile')}
-                onRemove={() => setForm((prev) => ({
-                  ...prev,
-                  profileImageUrl: '',
-                  profileImagePositionX: 50,
-                  profileImagePositionY: 50,
-                  profileImageZoom: 115,
-                }))}
+                onRemove={() => {
+                  setForm((prev) => ({
+                    ...prev,
+                    profileImageUrl: '',
+                    profileImagePositionX: 50,
+                    profileImagePositionY: 50,
+                    profileImageZoom: 115,
+                  }));
+                }}
               />
 
               <ImagePicker
@@ -776,13 +755,15 @@ export default function ProfilePage() {
                 variant="cover"
                 onChange={(event) => handleImageChange('backgroundImageUrl', event)}
                 onEdit={() => openCropEditor('background')}
-                onRemove={() => setForm((prev) => ({
-                  ...prev,
-                  backgroundImageUrl: '',
-                  backgroundImagePositionX: 50,
-                  backgroundImagePositionY: 50,
-                  backgroundImageZoom: 115,
-                }))}
+                onRemove={() => {
+                  setForm((prev) => ({
+                    ...prev,
+                    backgroundImageUrl: '',
+                    backgroundImagePositionX: 50,
+                    backgroundImagePositionY: 50,
+                    backgroundImageZoom: 115,
+                  }));
+                }}
               />
             </div>
 
@@ -922,7 +903,6 @@ export default function ProfilePage() {
           uploading={saving}
           onChange={setCropDraft}
           onCancel={() => {
-            if (cropDraft.file) URL.revokeObjectURL(cropDraft.imageUrl);
             setCropDraft(null);
           }}
           onApply={applyCropDraft}
@@ -1025,7 +1005,7 @@ function ImagePicker({
         </div>
       </div>
       <p className="mt-3 text-[11px] text-[#a1a1aa]">
-        Priporočena je slika do 5 MB.
+        Začasno shranjevanje podpira slike do 500 KB.
       </p>
     </div>
   );

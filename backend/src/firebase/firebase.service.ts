@@ -9,9 +9,6 @@ export class FirebaseService implements OnApplicationBootstrap {
   onApplicationBootstrap() {
     if (!admin.apps.length) {
       const projectId = this.configService.get<string>('FIREBASE_PROJECT_ID');
-      const storageBucket =
-        this.configService.get<string>('FIREBASE_STORAGE_BUCKET') ??
-        `${projectId}.firebasestorage.app`;
 
       admin.initializeApp({
         credential: admin.credential.cert({
@@ -21,7 +18,6 @@ export class FirebaseService implements OnApplicationBootstrap {
             .get<string>('FIREBASE_PRIVATE_KEY')
             ?.replace(/\\n/g, '\n'),
         }),
-        storageBucket,
       });
     }
   }
@@ -32,9 +28,5 @@ export class FirebaseService implements OnApplicationBootstrap {
 
   getAuth(): admin.auth.Auth {
     return admin.auth();
-  }
-
-  getStorageBucket() {
-    return admin.storage().bucket();
   }
 }
