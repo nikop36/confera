@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
 import { FirebaseModule } from '../firebase/firebase.module';
-import { UsersRepository } from '../users/users.repository';
+import { UsersModule } from '../users/users.module';
 import { RoleRequestsService } from './role-requests.service';
 import { RoleRequestsRepository } from './role-requests.repository';
 import { RoleRequestController } from './role-requests.controller';
 
 @Module({
-  imports: [FirebaseModule],
-  providers: [RoleRequestsService, UsersRepository, RoleRequestController],
-  exports: [RoleRequestsRepository, RoleRequestsService],
+  imports: [FirebaseModule, UsersModule],
+  controllers: [RoleRequestController],
+  providers: [RoleRequestsService, RoleRequestsRepository],
+  exports: [RoleRequestsService],
 })
-export class UsersModule {}
+export class RoleRequestsModule {}

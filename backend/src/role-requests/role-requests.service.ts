@@ -1,6 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UsersRepository } from '../users/users.repository';
 import { RoleRequestsRepository } from './role-requests.repository';
+import { CreateRoleRequestDto } from './dto/create-role-request.dto';
+import { FirebaseUser } from '../common/interfaces/firebase-user.interface';
+import { UserRoleEnum } from '../common/enums/roles.enum';
 
 @Injectable()
 export class RoleRequestsService {
@@ -9,11 +17,78 @@ export class RoleRequestsService {
     private readonly usersRepository: UsersRepository,
   ) {}
 
-  async createRoleRequest() {}
+  async createRoleRequest(user: FirebaseUser, dto: CreateRoleRequestDto) {
+    const existingUser = await this.usersRepository.findByUid(user.uid);
+    if (!existingUser) throw new NotFoundException('User not found');
 
-  async getPendingRequests() {}
+    if (existingUser.role !== UserRoleEnum.PARTICIPANT) {
+      throw new ForbiddenException(
+        'Only participants can request a role upgrade',
+      );
+    }
 
-  async approveRequest() {}
+    if ((existingUser.role as string) === (dto.requestedRole as string)) {
+      throw new BadRequestException('You already have this role');
+    }
 
-  async rejectRequest() {}
+    const existingRequest = await this.roleRequestsRepository.findPendingByUid(
+      user.uid,
+    );
+    if (existingRequest) {
+      throw new BadRequestException('You already have a pending role request');
+    }
+
+    return this.roleRequestsRepository.saveRoleRequest({
+      uid: user.uid,
+      email: user.email,
+      requestedRole: dto.requestedRole,
+      reason: dto.reason,
+      status: 'pending',
+      createdAt: new Date(),
+    });
+  }
+
+  async getPendingRequests() {
+    try {
+      return await this.roleRequestsRepository.findAllPending();
+    } catch (err) {
+      console.error('getPendingRequests error:', err);
+      throw err;
+    }
+  }
+
+  async approveRequest(requestId: string, adminUser: FirebaseUser) {
+    const request = await this.roleRequestsRepository.findById(requestId);
+    if (!request) throw new NotFoundException('Request not found');
+
+    if (request.status !== 'pending') {
+      throw new BadRequestException('Request has already been reviewed');
+    }
+
+    await this.roleRequestsRepository.updateStatus(
+      requestId,
+      'approved',
+      adminUser.uid,
+    );
+
+    await this.usersRepository.updateUserRole(
+      request.uid,
+      request.requestedRole,
+    );
+  }
+
+  async rejectRequest(requestId: string, adminUser: FirebaseUser) {
+    const request = await this.roleRequestsRepository.findById(requestId);
+    if (!request) throw new NotFoundException('Request not found');
+
+    if (request.status !== 'pending') {
+      throw new BadRequestException('Request has already been reviewed');
+    }
+
+    await this.roleRequestsRepository.updateStatus(
+      requestId,
+      'rejected',
+      adminUser.uid,
+    );
+  }
 }

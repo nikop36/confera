@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import { User, UserProfile } from '../common/interfaces/user.interface';
+import { UserRoleEnum } from '../common/enums/roles.enum';
 
 @Injectable()
 export class UsersRepository {
@@ -39,5 +40,8 @@ export class UsersRepository {
     await db.collection('users').doc(uid).update(cleanData);
   }
 
-  async updateUserRole() {}
+  async updateUserRole(uid: string, role: UserRoleEnum): Promise<void> {
+    const db = this.firebaseService.getFirestore();
+    await db.collection('users').doc(uid).update({ role });
+  }
 }

@@ -1,10 +1,18 @@
-import { IsEnum } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import {
   UserRoleEnum,
-  RequestableRoleEnum,
+  type RequestableRole,
 } from '../../common/enums/roles.enum';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateRoleRequestDto {
+  @ApiProperty({ enum: UserRoleEnum })
   @IsEnum(UserRoleEnum)
-  requestedRole!: RequestableRoleEnum;
+  requestedRole!: RequestableRole;
+
+  @ApiPropertyOptional({ example: 'I am organizing a conference in June' })
+  @IsString()
+  @MaxLength(500)
+  @IsOptional()
+  reason?: string;
 }

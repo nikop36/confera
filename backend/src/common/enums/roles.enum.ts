@@ -5,7 +5,4 @@ export enum UserRoleEnum {
   ADMIN = 'admin',
 }
 
-export enum RequestableRoleEnum {
-  ORGANIZER = UserRoleEnum.ORGANIZER,
-  INDUSTRY = UserRoleEnum.INDUSTRY,
-}
+export type RequestableRole = UserRoleEnum.ORGANIZER | UserRoleEnum.INDUSTRY;
