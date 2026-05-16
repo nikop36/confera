@@ -1,10 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-type StoredUser = { displayName: string; email: string };
+import { useStoredUser } from '../lib/auth';
 
 const NAV = [
   { label: 'Novice', href: '/home' },
@@ -36,13 +34,8 @@ const NOTIFICATIONS = [
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<StoredUser | null>(null);
+  const user = useStoredUser();
   const pathname = usePathname();
-
-  useEffect(() => {
-    const raw = localStorage.getItem('confera_user');
-    if (raw) { try { setUser(JSON.parse(raw)); } catch { /* invalid json */ } }
-  }, []);
 
   const initials = user?.displayName
     .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() ?? '??';
@@ -114,7 +107,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* ── CENTER ── */}
-        <main className="flex-1 min-w-0 py-7">{children}</main>
+        <main className="flex-1 min-w-0 py-7 pb-12">
+          {children}
+        </main>
 
         {/* ── RIGHT SIDEBAR ── */}
         <aside className="w-[280px] shrink-0 sticky top-0 h-screen pt-7 pb-5 overflow-y-auto flex flex-col gap-7">

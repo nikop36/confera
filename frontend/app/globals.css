@@ -264,6 +264,28 @@ body {
   border-color: var(--border-accent);
 }
 
+.profile-input {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #111827;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.profile-input::placeholder {
+  color: #a1a1aa;
+}
+
+.profile-input:focus {
+  border-color: #9dbed8;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(127, 168, 200, 0.18);
+}
+
 /* Icon box */
 .icon-box {
   width: 44px;
