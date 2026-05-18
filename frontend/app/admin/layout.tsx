@@ -3,13 +3,14 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useStoredUser } from '../lib/auth';
 
 type AdminNavItem = {
   label: string;
   href: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   badge?: number;
   disabled?: boolean;
 };
@@ -38,12 +39,16 @@ const ADMIN_NAV: AdminNavItem[] = [
   { label: 'Users', href: '/admin/users', icon: <UsersIcon />, disabled: true },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
   const user = useStoredUser();
   const router = useRouter();
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
+    if (!mounted) return;
     if (user === null) {
       router.push('/login');
       return;
@@ -51,9 +56,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (user.role !== 'admin') {
       router.push('/home');
     }
-  }, [user, router]);
+  }, [user, router, mounted]);
 
-  if (!user || user.role !== 'admin') {
+  if (!mounted || !user || user.role !== 'admin') {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <p className="text-sm text-[#8e8e93]">Preverjanje dostopa...</p>
@@ -63,10 +68,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const initials = user.displayName
     .split(' ')
+    .filter((w) => w.length > 0)
     .map((w) => w[0])
     .slice(0, 2)
     .join('')
-    .toUpperCase();
+    .toUpperCase() || '??';
 
   return (
     <div className="min-h-screen bg-white text-[#0d0d0d] font-sans flex">
