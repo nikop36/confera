@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { saveStoredUser } from '../lib/auth';
+import { firebaseSignIn } from '../lib/firebase';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -62,31 +63,14 @@ export default function RegisterPage() {
 
       const data = await res.json().catch(() => ({}));
 
-      const loginRes = await fetch(`${API}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-        }),
-      });
-
-      if (!loginRes.ok) {
-        const data = await loginRes.json().catch(() => ({}));
-        const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Račun je bil ustvarjen, samodejna prijava pa ni uspela. Preverite Firebase API ključ v backend .env.');
-      }
-
-      const loginData = await loginRes.json().catch(() => ({}));
-      if (!loginData.idToken) {
-        throw new Error('Račun je bil ustvarjen, vendar backend ni vrnil prijavnega žetona.');
-      }
+      const { idToken, uid } = await firebaseSignIn(form.email, form.password);
 
       saveStoredUser({
         displayName: form.displayName,
         email: form.email,
-        ...data,
-        ...loginData,
+        uid: (data as { uid?: string }).uid ?? uid,
+        idToken,
+        role: (data as { role?: string }).role ?? 'participant',
       });
       router.push('/home');
     } catch (err) {

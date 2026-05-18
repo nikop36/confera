@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { saveStoredUser } from '../lib/auth';
+import { firebaseSignIn } from '../lib/firebase';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -26,41 +27,22 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const res = await fetch(`${API}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
+      const { idToken, uid } = await firebaseSignIn(form.email, form.password);
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Prijava ni uspela');
-      }
-
-      const data = await res.json();
       let displayName = form.email.split('@')[0];
       let role = 'participant';
 
-      if (data.idToken) {
-        const profileRes = await fetch(`${API}/profile/me`, {
-          headers: { Authorization: `Bearer ${data.idToken}` },
-        });
+      const profileRes = await fetch(`${API}/profile/me`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
 
-        if (profileRes.ok) {
-          const profile = await profileRes.json();
-          displayName = profile.displayName ?? displayName;
-          role = profile.role ?? role;
-        }
+      if (profileRes.ok) {
+        const profile = await profileRes.json();
+        displayName = profile.displayName ?? displayName;
+        role = profile.role ?? role;
       }
 
-      saveStoredUser({
-        uid: data.uid,
-        idToken: data.idToken,
-        displayName,
-        email: form.email,
-        role,
-      });
+      saveStoredUser({ uid, idToken, displayName, email: form.email, role });
       router.push('/home');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Prišlo je do napake');
