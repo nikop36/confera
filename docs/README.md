@@ -9,3 +9,4 @@ This folder contains project documentation and diagram sources for the Confera c
 - `Activity diagram/` - Activity diagrams for business workflows such as AI recommendations, meeting scheduling, CSV import, and career interviews.
 - `Deployment diagram/` - Deployment and CI/CD architecture diagrams for Vercel, Render, Firebase, GitHub Actions, and SonarQube Cloud.
 - `ER diagram/` - Firestore schema and relationship diagrams.
+- `Model/` - Firestore model documentation and the controlled profile taxonomy used for recommendations and AI matching.

@@ -28,6 +28,12 @@ Firebase Auth UID.
 | researchKeywords | string[] | Ne | Ključne besede za iskanje |
 | roleProfile | map | Ne | Fleksibilna polja specifična za vlogo |
 
+**Taksonomija profilnih signalov:** podrobna definicija področij interesa,
+ciljev mreženja, kompetenc in ključnih besed je dokumentirana v
+[interests.md](./interests.md). Ta polja so trenutno shranjena kot `string[]`,
+ker aplikacija podpira vnaprej pripravljene izbire in uporabniško možnost
+`Drugo`.
+
 **Indeksi:** noben sestavljen indeks trenutno ni potreben
 
 **Primer dokumenta:**
