@@ -17,4 +17,8 @@ export class UsersService {
     }
     return user;
   }
+
+  async findByUidOrNull(uid: string): Promise<(User & UserProfile) | null> {
+    return this.usersRepository.findByUid(uid);
+  }
 }

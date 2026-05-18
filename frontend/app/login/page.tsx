@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { saveStoredUser } from '../lib/auth';
-import { firebaseSignIn } from '../lib/firebase';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -27,7 +26,19 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const { idToken, uid } = await firebaseSignIn(form.email, form.password);
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, password: form.password }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const msg = Array.isArray(data.message) ? data.message[0] : data.message;
+        throw new Error(msg ?? 'Prijava ni uspela');
+      }
+
+      const { idToken, uid } = await res.json() as { idToken: string; uid: string };
 
       let displayName = form.email.split('@')[0];
       let role = 'participant';
@@ -37,13 +48,13 @@ export default function LoginPage() {
       });
 
       if (profileRes.ok) {
-        const profile = await profileRes.json();
+        const profile = await profileRes.json() as { displayName?: string; role?: string };
         displayName = profile.displayName ?? displayName;
         role = profile.role ?? role;
       }
 
       saveStoredUser({ uid, idToken, displayName, email: form.email, role });
-      router.push('/home');
+      router.push(role === 'admin' ? '/admin' : '/home');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Prišlo je do napake');
     } finally {
@@ -52,70 +63,90 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex" style={{ background: 'var(--bg)' }}>
-      <section className="hidden lg:flex flex-col justify-between w-[45%] p-12 relative overflow-hidden">
-        <div className="absolute inset-0 map-grid" />
-        <div className="absolute inset-0 vignette" />
-        <div className="relative z-10">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full border flex items-center justify-center" style={{ borderColor: 'var(--border-accent)' }}>
-              <div className="w-2 h-2 rounded-full" style={{ background: 'var(--accent)' }} />
-            </div>
-            <span className="font-display text-lg tracking-wide" style={{ color: 'var(--text)' }}>Confera</span>
-          </Link>
-        </div>
+    <main className="min-h-screen flex bg-white font-sans">
 
-        <div className="relative z-10 max-w-sm">
-          <div className="section-label mb-4">Prijava</div>
-          <h1 className="font-display text-5xl font-light leading-tight mb-6" style={{ color: 'var(--text)' }}>
+      {/* ── Left panel ── */}
+      <div
+        className="hidden lg:flex flex-col justify-between w-[42%] p-12 relative overflow-hidden"
+        style={{ background: 'linear-gradient(150deg, #f0f5fb 0%, #faf0fb 100%)' }}
+      >
+        {/* Subtle grid */}
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'linear-gradient(rgba(127,168,200,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(127,168,200,0.06) 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
+        }} />
+
+        <Link href="/" className="relative flex items-center gap-2 no-underline">
+          <div className="w-2 h-2 rounded-full bg-[#7fa8c8]" />
+          <span className="font-bold text-[17px] text-[#0d0d0d] tracking-wide">Confera</span>
+        </Link>
+
+        <div className="relative">
+          <p className="text-[11px] font-semibold text-[#7fa8c8] tracking-[0.18em] uppercase mb-4">Prijava</p>
+          <h1 className="text-[2.4rem] font-bold leading-tight text-[#0d0d0d] mb-5">
             Nadaljujte<br />
-            <em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>s svojim</em><br />
+            <span className="text-[#7fa8c8]">s svojim</span><br />
             profilom.
           </h1>
-          <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-[14px] text-[#6e6e73] leading-relaxed max-w-[260px]">
             Dostopajte do profila, priporočil in povabil za mreženje na konferenci.
           </p>
+
+          {/* Network decoration */}
+          <svg className="mt-10" width="260" height="90" viewBox="0 0 260 90" fill="none">
+            <line x1="55" y1="45" x2="130" y2="18" stroke="rgba(127,168,200,0.2)" strokeWidth="1" />
+            <line x1="55" y1="45" x2="130" y2="72" stroke="rgba(127,168,200,0.2)" strokeWidth="1" />
+            <line x1="130" y1="18" x2="205" y2="33" stroke="rgba(127,168,200,0.2)" strokeWidth="1" />
+            <line x1="130" y1="72" x2="205" y2="57" stroke="rgba(127,168,200,0.2)" strokeWidth="1" />
+            <circle cx="55" cy="45" r="14" fill="rgba(127,168,200,0.06)" stroke="rgba(127,168,200,0.2)" strokeWidth="1" />
+            <circle cx="55" cy="45" r="5" fill="rgba(127,168,200,0.25)" stroke="rgba(127,168,200,0.6)" strokeWidth="1" />
+            <circle cx="130" cy="18" r="3.5" fill="rgba(127,168,200,0.15)" stroke="rgba(127,168,200,0.35)" strokeWidth="1" />
+            <circle cx="130" cy="72" r="3.5" fill="rgba(127,168,200,0.15)" stroke="rgba(127,168,200,0.35)" strokeWidth="1" />
+            <circle cx="205" cy="33" r="4.5" fill="rgba(196,168,125,0.2)" stroke="rgba(196,168,125,0.45)" strokeWidth="1" />
+            <circle cx="205" cy="57" r="3" fill="rgba(127,168,200,0.12)" stroke="rgba(127,168,200,0.3)" strokeWidth="1" />
+          </svg>
         </div>
 
-        <div className="relative z-10 flex items-center gap-4">
-          <div className="section-divider" />
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Confera 2026</span>
-        </div>
-      </section>
+        <p className="relative text-[12px] text-[#8e8e93]">Confera 2026</p>
+      </div>
 
-      <section className="flex-1 flex items-center justify-center p-6 lg:p-12">
+      {/* ── Right panel (form) ── */}
+      <div className="flex-1 flex items-center justify-center p-8 lg:p-12">
         <motion.div
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
-          className="w-full max-w-[420px]"
+          className="w-full max-w-[400px]"
         >
+          {/* Mobile logo */}
+          <Link href="/" className="lg:hidden flex items-center gap-2 no-underline mb-8">
+            <div className="w-2 h-2 rounded-full bg-[#7fa8c8]" />
+            <span className="font-bold text-[17px] text-[#0d0d0d] tracking-wide">Confera</span>
+          </Link>
+
           <div className="mb-8">
-            <div className="section-label mb-3">Dostop do računa</div>
-            <h2 className="font-display text-4xl font-light mb-2" style={{ color: 'var(--text)' }}>
-              Prijavite se
-            </h2>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            <h2 className="text-[28px] font-bold text-[#0d0d0d] mb-1">Prijavite se</h2>
+            <p className="text-[14px] text-[#8e8e93]">
               Še nimate računa?{' '}
-              <Link href="/register" style={{ color: 'var(--accent)' }} className="hover:underline">
-                Ustvarite ga
-              </Link>
+              <Link href="/register" className="text-[#7fa8c8] hover:underline">Ustvarite ga</Link>
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <FormField label="E-pošta">
+            <div>
+              <label className="block text-xs font-semibold text-[#6e6e73] mb-1.5">E-pošta</label>
               <input
                 type="email"
                 value={form.email}
                 onChange={field('email')}
                 placeholder="jana@primer.si"
                 required
-                className="form-input"
+                className="profile-input"
               />
-            </FormField>
+            </div>
 
-            <FormField label="Geslo">
+            <div>
+              <label className="block text-xs font-semibold text-[#6e6e73] mb-1.5">Geslo</label>
               <div className="relative">
                 <input
                   type={showPw ? 'text' : 'password'}
@@ -123,30 +154,25 @@ export default function LoginPage() {
                   onChange={field('password')}
                   placeholder="Vaše geslo"
                   required
-                  className="form-input pr-12"
+                  className="profile-input pr-12"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPw((value) => !value)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 transition-opacity hover:opacity-100 opacity-60"
-                  style={{ color: 'var(--text-muted)' }}
+                  onClick={() => setShowPw((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#8e8e93] hover:text-[#0d0d0d] transition-colors bg-transparent border-0 cursor-pointer"
                   aria-label={showPw ? 'Skrij geslo' : 'Prikaži geslo'}
                 >
                   {showPw ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </div>
-            </FormField>
+            </div>
 
             {error && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="px-4 py-3 rounded-lg text-sm"
-                style={{
-                  background: 'rgba(224,92,92,0.08)',
-                  border: '1px solid rgba(224,92,92,0.2)',
-                  color: '#e05c5c',
-                }}
+                className="px-4 py-3 rounded-xl text-[13px]"
+                style={{ background: 'rgba(209,66,66,0.06)', border: '1px solid rgba(209,66,66,0.15)', color: '#d14242' }}
               >
                 {error}
               </motion.div>
@@ -155,26 +181,14 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full justify-center mt-2"
-              style={{ opacity: loading ? 0.7 : 1 }}
+              className="w-full py-3 rounded-full bg-[#0d0d0d] text-white text-[14px] font-semibold border-0 cursor-pointer font-sans mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Prijava...' : 'Prijava'}
             </button>
           </form>
         </motion.div>
-      </section>
+      </div>
     </main>
-  );
-}
-
-function FormField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs mb-1.5 tracking-wide" style={{ color: 'var(--text-muted)' }}>
-        {label}
-      </label>
-      {children}
-    </div>
   );
 }
 

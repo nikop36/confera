@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import AppShell from '../components/AppShell';
 import { saveStoredUser, useStoredUser } from '../lib/auth';
 
@@ -366,6 +366,8 @@ function profileToForm(profile?: UserProfile): ProfileForm {
   };
 }
 
+type RoleRequestState = 'idle' | 'submitting' | 'submitted' | 'error';
+
 export default function ProfilePage() {
   const user = useStoredUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -377,6 +379,10 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [cropDraft, setCropDraft] = useState<CropDraft | null>(null);
+  const [roleRequestState, setRoleRequestState] = useState<RoleRequestState>('idle');
+  const [roleRequestedRole, setRoleRequestedRole] = useState<'organizer' | 'industry'>('organizer');
+  const [roleRequestReason, setRoleRequestReason] = useState('');
+  const [roleRequestError, setRoleRequestError] = useState('');
 
   const token = user?.idToken;
   const displayName = profile?.displayName ?? user?.displayName ?? 'Udeleženec';
@@ -389,12 +395,16 @@ export default function ProfilePage() {
   const profileImageSize = `${form.profileImageZoom}%`;
   const backgroundImageSize = `${form.backgroundImageZoom}%`;
 
-  useEffect(() => {
-    if (!user?.idToken) return;
+  const loadedRef = useRef(false);
 
+  useEffect(() => {
+    if (loadedRef.current || !user?.idToken) return;
+    loadedRef.current = true;
+
+    const idToken = user.idToken;
     const currentUser = user;
 
-    async function loadProfile(idToken: string) {
+    async function loadProfile() {
       setLoading(true);
       setError('');
 
@@ -426,7 +436,7 @@ export default function ProfilePage() {
       }
     }
 
-    void loadProfile(user.idToken);
+    void loadProfile();
   }, [user]);
 
   const initials = useMemo(
@@ -601,6 +611,35 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleRoleRequest(event: React.SyntheticEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!token) {
+      setRoleRequestError('Niste prijavljeni. Odjavite se in se znova prijavite.');
+      setRoleRequestState('error');
+      return;
+    }
+    setRoleRequestState('submitting');
+    setRoleRequestError('');
+    try {
+      const res = await fetch(`${API}/role-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ requestedRole: roleRequestedRole, reason: roleRequestReason.trim() || undefined }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const msg = Array.isArray(data.message) ? data.message[0] : data.message;
+        throw new Error(msg ?? 'Zahteva ni bila poslana');
+      }
+      setRoleRequestState('submitted');
+    } catch (err) {
+      setRoleRequestError(err instanceof Error ? err.message : 'Prišlo je do napake');
+      setRoleRequestState('error');
+    }
+  }
+
+  const currentRole = profile?.role ?? user?.role;
+
   return (
     <AppShell>
       {/* Cover */}
@@ -674,7 +713,7 @@ export default function ProfilePage() {
                 setSuccess('');
                 setError('');
               }}
-              className="px-[18px] py-[6px] rounded-full text-[13px] font-semibold bg-[#0d0d0d] text-white border-0 cursor-pointer font-sans"
+              className="px-[18px] py-[6px] rounded-full text-[13px] font-semibold text-white border-0 cursor-pointer font-sans" style={{ background: '#7fa8c8' }}
             >
               {editMode ? 'Zapri urejanje' : 'Uredi profil'}
             </button>
@@ -697,6 +736,76 @@ export default function ProfilePage() {
           {bio}
         </p>
       </div>
+
+      {currentRole === 'participant' && !editMode && (
+        <div className="mb-[18px] rounded-[18px] border border-[#f0f0f0] bg-white p-5">
+          <div className="mb-4">
+            <h3 className="text-base font-bold text-[#1d1d1f]">Zahteva za spremembo vloge</h3>
+            <p className="text-sm text-[#8e8e93] mt-1">
+              Zaprosili boste administratorja za spremembo vaše vloge na platformi.
+            </p>
+          </div>
+
+          {roleRequestState === 'submitted' ? (
+            <div className="rounded-[14px] bg-[#f0faf4] border border-[#a7f3d0] px-4 py-3 text-sm text-[#16803c]">
+              Vaša zahteva je bila poslana. Administrator jo bo pregledal.
+            </div>
+          ) : (
+            <form onSubmit={handleRoleRequest} className="grid gap-4">
+              <div>
+                <p className="text-xs font-semibold text-[#6e6e73] mb-2">Zahtevana vloga</p>
+                <div className="flex gap-2">
+                  {(['organizer', 'industry'] as const).map((role) => {
+                    const label = role === 'organizer' ? 'Organizator' : 'Industrija';
+                    const selected = roleRequestedRole === role;
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => setRoleRequestedRole(role)}
+                        className={`rounded-full px-4 py-2 text-[13px] font-semibold border transition-colors ${
+                          selected
+                            ? 'bg-[#0d0d0d] text-white border-[#0d0d0d]'
+                            : 'bg-white text-[#4b5563] border-[#e5e7eb] hover:bg-[#f7f7f7]'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#6e6e73] mb-1.5">
+                  Razlog (neobvezno)
+                </label>
+                <textarea
+                  value={roleRequestReason}
+                  onChange={(e) => setRoleRequestReason(e.target.value)}
+                  placeholder="Kratko opišite, zakaj zaprošate za to vlogo..."
+                  rows={3}
+                  className="profile-input resize-none"
+                />
+              </div>
+
+              {roleRequestState === 'error' && (
+                <p className="text-sm text-[#d14242]">{roleRequestError}</p>
+              )}
+
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={roleRequestState === 'submitting'}
+                  className="px-[18px] py-[8px] rounded-full text-[13px] font-semibold bg-[#0d0d0d] text-white border-0 cursor-pointer font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {roleRequestState === 'submitting' ? 'Pošiljanje...' : 'Pošlji zahtevo'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
 
       {loading && (
         <div className="mb-[18px] rounded-[16px] bg-[#f7f7f7] px-4 py-3 text-sm text-[#6e6e73]">

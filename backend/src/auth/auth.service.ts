@@ -94,6 +94,21 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return { idToken: data.idToken ?? '', uid: data.localId ?? '' };
+    const idToken = data.idToken ?? '';
+    const uid = data.localId ?? '';
+
+    const existing = await this.usersService.findByUidOrNull(uid);
+    if (!existing) {
+      await this.usersService.createUser({
+        uid,
+        email: dto.email,
+        displayName: dto.email.split('@')[0],
+        role: UserRoleEnum.PARTICIPANT,
+        profileStatus: 'incomplete',
+        createdAt: new Date(),
+      });
+    }
+
+    return { idToken, uid };
   }
 }

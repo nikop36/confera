@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useStoredUser } from '../lib/auth';
+import { usePathname, useRouter } from 'next/navigation';
+import { clearStoredUser, useStoredUser } from '../lib/auth';
 
 const NAV = [
   { label: 'Novice', href: '/home' },
@@ -36,6 +36,12 @@ const NOTIFICATIONS = [
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = useStoredUser();
   const pathname = usePathname();
+  const router = useRouter();
+
+  function logout() {
+    clearStoredUser();
+    router.push('/login');
+  }
 
   const initials = user?.displayName
     .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() ?? '??';
@@ -90,8 +96,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
+          {/* Logout */}
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-[10px] px-[14px] py-[9px] rounded-xl text-sm text-[#d14242] font-normal hover:bg-[#fff5f5] w-full border-0 bg-transparent cursor-pointer font-sans mb-1"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span>Odjava</span>
+          </button>
+
           {/* Confera branding */}
-          <div className="mt-4 p-[14px] rounded-2xl bg-gradient-to-br from-[#f0f9ff] to-[#fef3fb] relative overflow-hidden">
+          <div className="mt-1 p-[14px] rounded-2xl bg-gradient-to-br from-[#f0f9ff] to-[#fef3fb] relative overflow-hidden">
             <div className="absolute w-14 h-14 rounded-full bg-gradient-to-br from-[#a8edea] to-[#c2e9fb] -top-3 -right-3 opacity-50" />
             <div className="flex items-center gap-2 mb-1.5">
               <div className="w-[26px] h-[26px] rounded-lg bg-[#0d0d0d] flex items-center justify-center shrink-0">

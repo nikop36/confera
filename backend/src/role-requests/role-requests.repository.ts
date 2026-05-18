@@ -11,7 +11,7 @@ export class RoleRequestsRepository {
 
   async saveRoleRequest(data: Omit<RoleRequest, 'id'>): Promise<RoleRequest> {
     const db = this.firebaseService.getFirestore();
-    const ref = await db.collection('roleRequest').add(data);
+    const ref = await db.collection('roleRequests').add(data);
 
     return { id: ref.id, ...data };
   }

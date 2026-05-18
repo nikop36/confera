@@ -13,11 +13,11 @@ function passwordStrength(pw: string) {
   if (!pw) return null;
   const score = [pw.length >= 12, /[A-Z]/.test(pw), /\d/.test(pw), /[^A-Za-z0-9]/.test(pw)].filter(Boolean).length;
   const levels = [
-    { label: 'Šibko', color: '#e05c5c' },
-    { label: 'Šibko', color: '#e05c5c' },
+    { label: 'Šibko', color: '#d14242' },
+    { label: 'Šibko', color: '#d14242' },
     { label: 'Srednje', color: '#c4a87d' },
     { label: 'Dobro', color: '#7fa8c8' },
-    { label: 'Močno', color: '#6fcf97' },
+    { label: 'Močno', color: '#16803c' },
   ];
   return { score, ...levels[score] };
 }
@@ -62,7 +62,6 @@ export default function RegisterPage() {
       }
 
       const data = await res.json().catch(() => ({}));
-
       const { idToken, uid } = await firebaseSignIn(form.email, form.password);
 
       saveStoredUser({
@@ -81,122 +80,105 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen flex" style={{ background: 'var(--bg)' }}>
+    <main className="min-h-screen flex bg-white font-sans">
 
-      {/* ── Left brand panel ── */}
-      <div className="hidden lg:flex flex-col relative w-[45%] overflow-hidden">
-        <div className="absolute inset-0 map-grid" />
-        <div className="absolute inset-0 vignette" />
-        <div
-          className="absolute inset-0"
-          style={{ background: 'radial-gradient(ellipse 60% 50% at 30% 50%, rgba(127,168,200,0.07) 0%, transparent 70%)' }}
-        />
+      {/* ── Left panel ── */}
+      <div
+        className="hidden lg:flex flex-col justify-between w-[42%] p-12 relative overflow-hidden"
+        style={{ background: 'linear-gradient(150deg, #f0f5fb 0%, #faf0fb 100%)' }}
+      >
+        {/* Subtle grid */}
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'linear-gradient(rgba(127,168,200,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(127,168,200,0.06) 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
+        }} />
 
-        <div className="relative z-10 flex flex-col h-full p-12">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full border flex items-center justify-center" style={{ borderColor: 'var(--border-accent)' }}>
-              <div className="w-2 h-2 rounded-full" style={{ background: 'var(--accent)' }} />
-            </div>
-            <span className="font-display text-lg tracking-wide" style={{ color: 'var(--text)' }}>Confera</span>
-          </Link>
+        <Link href="/" className="relative flex items-center gap-2 no-underline">
+          <div className="w-2 h-2 rounded-full bg-[#7fa8c8]" />
+          <span className="font-bold text-[17px] text-[#0d0d0d] tracking-wide">Confera</span>
+        </Link>
 
-          <div className="flex-1 flex flex-col justify-center">
-            <div className="section-label mb-4">Nova registracija</div>
-            <h2 className="font-display text-5xl font-light leading-tight mb-6" style={{ color: 'var(--text)' }}>
-              Pametno<br />
-              <em style={{ color: 'var(--accent)', fontStyle: 'italic' }}>mreženje</em><br />
-              se začne tukaj.
-            </h2>
-            <p className="text-sm leading-relaxed max-w-xs" style={{ color: 'var(--text-muted)' }}>
-              Pridružite se sistemu za ciljno usmerjeno mreženje med udeleženci
-              konference — akademija, industrija, javna uprava.
-            </p>
+        <div className="relative">
+          <p className="text-[11px] font-semibold text-[#7fa8c8] tracking-[0.18em] uppercase mb-4">Nova registracija</p>
+          <h2 className="text-[2.4rem] font-bold leading-tight text-[#0d0d0d] mb-5">
+            Pametno<br />
+            <span className="text-[#7fa8c8]">mreženje</span><br />
+            se začne tukaj.
+          </h2>
+          <p className="text-[14px] text-[#6e6e73] leading-relaxed max-w-[260px]">
+            Pridružite se sistemu za ciljno usmerjeno mreženje med udeleženci
+            konference — akademija, industrija, javna uprava.
+          </p>
 
-            {/* Network node decoration */}
-            <div className="mt-12">
-              <svg width="280" height="100" viewBox="0 0 280 100" fill="none">
-                <line x1="60" y1="50" x2="140" y2="22" stroke="rgba(127,168,200,0.15)" strokeWidth="1" />
-                <line x1="60" y1="50" x2="140" y2="78" stroke="rgba(127,168,200,0.15)" strokeWidth="1" />
-                <line x1="140" y1="22" x2="220" y2="38" stroke="rgba(127,168,200,0.15)" strokeWidth="1" />
-                <line x1="140" y1="78" x2="220" y2="62" stroke="rgba(127,168,200,0.15)" strokeWidth="1" />
-                <line x1="140" y1="22" x2="140" y2="78" stroke="rgba(127,168,200,0.07)" strokeWidth="1" />
-                <line x1="220" y1="38" x2="220" y2="62" stroke="rgba(127,168,200,0.07)" strokeWidth="1" />
-                <circle cx="60" cy="50" r="16" fill="rgba(127,168,200,0.04)" stroke="rgba(127,168,200,0.12)" strokeWidth="1" />
-                <circle cx="60" cy="50" r="6" fill="rgba(127,168,200,0.18)" stroke="rgba(127,168,200,0.5)" strokeWidth="1" />
-                <circle cx="140" cy="22" r="4" fill="rgba(127,168,200,0.12)" stroke="rgba(127,168,200,0.3)" strokeWidth="1" />
-                <circle cx="140" cy="78" r="4" fill="rgba(127,168,200,0.12)" stroke="rgba(127,168,200,0.3)" strokeWidth="1" />
-                <circle cx="220" cy="38" r="5" fill="rgba(196,168,125,0.18)" stroke="rgba(196,168,125,0.4)" strokeWidth="1" />
-                <circle cx="220" cy="62" r="3" fill="rgba(127,168,200,0.1)" stroke="rgba(127,168,200,0.25)" strokeWidth="1" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="section-divider" />
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Konferenca 2026</span>
-          </div>
+          {/* Network decoration */}
+          <svg className="mt-10" width="260" height="100" viewBox="0 0 260 100" fill="none">
+            <line x1="55" y1="50" x2="130" y2="22" stroke="rgba(127,168,200,0.2)" strokeWidth="1" />
+            <line x1="55" y1="50" x2="130" y2="78" stroke="rgba(127,168,200,0.2)" strokeWidth="1" />
+            <line x1="130" y1="22" x2="205" y2="38" stroke="rgba(127,168,200,0.2)" strokeWidth="1" />
+            <line x1="130" y1="78" x2="205" y2="62" stroke="rgba(127,168,200,0.2)" strokeWidth="1" />
+            <line x1="130" y1="22" x2="130" y2="78" stroke="rgba(127,168,200,0.08)" strokeWidth="1" />
+            <line x1="205" y1="38" x2="205" y2="62" stroke="rgba(127,168,200,0.08)" strokeWidth="1" />
+            <circle cx="55" cy="50" r="16" fill="rgba(127,168,200,0.06)" stroke="rgba(127,168,200,0.18)" strokeWidth="1" />
+            <circle cx="55" cy="50" r="6" fill="rgba(127,168,200,0.2)" stroke="rgba(127,168,200,0.55)" strokeWidth="1" />
+            <circle cx="130" cy="22" r="4" fill="rgba(127,168,200,0.12)" stroke="rgba(127,168,200,0.3)" strokeWidth="1" />
+            <circle cx="130" cy="78" r="4" fill="rgba(127,168,200,0.12)" stroke="rgba(127,168,200,0.3)" strokeWidth="1" />
+            <circle cx="205" cy="38" r="5" fill="rgba(196,168,125,0.2)" stroke="rgba(196,168,125,0.45)" strokeWidth="1" />
+            <circle cx="205" cy="62" r="3" fill="rgba(127,168,200,0.1)" stroke="rgba(127,168,200,0.25)" strokeWidth="1" />
+          </svg>
         </div>
+
+        <p className="relative text-[12px] text-[#8e8e93]">Konferenca 2026</p>
       </div>
 
-      {/* ── Right form panel ── */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+      {/* ── Right panel (form) ── */}
+      <div className="flex-1 flex items-start justify-center p-8 lg:p-12 overflow-y-auto">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-[420px]"
+          transition={{ duration: 0.45 }}
+          className="w-full max-w-[400px] py-4"
         >
           {/* Mobile logo */}
-          <div className="lg:hidden mb-8">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-full border flex items-center justify-center" style={{ borderColor: 'var(--border-accent)' }}>
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--accent)' }} />
-              </div>
-              <span className="font-display text-lg" style={{ color: 'var(--text)' }}>Confera</span>
-            </Link>
-          </div>
+          <Link href="/" className="lg:hidden flex items-center gap-2 no-underline mb-8">
+            <div className="w-2 h-2 rounded-full bg-[#7fa8c8]" />
+            <span className="font-bold text-[17px] text-[#0d0d0d] tracking-wide">Confera</span>
+          </Link>
 
           <div className="mb-8">
-            <div className="section-label mb-3">Ustvari račun</div>
-            <h1 className="font-display text-4xl font-light mb-2" style={{ color: 'var(--text)' }}>
-              Dobrodošli
-            </h1>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            <h2 className="text-[28px] font-bold text-[#0d0d0d] mb-1">Dobrodošli</h2>
+            <p className="text-[14px] text-[#8e8e93]">
               Že imate račun?{' '}
-              <Link href="/login" style={{ color: 'var(--accent)' }} className="hover:underline">
-                Prijavite se
-              </Link>
+              <Link href="/login" className="text-[#7fa8c8] hover:underline">Prijavite se</Link>
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-
-            {/* Display name */}
-            <FormField label="Polno ime">
+            <div>
+              <label className="block text-xs font-semibold text-[#6e6e73] mb-1.5">Polno ime</label>
               <input
                 type="text"
                 value={form.displayName}
                 onChange={field('displayName')}
                 placeholder="Jana Novak"
                 required
-                className="form-input"
+                className="profile-input"
               />
-            </FormField>
+            </div>
 
-            {/* Email */}
-            <FormField label="E-pošta">
+            <div>
+              <label className="block text-xs font-semibold text-[#6e6e73] mb-1.5">E-pošta</label>
               <input
                 type="email"
                 value={form.email}
                 onChange={field('email')}
                 placeholder="jana@primer.si"
                 required
-                className="form-input"
+                className="profile-input"
               />
-            </FormField>
+            </div>
 
-            {/* Password */}
-            <FormField label="Geslo">
+            <div>
+              <label className="block text-xs font-semibold text-[#6e6e73] mb-1.5">Geslo</label>
               <div className="relative">
                 <input
                   type={showPw ? 'text' : 'password'}
@@ -204,13 +186,12 @@ export default function RegisterPage() {
                   onChange={field('password')}
                   placeholder="Min. 12 znakov"
                   required
-                  className="form-input pr-12"
+                  className="profile-input pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPw(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 transition-opacity hover:opacity-100 opacity-60"
-                  style={{ color: 'var(--text-muted)' }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#8e8e93] hover:text-[#0d0d0d] transition-colors bg-transparent border-0 cursor-pointer"
                 >
                   {showPw ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
@@ -222,25 +203,23 @@ export default function RegisterPage() {
                       <div
                         key={i}
                         className="h-0.5 flex-1 rounded-full transition-all duration-300"
-                        style={{ background: i <= strength.score ? strength.color : 'var(--border)' }}
+                        style={{ background: i <= strength.score ? strength.color : '#e5e7eb' }}
                       />
                     ))}
                   </div>
-                  <span className="text-xs" style={{ color: strength.color }}>{strength.label}</span>
+                  <span className="text-[12px]" style={{ color: strength.color }}>{strength.label}</span>
                 </div>
               )}
-              <p className="mt-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+              <p className="mt-1.5 text-[12px] text-[#8e8e93]">
                 Vsaj 12 znakov, 1 velika črka, 1 številka, 1 poseben znak.
               </p>
-            </FormField>
+            </div>
 
-            {/* Invite token */}
             <div>
               <button
                 type="button"
                 onClick={() => setShowInvite(v => !v)}
-                className="flex items-center gap-2 text-xs transition-colors"
-                style={{ color: showInvite ? 'var(--accent)' : 'var(--text-muted)' }}
+                className="flex items-center gap-1.5 text-[13px] text-[#8e8e93] hover:text-[#0d0d0d] bg-transparent border-0 cursor-pointer font-sans transition-colors"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d={showInvite ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'} />
@@ -258,34 +237,27 @@ export default function RegisterPage() {
                     value={form.inviteToken}
                     onChange={field('inviteToken')}
                     placeholder="INVITE-XXXX"
-                    className="form-input font-mono"
+                    className="profile-input font-mono"
                   />
                 </motion.div>
               )}
             </div>
 
-            {/* Error */}
             {error && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="px-4 py-3 rounded-lg text-sm"
-                style={{
-                  background: 'rgba(224,92,92,0.08)',
-                  border: '1px solid rgba(224,92,92,0.2)',
-                  color: '#e05c5c',
-                }}
+                className="px-4 py-3 rounded-xl text-[13px]"
+                style={{ background: 'rgba(209,66,66,0.06)', border: '1px solid rgba(209,66,66,0.15)', color: '#d14242' }}
               >
                 {error}
               </motion.div>
             )}
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full justify-center mt-2"
-              style={{ opacity: loading ? 0.7 : 1 }}
+              className="w-full py-3 rounded-full bg-[#0d0d0d] text-white text-[14px] font-semibold border-0 cursor-pointer font-sans mt-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -297,7 +269,7 @@ export default function RegisterPage() {
               ) : (
                 <>
                   Ustvari račun
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
                 </>
@@ -305,26 +277,15 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="mt-8 text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+          <p className="mt-6 text-[12px] text-center text-[#8e8e93]">
             Z registracijo se strinjate s{' '}
-            <span style={{ color: 'var(--accent)' }} className="cursor-pointer hover:underline">pogoji uporabe</span>
+            <span className="text-[#7fa8c8] cursor-pointer hover:underline">pogoji uporabe</span>
             {' '}in{' '}
-            <span style={{ color: 'var(--accent)' }} className="cursor-pointer hover:underline">politiko zasebnosti</span>.
+            <span className="text-[#7fa8c8] cursor-pointer hover:underline">politiko zasebnosti</span>.
           </p>
         </motion.div>
       </div>
     </main>
-  );
-}
-
-function FormField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs mb-1.5 tracking-wide" style={{ color: 'var(--text-muted)' }}>
-        {label}
-      </label>
-      {children}
-    </div>
   );
 }
 
