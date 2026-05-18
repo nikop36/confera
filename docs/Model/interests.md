@@ -148,7 +148,7 @@ Vrednosti so za zdaj shranjene kot prikazna besedila. To omogoča hitro implemen
 
 ## Strategija za AI matching v1
 
-Za prvo različico ujemanja naj sistem izdela tekstovni profil uporabnika iz strukturiranih in prostih polj. Primer:
+Za prvo različico ujemanja sistem izdela tekstovni profil uporabnika iz strukturiranih in prostih polj. Primer:
 
 ```txt
 Interesi: Umetna inteligenca, Medicina
@@ -159,7 +159,21 @@ Opis: ...
 Institucija: ...
 ```
 
-Ta tekstovni profil se lahko uporabi za embeddinge in izračun podobnosti med udeleženci. Strukturirana polja naj imajo večjo težo kot prosti opis, ker so izbrana iz nadzorovane taksonomije.
+Ta tekstovni profil se sinhronizira v PostgreSQL tabelo
+`participant_profile_index`, kjer se uporablja za hibridno iskanje:
+
+- `to_tsvector` za besedilno ujemanje po interesih, ciljih in ključnih besedah
+- `pgvector` za semantično podobnost profilov
+- združen rezultat, ki vrne rangirane uporabnike in razloge za priporočilo
+
+Firestore ostane vir resnice za profil, PostgreSQL pa je iskalni indeks za AI
+ujemanje. Lokalni razvoj lahko uporablja `docker-compose.yml`, ki zažene
+`pgvector/pgvector:pg16`.
+
+V trenutni verziji je embedding model označen kot prototip
+`prototype-local-hash-384-v1`. To pomeni, da je arhitektura za vektorsko
+ujemanje pripravljena, kakovost priporočil pa se bo izboljšala z zamenjavo
+`EmbeddingService` z realnim semantičnim modelom.
 
 ---
 

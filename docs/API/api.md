@@ -160,6 +160,49 @@ Javni profil kateregakoli uporabnika.
 
 ---
 
+## AI ujemanje
+
+### GET /matches/me
+Vrne priporočene udeležence za trenutno prijavljenega uporabnika.
+
+**Zahteva avtentikacijo:** Da
+
+**Opomba:** Endpoint uporablja PostgreSQL + `pgvector` indeks. Če `DATABASE_URL`
+ni nastavljen ali baza nima razširitve `pgvector`, endpoint vrne `503`, ostali
+deli aplikacije pa še naprej delujejo prek Firestore.
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Priporočila uspešno vrnjena |
+| 401 | Ni avtentikacije |
+| 404 | Profil ni najden |
+| 503 | SQL matching indeks ni konfiguriran |
+
+**Uspešen odgovor**
+```json
+[
+  {
+    "uid": "firebase-uid",
+    "displayName": "Petra Kos",
+    "affiliation": "Univerza v Ljubljani",
+    "bio": "Raziskovalka na področju AI",
+    "interests": ["Umetna inteligenca", "Medicina"],
+    "goals": ["Raziskovalno sodelovanje"],
+    "competencies": ["Strojno učenje"],
+    "researchKeywords": ["LLM"],
+    "meetingType": "both",
+    "score": 0.031,
+    "reasons": [
+      "Skupna področja interesa: Umetna inteligenca",
+      "Ujemanje ključnih besed: LLM"
+    ]
+  }
+]
+```
+
+---
+
 ## Prošnja za vlogo
 
 ### POST /role-requests

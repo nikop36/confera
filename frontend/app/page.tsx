@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import HeroSection from "./components/HeroSection";
 
 const FEATURES = [
@@ -54,16 +55,16 @@ export default function Home() {
 
       {/* ── Navbar ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-10 h-[62px] bg-white/90 backdrop-blur-md border-b border-[#f0f0f0]">
-        <a href="/" className="flex items-center gap-2 no-underline">
+        <Link href="/" className="flex items-center gap-2 no-underline">
           <div className="w-2 h-2 rounded-full bg-[#7fa8c8]" />
           <span className="font-bold text-[17px] text-[#0d0d0d] tracking-wide">Confera</span>
-        </a>
+        </Link>
         <div className="hidden md:flex items-center gap-8">
           {["Funkcije", "Kako deluje", "O projektu"].map((l) => (
             <a key={l} href="#" className="text-[13px] text-[#6e6e73] no-underline hover:text-[#0d0d0d] transition-colors">{l}</a>
           ))}
         </div>
-        <a
+        <Link
           href="/login"
           className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#0d0d0d] text-white text-[13px] font-semibold no-underline"
         >
@@ -71,7 +72,7 @@ export default function Home() {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
-        </a>
+        </Link>
       </nav>
 
       {/* ── Hero (map + converging lines — unchanged logic) ── */}

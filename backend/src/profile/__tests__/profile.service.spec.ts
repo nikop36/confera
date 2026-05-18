@@ -2,12 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProfileService } from '../profile.service';
 import { UsersRepository } from '../../users/users.repository';
 import type { UserProfile } from '../../common/interfaces/user.interface';
+import { MatchingIndexService } from '../../matching/matching-index.service';
 
 describe('ProfileService', () => {
   let profileService: ProfileService;
 
   const mockFindByUid = jest.fn();
   const mockUpdateProfile = jest.fn();
+  const mockSafeUpsertProfile = jest.fn();
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -18,6 +20,12 @@ describe('ProfileService', () => {
           useValue: {
             findByUid: mockFindByUid,
             updateProfile: mockUpdateProfile,
+          },
+        },
+        {
+          provide: MatchingIndexService,
+          useValue: {
+            safeUpsertProfile: mockSafeUpsertProfile,
           },
         },
       ],
@@ -59,9 +67,18 @@ describe('ProfileService', () => {
       mockUpdateProfile.mockResolvedValue(undefined);
 
       const partialUpdate: Partial<UserProfile> = { bio: 'Researcher at FRI' };
+      mockFindByUid.mockResolvedValue({
+        uid: 'uid-123',
+        bio: 'Researcher at FRI',
+      });
+
       await profileService.updateProfile('uid-123', partialUpdate);
 
       expect(mockUpdateProfile).toHaveBeenCalledWith('uid-123', partialUpdate);
+      expect(mockSafeUpsertProfile).toHaveBeenCalledWith({
+        uid: 'uid-123',
+        bio: 'Researcher at FRI',
+      });
     });
 
     it('should handle updating multiple fields at once', async () => {
@@ -73,10 +90,15 @@ describe('ProfileService', () => {
         interests: ['AI', 'ML'],
         meetingType: 'both',
       };
+      mockFindByUid.mockResolvedValue({ uid: 'uid-123', ...partialUpdate });
 
       await profileService.updateProfile('uid-123', partialUpdate);
 
       expect(mockUpdateProfile).toHaveBeenCalledWith('uid-123', partialUpdate);
+      expect(mockSafeUpsertProfile).toHaveBeenCalledWith({
+        uid: 'uid-123',
+        ...partialUpdate,
+      });
     });
   });
 });

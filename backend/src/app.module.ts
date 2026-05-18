@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProfileModule } from './profile/profile.module';
 import { RoleRequestsModule } from './role-requests/role-requests.module';
+import { MatchingModule } from './matching/matching.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { RoleRequestsModule } from './role-requests/role-requests.module';
     UsersModule,
     ProfileModule,
     RoleRequestsModule,
+    MatchingModule,
   ],
   controllers: [AppController],
   providers: [],

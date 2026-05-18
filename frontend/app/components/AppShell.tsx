@@ -2,7 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { clearStoredUser, useStoredUser } from '../lib/auth';
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 const NAV = [
   { label: 'Novice', href: '/home' },
@@ -19,6 +22,12 @@ const SUGGESTIONS = [
   { name: 'Andrej Novak', org: 'Startup Slovenia', hue: 280 },
   { name: 'Nina Hauptman', org: 'Ministrstvo', hue: 155 },
 ];
+
+type MatchSuggestion = {
+  uid: string;
+  displayName: string;
+  affiliation?: string;
+};
 
 const RECOMMENDATIONS = [
   { label: 'AI in robotika', bg: '#1d1d1f', fg: '#ffffff' },
@@ -37,14 +46,47 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = useStoredUser();
   const pathname = usePathname();
   const router = useRouter();
-
-  function logout() {
-    clearStoredUser();
-    router.push('/login');
-  }
+  const [matches, setMatches] = useState<MatchSuggestion[]>([]);
 
   const initials = user?.displayName
     .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() ?? '??';
+  const suggestions = user?.idToken && matches.length
+    ? matches.slice(0, 3).map((match, index) => ({
+      name: match.displayName,
+      org: match.affiliation || 'Confera',
+      hue: [200, 280, 155][index] ?? 210,
+    }))
+    : SUGGESTIONS;
+
+  useEffect(() => {
+    if (!user?.idToken) return;
+
+    async function loadMatches(idToken: string) {
+      try {
+        const response = await fetch(`${API}/matches/me`, {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+
+        if (!response.ok) {
+          setMatches([]);
+          return;
+        }
+
+        const data = (await response.json()) as MatchSuggestion[];
+        setMatches(data);
+      } catch {
+        setMatches([]);
+      }
+    }
+
+    void loadMatches(user.idToken);
+  }, [user?.idToken]);
+
+  function handleLogout() {
+    clearStoredUser();
+    setMatches([]);
+    router.replace('/login');
+  }
 
   return (
     <div className="min-h-screen bg-white text-[#0d0d0d] font-sans">
@@ -96,22 +138,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          {/* Logout */}
-          <button
-            type="button"
-            onClick={logout}
-            className="flex items-center gap-[10px] px-[14px] py-[9px] rounded-xl text-sm text-[#d14242] font-normal hover:bg-[#fff5f5] w-full border-0 bg-transparent cursor-pointer font-sans mb-1"
-          >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            <span>Odjava</span>
-          </button>
-
           {/* Confera branding */}
-          <div className="mt-1 p-[14px] rounded-2xl bg-gradient-to-br from-[#f0f9ff] to-[#fef3fb] relative overflow-hidden">
+          <div className="mt-4 p-[14px] rounded-2xl bg-gradient-to-br from-[#f0f9ff] to-[#fef3fb] relative overflow-hidden">
             <div className="absolute w-14 h-14 rounded-full bg-gradient-to-br from-[#a8edea] to-[#c2e9fb] -top-3 -right-3 opacity-50" />
             <div className="flex items-center gap-2 mb-1.5">
               <div className="w-[26px] h-[26px] rounded-lg bg-[#0d0d0d] flex items-center justify-center shrink-0">
@@ -124,6 +152,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <p className="text-[11px] text-[#6e6e73] leading-relaxed relative">Pametno mreženje na konferencah</p>
           </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-3 flex items-center justify-center rounded-xl border border-[#e5e5ea] bg-white px-4 py-2 text-sm font-semibold text-[#3d3d3d] transition-colors hover:bg-[#f5f5f5] font-sans"
+          >
+            Odjava
+          </button>
         </aside>
 
         {/* ── CENTER ── */}
@@ -157,7 +193,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <button className="text-xs text-[#007AFF] bg-transparent border-0 cursor-pointer font-sans">Vse</button>
             </div>
             <div className="flex flex-col gap-3">
-              {SUGGESTIONS.map((sug, i) => (
+              {suggestions.map((sug, i) => (
                 <div key={i} className="flex items-center gap-[10px]">
                   <div
                     className="w-[38px] h-[38px] rounded-full shrink-0 flex items-center justify-center text-xs font-bold"
