@@ -16,8 +16,8 @@ Firebase Auth UID.
 | uid | string | Da | Firebase Auth UID |
 | email | string | Da | E-poštni naslov |
 | displayName | string | Da | Prikazno ime |
-| role | string | Da | Vloga: `participant`, `organizer`, `industry`, `admin` |
-| profileStatus | string | Da | `incomplete` ali `complete` |
+| role | string | Da | Vloga: `participant`, `organizer`, `industry`, `admin`, `guest` |
+| profileStatus | string | Da | `incomplete` — profil ni v AI ujemanju; `complete` — profil je indeksiran za AI ujemanje |
 | createdAt | timestamp | Da | Čas registracije |
 | bio | string | Ne | Kratka predstavitev |
 | affiliation | string | Ne | Organizacija ali institucija |
@@ -101,18 +101,17 @@ Zahtevki udeležencev za spremembo vloge. Čaka na odobritev admina.
 ## Načrtovane kolekcije
 
 ### `invites`
-Povabila za direktno dodelitev vloge ob registraciji. Ustvari jih admin.
+Začasni zapisi za udeležence, uvožene iz CSV, ki še nimajo Firebase računa. Dokument ID je normaliziran e-poštni naslov.
+
+Ko se tak uporabnik registrira z istim e-poštnim naslovom, se gostujoči zapis izbriše in uporabnik dobi vlogo `participant` v kolekciji `users`.
 
 | Polje | Tip | Opis |
 |---|---|---|
-| token | string | Naključni URL-varni žeton |
-| role | string | `organizer` ali `industry` |
-| createdBy | string | UID admina |
-| createdAt | timestamp | Čas ustvaritve |
-| expiresAt | timestamp | Rok veljavnosti — privzeto 7 dni |
-| usedBy | string | UID uporabnika ki je uporabil povabilo |
-| usedAt | timestamp | Čas uporabe |
-| isActive | boolean | Ali je povabilo še aktivno |
+| email | string | E-poštni naslov (hkrati document ID) |
+| displayName | string | Prikazno ime iz CSV uvoza |
+| createdAt | timestamp | Čas uvoza |
+
+**Opomba:** Gostujočim zapisom ni ustvarjen Firebase Auth račun. Vloga je konceptualno `guest` — ob registraciji se samodejno nadgradi v `participant`.
 
 ---
 

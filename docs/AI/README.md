@@ -32,6 +32,10 @@ Uporabnik posodobi profil
 v Firestore. SQL indeks je zato dodaten sloj, ne kritična pot za osnovno uporabo
 aplikacije.
 
+V AI ujemanje so vključeni samo profili s `profileStatus: 'complete'`. Uporabniki
+z nepopolnim profilom (`incomplete`) aplikacijo normalno uporabljajo, vendar niso
+vidni v priporočilih in ne prejemajo ujemanj.
+
 ---
 
 ## Podatkovni indeks

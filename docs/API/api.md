@@ -42,6 +42,8 @@ Registracija novega uporabnika.
 }
 ```
 
+**Opomba:** Če je bil e-poštni naslov predhodno uvožen iz CSV, se gostujoči zapis iz kolekcije `invites` samodejno izbriše ob registraciji.
+
 ---
 
 ### POST /auth/login
@@ -282,6 +284,54 @@ Zavrnitev zahtevka za vlogo. Samo admini.
 | 200 | Zahtevek zavrnjen |
 | 400 | Zahtevek je bil že obravnavan |
 | 404 | Zahtevek ni najden |
+
+---
+
+## Uvoz udeležencev
+
+### POST /invites/import
+Uvoz udeležencev iz CSV datoteke. Samo admini.
+
+**Zahteva avtentikacijo:** Da (samo admin)
+
+**Telo zahteve**
+| Polje | Tip | Opis |
+|---|---|---|
+| csv | string | Vsebina CSV datoteke kot besedilo |
+
+**Format CSV:**
+```
+email,displayName
+jana@primer.si,Jana Novak
+marko@primer.si,Marko Kovač
+```
+
+**Logika obdelave vsake vrstice:**
+- E-pošta že registrirana → udeleženec je že del aplikacije, nič se ne spremeni
+- E-pošta že uvožena (gostujoči zapis obstaja) → preskočena
+- Nov e-poštni naslov → ustvarjen gostujoči zapis v kolekciji `invites`
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Uvoz zaključen, vrne povzetek |
+| 400 | Napaka pri validaciji |
+| 403 | Ni dovoljenja |
+
+**Uspešen odgovor**
+```json
+{
+  "imported": 2,
+  "alreadyRegistered": 1,
+  "alreadyInvited": 0,
+  "invalid": 0,
+  "rows": [
+    { "email": "jana@primer.si", "displayName": "Jana Novak", "status": "imported" },
+    { "email": "marko@primer.si", "displayName": "Marko Kovač", "status": "imported" },
+    { "email": "obstoječ@primer.si", "displayName": "Obstoječ Uporabnik", "status": "already_registered" }
+  ]
+}
+```
 
 ---
 
