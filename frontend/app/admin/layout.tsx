@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useStoredUser } from '../lib/auth';
 
@@ -43,15 +43,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const user = useStoredUser();
   const router = useRouter();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => setMounted(true), 0);
-    return () => window.clearTimeout(timeoutId);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
     if (user === null) {
       router.push('/login');
       return;
@@ -59,9 +51,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     if (user.role !== 'admin') {
       router.push('/home');
     }
-  }, [user, router, mounted]);
+  }, [user, router]);
 
-  if (!mounted || !user || user.role !== 'admin') {
+  if (!user || user.role !== 'admin') {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <p className="text-sm text-[#8e8e93]">Preverjanje dostopa...</p>

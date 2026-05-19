@@ -15,9 +15,9 @@ flowchart TD
 
     D -- "Da" --> F["Sistem naloži profile ostalih udeležencev"]
     F --> G["Sistem izloči neustrezne kandidate"]
-    G --> H["Sistem primerja interese, kompetence, cilje in vloge"]
-    H --> I["Sistem preveri časovno razpoložljivost"]
-    I --> J["Sistem izračuna oceno ujemanja"]
+    G --> I["Sistem preveri časovno razpoložljivost"]
+    I --> H["Sistem primerja interese, kompetence, cilje in vloge"]
+    H --> J["Sistem izračuna oceno ujemanja"]
     J --> K{"Ali obstajajo primerna ujemanja?"}
 
     K -- "Ne" --> L["Sistem prikaže sporočilo, da trenutno ni priporočil"]
@@ -37,35 +37,20 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A([Začetek]) --> B["Udeleženec izbere drugega udeleženca"]
-    B --> C["Udeleženec pošlje zahtevo za srečanje"]
-    C --> D["Sistem naloži razpoložljivost obeh udeležencev"]
-    D --> E["Sistem naloži razpoložljive termine in prostore"]
-    E --> F{"Ali obstaja skupen prost termin?"}
+    A([Začetek]) --> B["Predstavnik industrije objavi razpoložljive termine in lokacije"]
+    B --> C["Udeleženec pregleda razpoložljive termine"]
+    C --> D["Udeleženec izbere termin in pošlje zahtevo za srečanje"]
+    D --> E["Sistem ustvari srečanje s statusom v čakanju"]
+    E --> F["Sistem obvesti predstavnika industrije"]
+    F --> G{"Ali predstavnik industrije sprejme zahtevo?"}
 
-    F -- "Ne" --> G["Sistem prikaže konflikt razpoložljivosti"]
-    G --> Z([Konec])
+    G -- "Ne" --> H["Sistem označi srečanje kot zavrnjeno"]
+    H --> I["Sistem obvesti udeleženca"]
+    I --> Z([Konec])
 
-    F -- "Da" --> H{"Ali je na voljo ustrezen prostor?"}
-    H -- "Ne" --> I["Sistem poišče alternativni termin ali prostor"]
-    I --> J{"Ali obstaja alternativa?"}
-
-    J -- "Ne" --> K["Sistem prikaže, da srečanja ni mogoče razporediti"]
+    G -- "Da" --> J["Sistem potrdi srečanje"]
+    J --> K["Sistem obvesti udeleženca"]
     K --> Z
-
-    J -- "Da" --> L["Sistem predlaga termin in lokacijo"]
-    H -- "Da" --> L
-
-    L --> M["Sistem ustvari srečanje s statusom v čakanju"]
-    M --> N["Sistem obvesti povabljenega udeleženca"]
-    N --> O{"Ali povabljeni udeleženec sprejme srečanje?"}
-
-    O -- "Ne" --> P["Sistem označi srečanje kot zavrnjeno"]
-    P --> Z
-
-    O -- "Da" --> Q["Sistem potrdi srečanje"]
-    Q --> R["Sistem obvesti oba udeleženca"]
-    R --> Z
 ```
 
 ## Proces Uvoza Udeležencev Iz CSV
@@ -73,32 +58,48 @@ flowchart TD
 ```mermaid
 flowchart TD
     A([Začetek]) --> B["Organizator odpre administratorski vmesnik"]
-    B --> C["Organizator naloži CSV datoteko"]
-    C --> D["Sistem preveri pravice organizatorja"]
+    B --> D["Sistem preveri pravice organizatorja"]
     D --> E{"Ali ima uporabnik dovoljenje za uvoz?"}
 
-    E -- "Ne" --> F["Sistem zavrne zahtevo"]
+    E -- "Ne" --> F["Sistem zavrne dostop"]
     F --> Z([Konec])
 
-    E -- "Da" --> G["Sistem prebere CSV datoteko"]
-    G --> H["Sistem preveri strukturo predloge"]
-    H --> I{"Ali so glave stolpcev pravilne?"}
+    E -- "Da" --> C["Organizator naloži CSV datoteko (email, prikazno ime)"]
+    C --> G["Sistem prebere in validira CSV"]
+    G --> H{"Ali je struktura datoteke pravilna?"}
 
-    I -- "Ne" --> J["Sistem prikaže napako predloge"]
+    H -- "Ne" --> I["Sistem prikaže napako strukture"]
+    I --> Z
+
+    H -- "Da" --> J["Sistem preveri vsak e-poštni naslov"]
+    J --> K["Že registrirani → dodani na seznam udeležencev brez sprememb"]
+    K --> L["Že uvoženi (gostujoči zapis obstaja) → preskočeni"]
+    L --> M["Novi naslovi → sistem ustvari gostujoče zapise s prikaznim imenom"]
+    M --> N["Sistem pripravi povzetek uvoza"]
+    N --> O["Organizator pregleda rezultat: uvoženi, že registrirani, preskočeni, neveljavni"]
+    O --> Z
+```
+
+## Proces Dopolnitve Profila
+
+```mermaid
+flowchart TD
+    A([Začetek]) --> B["Uporabnik se prijavi in dostopa do aplikacije"]
+    B --> C{"profileStatus == 'complete'?"}
+
+    C -- "Da" --> D["Profil je indeksiran v AI ujemanju"]
+    D --> Z([Konec])
+
+    C -- "Ne" --> E["Uporabnik še vedno uporablja aplikacijo"]
+    E --> F["Sistem ne vključi profila v AI ujemanje"]
+    F --> G{"Ali uporabnik izpolni profilna polja?"}
+
+    G -- "Ne" --> Z
+
+    G -- "Da" --> H["Sistem shrani profil"]
+    H --> I["Sistem nastavi profileStatus na 'complete'"]
+    I --> J["Sistem indeksira profil za AI ujemanje"]
     J --> Z
-
-    I -- "Da" --> K["Sistem preveri obvezna polja v vrsticah"]
-    K --> L{"Ali so zapisi veljavni?"}
-
-    L -- "Ne" --> M["Sistem prikaže napake po vrsticah"]
-    M --> Z
-
-    L -- "Da" --> N["Sistem normalizira podatke udeležencev"]
-    N --> O["Sistem preveri podvojene uporabnike"]
-    O --> P["Sistem paketno ustvari ali posodobi profile"]
-    P --> Q["Sistem pripravi povzetek uvoza"]
-    Q --> R["Organizator pregleda uvožene in preskočene zapise"]
-    R --> Z
 ```
 
 ## Proces Prijave Na Karierni Razgovor
@@ -119,7 +120,7 @@ flowchart TD
     I --> J{"Ali je termin še prost?"}
 
     J -- "Ne" --> K["Sistem predlaga druge razpoložljive termine"]
-    K --> Z
+    K --> E
 
     J -- "Da" --> L["Sistem ustvari prijavo kandidata"]
     L --> M["Predstavnik podjetja pregleda prijavo"]
