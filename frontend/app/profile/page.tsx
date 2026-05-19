@@ -10,6 +10,7 @@ import {
   KEYWORD_GROUPS,
   type ProfileTaxonomyGroup,
 } from '../lib/profile-taxonomy';
+import { uploadProfileImage } from '../lib/supabase-storage';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -53,6 +54,7 @@ type CropTarget = 'profile' | 'background';
 type CropDraft = {
   target: CropTarget;
   imageUrl: string;
+  file?: File;
   positionX: number;
   positionY: number;
   zoom: number;
@@ -85,16 +87,7 @@ const DEFAULT_FORM: ProfileForm = {
   backgroundImageZoom: 115,
 };
 
-const MAX_IMAGE_SIZE_BYTES = 500 * 1024;
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error('Slike ni bilo mogoče prebrati.'));
-    reader.readAsDataURL(file);
-  });
-}
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const MEETING_TYPES: Array<{ value: MeetingType; label: string }> = [
   { value: 'both', label: 'Oboje' },
@@ -152,7 +145,9 @@ export default function ProfilePage() {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState('');
+  const [imageUploadError, setImageUploadError] = useState('');
   const [success, setSuccess] = useState('');
   const [cropDraft, setCropDraft] = useState<CropDraft | null>(null);
   const [roleRequestState, setRoleRequestState] = useState<RoleRequestState>('idle');
@@ -260,26 +255,22 @@ export default function ProfilePage() {
     }
 
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setError('Slika je prevelika. Za začasno shranjevanje izberite sliko manjšo od 500 KB.');
+      setError('Slika je prevelika. Izberite sliko manjšo od 5 MB.');
       return;
     }
 
-    let imageUrl = '';
-    try {
-      imageUrl = await fileToDataUrl(file);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Slike ni bilo mogoče prebrati.');
-      return;
-    }
+    const imageUrl = URL.createObjectURL(file);
 
     setCropDraft({
       target: key === 'profileImageUrl' ? 'profile' : 'background',
       imageUrl,
+      file,
       positionX: 50,
       positionY: 50,
       zoom: 115,
     });
     setError('');
+    setImageUploadError('');
     setSuccess('');
   }
 
@@ -297,31 +288,48 @@ export default function ProfilePage() {
     });
   }
 
-  function applyCropDraft() {
+  async function applyCropDraft() {
     if (!cropDraft) return;
 
     setError('');
+    setImageUploadError('');
+    setUploadingImage(true);
 
-    setForm((prev) => (
-      cropDraft.target === 'profile'
-        ? {
-          ...prev,
-          profileImageUrl: cropDraft.imageUrl,
-          profileImagePositionX: cropDraft.positionX,
-          profileImagePositionY: cropDraft.positionY,
-          profileImageZoom: cropDraft.zoom,
-        }
-        : {
-          ...prev,
-          backgroundImageUrl: cropDraft.imageUrl,
-          backgroundImagePositionX: cropDraft.positionX,
-          backgroundImagePositionY: cropDraft.positionY,
-          backgroundImageZoom: cropDraft.zoom,
-        }
-    ));
+    try {
+      const nextImageUrl = cropDraft.file
+        ? await uploadProfileImage({
+          file: cropDraft.file,
+          uid: profile?.uid ?? user?.uid ?? 'unknown-user',
+          kind: cropDraft.target === 'profile' ? 'avatar' : 'cover',
+        })
+        : cropDraft.imageUrl;
 
-    setCropDraft(null);
-    setSuccess('');
+      setForm((prev) => (
+        cropDraft.target === 'profile'
+          ? {
+            ...prev,
+            profileImageUrl: nextImageUrl,
+            profileImagePositionX: cropDraft.positionX,
+            profileImagePositionY: cropDraft.positionY,
+            profileImageZoom: cropDraft.zoom,
+          }
+          : {
+            ...prev,
+            backgroundImageUrl: nextImageUrl,
+            backgroundImagePositionX: cropDraft.positionX,
+            backgroundImagePositionY: cropDraft.positionY,
+            backgroundImageZoom: cropDraft.zoom,
+          }
+      ));
+
+      if (cropDraft.file) URL.revokeObjectURL(cropDraft.imageUrl);
+      setCropDraft(null);
+      setSuccess('Slika je naložena. Za trajno shranjevanje pritisnite Shrani profil.');
+    } catch (err) {
+      setImageUploadError(err instanceof Error ? err.message : 'Slike ni bilo mogoče naložiti.');
+    } finally {
+      setUploadingImage(false);
+    }
   }
 
   async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
@@ -785,10 +793,13 @@ export default function ProfilePage() {
       {cropDraft && (
         <ImageCropModal
           draft={cropDraft}
-          uploading={saving}
+          uploading={uploadingImage}
+          error={imageUploadError}
           onChange={setCropDraft}
           onCancel={() => {
+            if (cropDraft.file) URL.revokeObjectURL(cropDraft.imageUrl);
             setCropDraft(null);
+            setImageUploadError('');
           }}
           onApply={applyCropDraft}
         />
@@ -890,7 +901,7 @@ function ImagePicker({
         </div>
       </div>
       <p className="mt-3 text-[11px] text-[#a1a1aa]">
-        Začasno shranjevanje podpira slike do 500 KB.
+        Podprte so slike do 5 MB. Po potrditvi se naložijo v Supabase.
       </p>
     </div>
   );
@@ -899,12 +910,14 @@ function ImagePicker({
 function ImageCropModal({
   draft,
   uploading,
+  error,
   onChange,
   onCancel,
   onApply,
 }: {
   draft: CropDraft;
   uploading: boolean;
+  error: string;
   onChange: (draft: CropDraft) => void;
   onCancel: () => void;
   onApply: () => void | Promise<void>;
@@ -985,6 +998,12 @@ function ImageCropModal({
             className="w-full accent-[#0d0d0d]"
           />
         </label>
+
+        {error && (
+          <div className="mt-4 rounded-[14px] border border-[#f4c7c7] bg-[#fff5f5] px-4 py-3 text-sm text-[#b42318]">
+            {error}
+          </div>
+        )}
 
         <div className="mt-5 flex justify-end gap-3">
           <button

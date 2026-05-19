@@ -28,3 +28,18 @@ Backend quality and deployment:
 - `RENDER_DEPLOY_HOOK_URL`
 
 CI jobs run on pull requests even when deployment secrets are not configured. Deployment and SonarQube steps are skipped until the relevant secrets are added.
+
+## Local Supabase Storage
+
+Profile and cover images are uploaded from the frontend to Supabase Storage and
+their public URLs are saved in the Firebase profile document.
+
+Create a local root `.env` file for Docker Compose with:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+NEXT_PUBLIC_SUPABASE_PROFILE_BUCKET=pplProfilePics
+```
+
+The default bucket name used by the app is `pplProfilePics`.
