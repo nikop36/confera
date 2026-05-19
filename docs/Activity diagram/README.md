@@ -37,31 +37,20 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A([Začetek]) --> B["Udeleženec izbere drugega udeleženca"]
-    B --> C["Udeleženec pošlje zahtevo za srečanje"]
-    C --> D["Sistem naloži razpoložljivost obeh udeležencev"]
-    D --> E["Sistem naloži razpoložljive termine in prostore"]
-    E --> F{"Ali obstaja skupen prost termin?"}
+    A([Začetek]) --> B["Predstavnik industrije objavi razpoložljive termine in lokacije"]
+    B --> C["Udeleženec pregleda razpoložljive termine"]
+    C --> D["Udeleženec izbere termin in pošlje zahtevo za srečanje"]
+    D --> E["Sistem ustvari srečanje s statusom v čakanju"]
+    E --> F["Sistem obvesti predstavnika industrije"]
+    F --> G{"Ali predstavnik industrije sprejme zahtevo?"}
 
-    F -- "Ne" --> G["Sistem prikaže konflikt razpoložljivosti"]
-    G --> Z([Konec])
+    G -- "Ne" --> H["Sistem označi srečanje kot zavrnjeno"]
+    H --> I["Sistem obvesti udeleženca"]
+    I --> Z([Konec])
 
-    F -- "Da" --> H{"Ali je na voljo ustrezen prostor?"}
-    H -- "Ne" --> K["Sistem prikaže, da srečanja ni mogoče razporediti"]
+    G -- "Da" --> J["Sistem potrdi srečanje"]
+    J --> K["Sistem obvesti udeleženca"]
     K --> Z
-
-    H -- "Da" --> L["Sistem predlaga termin in lokacijo"]
-
-    L --> M["Sistem ustvari srečanje s statusom v čakanju"]
-    M --> N["Sistem obvesti povabljenega udeleženca"]
-    N --> O{"Ali povabljeni udeleženec sprejme srečanje?"}
-
-    O -- "Ne" --> P["Sistem označi srečanje kot zavrnjeno"]
-    P --> Z
-
-    O -- "Da" --> Q["Sistem potrdi srečanje"]
-    Q --> R["Sistem obvesti oba udeleženca"]
-    R --> Z
 ```
 
 ## Proces Uvoza Udeležencev Iz CSV
