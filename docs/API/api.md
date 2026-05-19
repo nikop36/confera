@@ -285,6 +285,133 @@ Zavrnitev zahtevka za vlogo. Samo admini.
 
 ---
 
+## Obvestila
+
+### GET /notifications
+Pridobi vsa obvestila trenutno prijavljenega uporabnika (30 na stran, razvrščena od najnovejšega).
+
+**Zahteva avtentikacijo:** Da
+
+**Parametri poizvedbe**
+| Parameter | Tip | Opis |
+|---|---|---|
+| cursor | string | Neobvezno — vrednost `createdAt` zadnjega obvestila prejšnje strani (ISO format) |
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Seznam obvestil |
+| 401 | Ni avtentikacije |
+
+**Uspešen odgovor**
+```json
+[
+  {
+    "id": "notif-id-789",
+    "uid": "firebase-uid",
+    "type": "role_approved",
+    "message": "Vaš zahtevek za vlogo \"organizer\" je bil odobren.",
+    "read": false,
+    "archived": false,
+    "createdAt": "2026-05-16T09:05:03.112Z"
+  }
+]
+```
+
+**Paginacija:**
+Prva stran — brez cursorja. Naslednja stran — pošlji `createdAt` zadnjega obvestila kot cursor:
+```
+GET /notifications?cursor=2026-05-16T09:05:03.112Z
+```
+
+---
+
+### PATCH /notifications/read-all
+Označi vsa neprebrana obvestila trenutnega uporabnika kot prebrana.
+
+**Zahteva avtentikacijo:** Da
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Vsa obvestila označena kot prebrana |
+| 401 | Ni avtentikacije |
+
+**Uspešen odgovor**
+```json
+{
+  "message": "Vsa obvestila označena kot prebrana"
+}
+```
+
+---
+
+### PATCH /notifications/:id/read
+Označi posamezno obvestilo kot prebrano.
+
+**Zahteva avtentikacijo:** Da
+
+**Parametri URL**
+| Parameter | Opis |
+|---|---|
+| id | Firestore ID obvestila |
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Obvestilo označeno kot prebrano |
+| 401 | Ni avtentikacije |
+| 403 | Obvestilo pripada drugemu uporabniku |
+| 404 | Obvestilo ni najdeno |
+
+**Uspešen odgovor**
+```json
+{
+  "message": "Obvestilo označeno kot prebrano"
+}
+```
+
+---
+
+### DELETE /notifications/:id
+Arhivira obvestilo (soft delete — obvestilo ostane v bazi, ni več prikazano).
+
+**Zahteva avtentikacijo:** Da
+
+**Parametri URL**
+| Parameter | Opis |
+|---|---|
+| id | Firestore ID obvestila |
+
+**Odgovori**
+| Status | Pomen |
+|---|---|
+| 200 | Obvestilo arhivirano |
+| 401 | Ni avtentikacije |
+| 403 | Obvestilo pripada drugemu uporabniku |
+| 404 | Obvestilo ni najdeno |
+
+**Uspešen odgovor**
+```json
+{
+  "message": "Obvestilo izbrisano"
+}
+```
+
+---
+
+### Tipi obvestil
+
+| Tip | Opis | Sproži se ob |
+|---|---|---|
+| `role_approved` | Zahtevek za vlogo odobren | Admin odobri zahtevek |
+| `role_rejected` | Zahtevek za vlogo zavrnjen | Admin zavrne zahtevek |
+| `meeting_request` | Prejeto povabilo na sestanek | Uporabnik pošlje zahtevo za sestanek |
+| `meeting_accepted` | Sestanek potrjen | Prejemnik sprejme sestanek |
+| `meeting_rejected` | Sestanek zavrnjen | Prejemnik zavrne sestanek |
+
+---
+
 ## Zdravje sistema
 
 ### GET /health

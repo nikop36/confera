@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { ProfileModule } from './profile/profile.module';
 import { RoleRequestsModule } from './role-requests/role-requests.module';
 import { MatchingModule } from './matching/matching.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { MatchingModule } from './matching/matching.module';
     ProfileModule,
     RoleRequestsModule,
     MatchingModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [],

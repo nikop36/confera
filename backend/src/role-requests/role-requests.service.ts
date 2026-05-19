@@ -9,12 +9,15 @@ import { RoleRequestsRepository } from './role-requests.repository';
 import { CreateRoleRequestDto } from './dto/create-role-request.dto';
 import { FirebaseUser } from '../common/interfaces/firebase-user.interface';
 import { UserRoleEnum } from '../common/enums/roles.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationTypeEnum } from '../common/enums/notification-type.enum';
 
 @Injectable()
 export class RoleRequestsService {
   constructor(
     private readonly roleRequestsRepository: RoleRequestsRepository,
     private readonly usersRepository: UsersRepository,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createRoleRequest(user: FirebaseUser, dto: CreateRoleRequestDto) {
@@ -75,6 +78,12 @@ export class RoleRequestsService {
       request.uid,
       request.requestedRole,
     );
+
+    await this.notificationsService.createNotification({
+      uid: request.uid,
+      type: NotificationTypeEnum.ROLE_APPROVED,
+      message: `Your request for "${request.requestedRole}" has been approved.`,
+    });
   }
 
   async rejectRequest(requestId: string, adminUser: FirebaseUser) {
@@ -90,5 +99,11 @@ export class RoleRequestsService {
       'rejected',
       adminUser.uid,
     );
+
+    await this.notificationsService.createNotification({
+      uid: request.uid,
+      type: NotificationTypeEnum.ROLE_REJECTED,
+      message: `Your request for "${request.requestedRole}" has been rejected.`,
+    });
   }
 }

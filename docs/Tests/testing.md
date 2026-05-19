@@ -101,11 +101,29 @@ HTML poročilo o pokritosti se ustvari v mapi `coverage/lcov-report/index.html`.
 
 ---
 
+### NotificationsService — createNotification(), getMyNotifications(), markAsRead(), markAllAsRead(), deleteNotification()
+
+| Primer | Pričakovan rezultat |
+|---|---|
+| Ustvarjanje obvestila | Obvestilo shranjeno z `read: false` in `archived: false` |
+| Pridobitev obvestil | Vrne seznam obvestil za uporabnika |
+| Ni obvestil | Vrne prazno polje |
+| Označi kot prebrano — lastno obvestilo | Obvestilo označeno kot prebrano |
+| Označi kot prebrano — obvestilo ne obstaja | Vrže `NotFoundException` |
+| Označi kot prebrano — tuje obvestilo | Vrže `ForbiddenException` |
+| Označi vsa kot prebrana | `markAllAsRead` poklican z uid uporabnika |
+| Izbriši — lastno obvestilo | Obvestilo arhivirano, ni fizično izbrisano |
+| Izbriši — obvestilo ne obstaja | Vrže `NotFoundException` |
+| Izbriši — tuje obvestilo | Vrže `ForbiddenException` |
+
+---
+
 ## Cilji pokritosti
 
 | Datoteka | Cilj |
 |---|---|
 | `auth.service.ts` | 100% |
+| `notifications.service.ts` | 100% |
 | `role-requests.service.ts` | > 80% |
 | `profile.service.ts` | > 80% |
 | `users.service.ts` | > 80% |

@@ -11,6 +11,7 @@ import { UserRoleEnum } from '../../common/enums/roles.enum';
 import type { FirebaseUser } from '../../common/interfaces/firebase-user.interface';
 import type { RoleRequest } from '../../common/interfaces/role-request.interface';
 import type { User } from '../../common/interfaces/user.interface';
+import { NotificationsService } from '../../notifications/notifications.service';
 
 describe('RoleRequestsService', () => {
   let service: RoleRequestsService;
@@ -22,6 +23,7 @@ describe('RoleRequestsService', () => {
   const mockUpdateStatus = jest.fn();
   const mockFindByUid = jest.fn();
   const mockUpdateUserRole = jest.fn();
+  const mockCreateNotification = jest.fn();
 
   const mockUser: FirebaseUser = {
     uid: 'user-uid-123',
@@ -74,6 +76,12 @@ describe('RoleRequestsService', () => {
           useValue: {
             findByUid: mockFindByUid,
             updateUserRole: mockUpdateUserRole,
+          },
+        },
+        {
+          provide: NotificationsService,
+          useValue: {
+            createNotification: mockCreateNotification,
           },
         },
       ],
@@ -168,6 +176,7 @@ describe('RoleRequestsService', () => {
       mockFindById.mockResolvedValue(mockPendingRequest);
       mockUpdateStatus.mockResolvedValue(undefined);
       mockUpdateUserRole.mockResolvedValue(undefined);
+      mockCreateNotification.mockResolvedValue(undefined);
 
       await service.approveRequest('request-id-789', mockAdminUser);
 
@@ -208,6 +217,7 @@ describe('RoleRequestsService', () => {
     it('should update request status to rejected', async () => {
       mockFindById.mockResolvedValue(mockPendingRequest);
       mockUpdateStatus.mockResolvedValue(undefined);
+      mockCreateNotification.mockResolvedValue(undefined);
 
       await service.rejectRequest('request-id-789', mockAdminUser);
 
