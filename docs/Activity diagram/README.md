@@ -47,14 +47,10 @@ flowchart TD
     G --> Z([Konec])
 
     F -- "Da" --> H{"Ali je na voljo ustrezen prostor?"}
-    H -- "Ne" --> I["Sistem poišče alternativni termin ali prostor"]
-    I --> J{"Ali obstaja alternativa?"}
-
-    J -- "Ne" --> K["Sistem prikaže, da srečanja ni mogoče razporediti"]
+    H -- "Ne" --> K["Sistem prikaže, da srečanja ni mogoče razporediti"]
     K --> Z
 
-    J -- "Da" --> L["Sistem predlaga termin in lokacijo"]
-    H -- "Da" --> L
+    H -- "Da" --> L["Sistem predlaga termin in lokacijo"]
 
     L --> M["Sistem ustvari srečanje s statusom v čakanju"]
     M --> N["Sistem obvesti povabljenega udeleženca"]
