@@ -177,7 +177,7 @@ export default function RoleRequestsPage() {
                   </div>
                   {req.reason && (
                     <p className="text-[13px] text-[#4b5563] bg-[#f7f7f7] rounded-[8px] px-3 py-2 mt-2 italic">
-                      "{req.reason}"
+                      &ldquo;{req.reason}&rdquo;
                     </p>
                   )}
                 </div>
