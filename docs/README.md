@@ -10,3 +10,4 @@ This folder contains project documentation and diagram sources for the Confera c
 - `Deployment diagram/` - Deployment and CI/CD architecture diagrams for Vercel, Render, Firebase, GitHub Actions, and SonarQube Cloud.
 - `ER diagram/` - Firestore schema and relationship diagrams.
 - `Model/` - Firestore model documentation and the controlled profile taxonomy used for recommendations and AI matching.
+- `AI/` - AI matching architecture, PostgreSQL/pgvector index, hybrid search strategy, and manual verification steps.

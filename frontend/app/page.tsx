@@ -64,7 +64,7 @@ export default function Home() {
             <a key={l} href="#" className="text-[13px] text-[#6e6e73] no-underline hover:text-[#0d0d0d] transition-colors">{l}</a>
           ))}
         </div>
-        <a
+        <Link
           href="/login"
           className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#0d0d0d] text-white text-[13px] font-semibold no-underline"
         >
@@ -72,7 +72,7 @@ export default function Home() {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
-        </a>
+        </Link>
       </nav>
 
       {/* ── Hero (map + converging lines — unchanged logic) ── */}
