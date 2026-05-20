@@ -8,6 +8,7 @@ import { ProfileModule } from './profile/profile.module';
 import { RoleRequestsModule } from './role-requests/role-requests.module';
 import { MatchingModule } from './matching/matching.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ExportModule } from './export/export.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     RoleRequestsModule,
     MatchingModule,
     NotificationsModule,
+    ExportModule,
   ],
   controllers: [AppController],
   providers: [],
