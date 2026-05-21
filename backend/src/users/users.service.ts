@@ -21,4 +21,16 @@ export class UsersService {
   async findByUidOrNull(uid: string): Promise<(User & UserProfile) | null> {
     return this.usersRepository.findByUid(uid);
   }
+
+  async listUsers(search?: string): Promise<Array<User & UserProfile>> {
+    const users = await this.usersRepository.listUsers(300);
+    const term = search?.trim().toLowerCase();
+    if (!term) return users;
+
+    return users.filter((user) => {
+      const displayName = user.displayName?.toLowerCase() ?? '';
+      const email = user.email?.toLowerCase() ?? '';
+      return displayName.includes(term) || email.includes(term);
+    });
+  }
 }

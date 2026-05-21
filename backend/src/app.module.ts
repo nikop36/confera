@@ -9,6 +9,7 @@ import { RoleRequestsModule } from './role-requests/role-requests.module';
 import { MatchingModule } from './matching/matching.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ExportModule } from './export/export.module';
+import { SchedulingModule } from './scheduling/scheduling.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ExportModule } from './export/export.module';
     MatchingModule,
     NotificationsModule,
     ExportModule,
+    SchedulingModule,
   ],
   controllers: [AppController],
   providers: [],
