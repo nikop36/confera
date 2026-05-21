@@ -26,6 +26,13 @@ import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { FirebaseUser } from '../common/interfaces/firebase-user.interface';
 
+type UploadedFilePayload = {
+  buffer: Buffer;
+  size: number;
+  mimetype: string;
+  originalname: string;
+};
+
 @ApiTags('export')
 @Controller()
 @UseGuards(FirebaseAuthGuard)
@@ -86,7 +93,7 @@ export class ExportController {
   @ApiResponse({ status: 400, description: 'Validation error or invalid file' })
   async importProfile(
     @CurrentUser() user: FirebaseUser,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: UploadedFilePayload,
   ) {
     if (!file) {
       throw new BadRequestException('File not uploaded');

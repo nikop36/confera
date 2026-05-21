@@ -11,6 +11,12 @@ import { IMPORTABLE_FIELDS } from '../common/constants/importable-fields';
 import type { User, UserProfile } from '../common/interfaces/user.interface';
 
 type ExportFormat = 'csv' | 'excel';
+type UploadedFile = {
+  buffer: Buffer;
+  size: number;
+  mimetype: string;
+  originalname: string;
+};
 
 // Fields exported for the user — never includes sensitive data
 const EXPORTABLE_PROFILE_FIELDS: Array<keyof (User & UserProfile)> = [
@@ -63,7 +69,7 @@ export class ExportService {
 
   async importProfile(
     uid: string,
-    file: Express.Multer.File,
+    file: UploadedFile,
   ): Promise<{ message: string; updatedFields: string[] }> {
     this.validateFile(file);
 
@@ -98,7 +104,7 @@ export class ExportService {
     };
   }
 
-  private validateFile(file: Express.Multer.File): void {
+  private validateFile(file: UploadedFile): void {
     const MAX_SIZE_BYTES = 1 * 1024 * 1024; // 1MB
 
     if (file.size > MAX_SIZE_BYTES) {
