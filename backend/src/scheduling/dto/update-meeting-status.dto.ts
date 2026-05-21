@@ -7,4 +7,3 @@ export class UpdateMeetingStatusDto {
   @IsIn(['scheduled', 'completed', 'cancelled'])
   status: MeetingStatus;
 }
-

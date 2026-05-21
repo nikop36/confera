@@ -99,13 +99,18 @@ export class SchedulingController {
   @UseGuards(RolesGuard)
   @Roles('admin', 'organizer')
   @ApiOperation({ summary: 'List generated time slots' })
-  @ApiQuery({ name: 'from', required: false, description: 'ISO date-time lower bound' })
-  @ApiQuery({ name: 'to', required: false, description: 'ISO date-time upper bound' })
+  @ApiQuery({
+    name: 'from',
+    required: false,
+    description: 'ISO date-time lower bound',
+  })
+  @ApiQuery({
+    name: 'to',
+    required: false,
+    description: 'ISO date-time upper bound',
+  })
   @ApiResponse({ status: 200, description: 'Time slots returned' })
-  async listTimeSlots(
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-  ) {
+  async listTimeSlots(@Query('from') from?: string, @Query('to') to?: string) {
     return this.schedulingService.listTimeSlots(from, to);
   }
 
@@ -115,7 +120,10 @@ export class SchedulingController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update a time slot' })
   @ApiResponse({ status: 200, description: 'Time slot updated' })
-  async updateTimeSlot(@Param('id') id: string, @Body() dto: UpdateTimeSlotDto) {
+  async updateTimeSlot(
+    @Param('id') id: string,
+    @Body() dto: UpdateTimeSlotDto,
+  ) {
     return this.schedulingService.updateTimeSlot(id, dto);
   }
 
@@ -134,9 +142,14 @@ export class SchedulingController {
   @UseGuards(RolesGuard)
   @Roles('admin', 'organizer')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Assign meeting to room and time slot with conflict checks' })
+  @ApiOperation({
+    summary: 'Assign meeting to room and time slot with conflict checks',
+  })
   @ApiResponse({ status: 201, description: 'Meeting assigned' })
-  @ApiResponse({ status: 409, description: 'Room/participant conflict detected' })
+  @ApiResponse({
+    status: 409,
+    description: 'Room/participant conflict detected',
+  })
   async assignMeeting(@Body() dto: AssignMeetingDto) {
     return this.schedulingService.assignMeeting(dto);
   }

@@ -44,7 +44,8 @@ describe('SchedulingService', () => {
             findRoomById: mockFindRoomById,
             findTimeSlotById: mockFindTimeSlotById,
             findMeetingByRoomAndSlot: mockFindMeetingByRoomAndSlot,
-            findMeetingsForParticipantAtSlot: mockFindMeetingsForParticipantAtSlot,
+            findMeetingsForParticipantAtSlot:
+              mockFindMeetingsForParticipantAtSlot,
             createMeeting: mockCreateMeeting,
             listMeetings: mockListMeetings,
             findMeetingById: mockFindMeetingById,
@@ -71,8 +72,9 @@ describe('SchedulingService', () => {
   describe('generateTimeSlots()', () => {
     it('generates slots for the requested window', async () => {
       mockListTimeSlotsInRange.mockResolvedValue([]);
-      mockCreateTimeSlots.mockImplementation(async (rows) =>
-        rows.map((row, index) => ({ id: `new-${index}`, ...row })),
+      mockCreateTimeSlots.mockImplementation(
+        (rows: Array<{ startAt: Date; endAt: Date; createdAt: Date }>) =>
+          rows.map((row, index) => ({ id: `new-${index}`, ...row })),
       );
 
       const result = await service.generateTimeSlots({
@@ -164,7 +166,9 @@ describe('SchedulingService', () => {
         createdAt: new Date(),
       });
 
-      await expect(service.assignMeeting(dto)).rejects.toThrow(ConflictException);
+      await expect(service.assignMeeting(dto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('throws when participant is already booked', async () => {
@@ -186,7 +190,9 @@ describe('SchedulingService', () => {
         .mockResolvedValueOnce([{ id: 'conflict' }])
         .mockResolvedValue([]);
 
-      await expect(service.assignMeeting(dto)).rejects.toThrow(ConflictException);
+      await expect(service.assignMeeting(dto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('throws when room does not exist', async () => {
@@ -198,7 +204,9 @@ describe('SchedulingService', () => {
         createdAt: new Date(),
       });
 
-      await expect(service.assignMeeting(dto)).rejects.toThrow(NotFoundException);
+      await expect(service.assignMeeting(dto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws when the same user appears on both sides', async () => {
@@ -234,7 +242,9 @@ describe('SchedulingService', () => {
 
     it('throws when meeting does not exist', async () => {
       mockFindMeetingById.mockResolvedValue(null);
-      await expect(service.deleteMeeting('missing-id')).rejects.toThrow(NotFoundException);
+      await expect(service.deleteMeeting('missing-id')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -264,7 +274,9 @@ describe('SchedulingService', () => {
       });
       mockFindMeetingsByRoomId.mockResolvedValue([{ id: 'meeting-1' }]);
 
-      await expect(service.deleteRoom('room-1')).rejects.toThrow(ConflictException);
+      await expect(service.deleteRoom('room-1')).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
@@ -292,7 +304,9 @@ describe('SchedulingService', () => {
       });
       mockFindMeetingsBySlotId.mockResolvedValue([{ id: 'meeting-1' }]);
 
-      await expect(service.deleteTimeSlot('slot-1')).rejects.toThrow(ConflictException);
+      await expect(service.deleteTimeSlot('slot-1')).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 });

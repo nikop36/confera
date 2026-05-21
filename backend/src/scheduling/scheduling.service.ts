@@ -38,7 +38,12 @@ export class SchedulingService {
     const existing = await this.schedulingRepository.findRoomById(id);
     if (!existing) throw new NotFoundException('Room not found');
 
-    const payload: Partial<{ name: string; location: string; capacity: number; active: boolean }> = {};
+    const payload: Partial<{
+      name: string;
+      location: string;
+      capacity: number;
+      active: boolean;
+    }> = {};
     if (dto.name !== undefined) payload.name = dto.name.trim();
     if (dto.location !== undefined) payload.location = dto.location.trim();
     if (dto.capacity !== undefined) payload.capacity = dto.capacity;
@@ -56,7 +61,8 @@ export class SchedulingService {
     const existing = await this.schedulingRepository.findRoomById(id);
     if (!existing) throw new NotFoundException('Room not found');
 
-    const relatedMeetings = await this.schedulingRepository.findMeetingsByRoomId(id);
+    const relatedMeetings =
+      await this.schedulingRepository.findMeetingsByRoomId(id);
     if (relatedMeetings.length > 0) {
       throw new ConflictException(
         'Cannot delete room with linked meetings. Delete or update meetings first.',
@@ -74,7 +80,9 @@ export class SchedulingService {
       throw new BadRequestException('Invalid startDate or endDate');
     }
     if (endDate < startDate) {
-      throw new BadRequestException('endDate must be after or equal to startDate');
+      throw new BadRequestException(
+        'endDate must be after or equal to startDate',
+      );
     }
 
     const [startHour, startMinute] = parseTime(dto.dayStartTime);
@@ -85,16 +93,24 @@ export class SchedulingService {
       throw new BadRequestException('dayEndTime must be after dayStartTime');
     }
     if (dto.slotDurationMinutes > dayEndMinutes - dayStartMinutes) {
-      throw new BadRequestException('slotDurationMinutes is longer than day window');
+      throw new BadRequestException(
+        'slotDurationMinutes is longer than day window',
+      );
     }
 
     const generationEnd = addDays(endDate, 1);
-    const existing = await this.schedulingRepository.listTimeSlotsInRange(startDate, generationEnd);
+    const existing = await this.schedulingRepository.listTimeSlotsInRange(
+      startDate,
+      generationEnd,
+    );
     const existingKeySet = new Set(
-      existing.map((slot) => `${slot.startAt.toISOString()}_${slot.endAt.toISOString()}`),
+      existing.map(
+        (slot) => `${slot.startAt.toISOString()}_${slot.endAt.toISOString()}`,
+      ),
     );
 
-    const generated: Array<{ startAt: Date; endAt: Date; createdAt: Date }> = [];
+    const generated: Array<{ startAt: Date; endAt: Date; createdAt: Date }> =
+      [];
     const cursor = atMidnight(startDate);
     const endDay = atMidnight(endDate);
 
@@ -106,7 +122,9 @@ export class SchedulingService {
       );
 
       while (slotStart <= lastPossibleStart) {
-        const slotEnd = new Date(slotStart.getTime() + dto.slotDurationMinutes * 60_000);
+        const slotEnd = new Date(
+          slotStart.getTime() + dto.slotDurationMinutes * 60_000,
+        );
         const key = `${slotStart.toISOString()}_${slotEnd.toISOString()}`;
         if (!existingKeySet.has(key)) {
           generated.push({
@@ -115,7 +133,9 @@ export class SchedulingService {
             createdAt: new Date(),
           });
         }
-        slotStart = new Date(slotStart.getTime() + dto.slotDurationMinutes * 60_000);
+        slotStart = new Date(
+          slotStart.getTime() + dto.slotDurationMinutes * 60_000,
+        );
       }
 
       cursor.setDate(cursor.getDate() + 1);
@@ -152,7 +172,8 @@ export class SchedulingService {
       throw new BadRequestException('endAt must be after startAt');
     }
 
-    const linkedMeetings = await this.schedulingRepository.findMeetingsBySlotId(id);
+    const linkedMeetings =
+      await this.schedulingRepository.findMeetingsBySlotId(id);
     if (linkedMeetings.length > 0) {
       throw new ConflictException(
         'Cannot update time slot that already has linked meetings.',
@@ -167,7 +188,8 @@ export class SchedulingService {
     const existing = await this.schedulingRepository.findTimeSlotById(id);
     if (!existing) throw new NotFoundException('Time slot not found');
 
-    const linkedMeetings = await this.schedulingRepository.findMeetingsBySlotId(id);
+    const linkedMeetings =
+      await this.schedulingRepository.findMeetingsBySlotId(id);
     if (linkedMeetings.length > 0) {
       throw new ConflictException(
         'Cannot delete time slot with linked meetings. Delete or update meetings first.',
@@ -203,10 +225,14 @@ export class SchedulingService {
   async assignMeeting(dto: AssignMeetingDto) {
     const requestedByUids = deduplicate(dto.requestedByUids);
     const requestedToUids = deduplicate(dto.requestedToUids);
-    const overlap = requestedByUids.filter((uid) => requestedToUids.includes(uid));
+    const overlap = requestedByUids.filter((uid) =>
+      requestedToUids.includes(uid),
+    );
 
     if (!requestedByUids.length || !requestedToUids.length) {
-      throw new BadRequestException('Both requestedByUids and requestedToUids must contain at least one user');
+      throw new BadRequestException(
+        'Both requestedByUids and requestedToUids must contain at least one user',
+      );
     }
     if (overlap.length > 0) {
       throw new BadRequestException(
@@ -226,25 +252,36 @@ export class SchedulingService {
       throw new NotFoundException('Time slot not found');
     }
 
-    const roomConflict = await this.schedulingRepository.findMeetingByRoomAndSlot(
-      dto.roomId,
-      dto.slotId,
-    );
+    const roomConflict =
+      await this.schedulingRepository.findMeetingByRoomAndSlot(
+        dto.roomId,
+        dto.slotId,
+      );
     if (roomConflict) {
-      throw new ConflictException('Room is already booked for the selected time slot');
+      throw new ConflictException(
+        'Room is already booked for the selected time slot',
+      );
     }
 
-    const allParticipantUids = deduplicate([...requestedByUids, ...requestedToUids]);
+    const allParticipantUids = deduplicate([
+      ...requestedByUids,
+      ...requestedToUids,
+    ]);
     const participantConflictChecks = await Promise.all(
       allParticipantUids.map((uid) =>
-        this.schedulingRepository.findMeetingsForParticipantAtSlot(uid, dto.slotId),
+        this.schedulingRepository.findMeetingsForParticipantAtSlot(
+          uid,
+          dto.slotId,
+        ),
       ),
     );
     const hasParticipantConflict = participantConflictChecks.some(
       (conflicts) => conflicts.length > 0,
     );
     if (hasParticipantConflict) {
-      throw new ConflictException('One or more participants are already booked in this time slot');
+      throw new ConflictException(
+        'One or more participants are already booked in this time slot',
+      );
     }
 
     return this.schedulingRepository.createMeeting({
@@ -269,7 +306,15 @@ function parseTime(value: string): [number, number] {
 }
 
 function atMidnight(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
 }
 
 function addDays(date: Date, days: number): Date {
@@ -281,5 +326,13 @@ function addDays(date: Date, days: number): Date {
 function combineDateAndMinuteOffset(date: Date, minuteOffset: number): Date {
   const hours = Math.floor(minuteOffset / 60);
   const minutes = minuteOffset % 60;
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes, 0, 0);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    hours,
+    minutes,
+    0,
+    0,
+  );
 }

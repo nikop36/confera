@@ -4,4 +4,3 @@ export interface TimeSlot {
   endAt: Date;
   createdAt: Date;
 }
-

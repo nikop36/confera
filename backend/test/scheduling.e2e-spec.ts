@@ -41,14 +41,17 @@ describe('SchedulingController (e2e-like routes)', () => {
           provide: FirebaseService,
           useValue: {
             getAuth: () => ({
-              verifyIdToken: async () => ({ uid: 'admin-uid', email: 'admin@example.com' }),
+              verifyIdToken: () => ({
+                uid: 'admin-uid',
+                email: 'admin@example.com',
+              }),
             }),
           },
         },
         {
           provide: UsersRepository,
           useValue: {
-            findByUid: async () => ({ uid: 'admin-uid', role: 'admin' }),
+            findByUid: () => ({ uid: 'admin-uid', role: 'admin' }),
           },
         },
         Reflector,

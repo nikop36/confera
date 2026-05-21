@@ -6,4 +6,3 @@ export interface Room {
   active: boolean;
   createdAt: Date;
 }
-

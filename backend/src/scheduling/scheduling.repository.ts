@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import type { Room } from '../common/interfaces/room.interface';
 import type { TimeSlot } from '../common/interfaces/time-slot.interface';
-import type { Meeting, MeetingStatus } from '../common/interfaces/meeting.interface';
+import type {
+  Meeting,
+  MeetingStatus,
+} from '../common/interfaces/meeting.interface';
 
 @Injectable()
 export class SchedulingRepository {
@@ -16,13 +19,19 @@ export class SchedulingRepository {
 
   async listRooms(): Promise<Room[]> {
     const db = this.firebaseService.getFirestore();
-    const snapshot = await db.collection('rooms').where('active', '==', true).get();
+    const snapshot = await db
+      .collection('rooms')
+      .where('active', '==', true)
+      .get();
     return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Room);
   }
 
   async listAllRooms(): Promise<Room[]> {
     const db = this.firebaseService.getFirestore();
-    const snapshot = await db.collection('rooms').orderBy('createdAt', 'desc').get();
+    const snapshot = await db
+      .collection('rooms')
+      .orderBy('createdAt', 'desc')
+      .get();
     return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Room);
   }
 
@@ -33,7 +42,10 @@ export class SchedulingRepository {
     return { id: doc.id, ...doc.data() } as Room;
   }
 
-  async updateRoom(id: string, data: Partial<Omit<Room, 'id' | 'createdAt'>>): Promise<void> {
+  async updateRoom(
+    id: string,
+    data: Partial<Omit<Room, 'id' | 'createdAt'>>,
+  ): Promise<void> {
     const db = this.firebaseService.getFirestore();
     await db.collection('rooms').doc(id).update(data);
   }
@@ -52,7 +64,9 @@ export class SchedulingRepository {
       .orderBy('startAt', 'asc')
       .get();
 
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as TimeSlot);
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() }) as TimeSlot,
+    );
   }
 
   async createTimeSlots(data: Omit<TimeSlot, 'id'>[]): Promise<TimeSlot[]> {
@@ -90,7 +104,10 @@ export class SchedulingRepository {
     await db.collection('timeSlots').doc(id).delete();
   }
 
-  async findMeetingByRoomAndSlot(roomId: string, slotId: string): Promise<Meeting | null> {
+  async findMeetingByRoomAndSlot(
+    roomId: string,
+    slotId: string,
+  ): Promise<Meeting | null> {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db
       .collection('meetings')
@@ -105,7 +122,10 @@ export class SchedulingRepository {
     return { id: doc.id, ...doc.data() } as Meeting;
   }
 
-  async findMeetingsForParticipantAtSlot(uid: string, slotId: string): Promise<Meeting[]> {
+  async findMeetingsForParticipantAtSlot(
+    uid: string,
+    slotId: string,
+  ): Promise<Meeting[]> {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db
       .collection('meetings')
@@ -114,7 +134,9 @@ export class SchedulingRepository {
       .where('participantUids', 'array-contains', uid)
       .get();
 
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Meeting);
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() }) as Meeting,
+    );
   }
 
   async createMeeting(data: Omit<Meeting, 'id'>): Promise<Meeting> {
@@ -131,19 +153,31 @@ export class SchedulingRepository {
       .limit(500)
       .get();
 
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Meeting);
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() }) as Meeting,
+    );
   }
 
   async findMeetingsByRoomId(roomId: string): Promise<Meeting[]> {
     const db = this.firebaseService.getFirestore();
-    const snapshot = await db.collection('meetings').where('roomId', '==', roomId).get();
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Meeting);
+    const snapshot = await db
+      .collection('meetings')
+      .where('roomId', '==', roomId)
+      .get();
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() }) as Meeting,
+    );
   }
 
   async findMeetingsBySlotId(slotId: string): Promise<Meeting[]> {
     const db = this.firebaseService.getFirestore();
-    const snapshot = await db.collection('meetings').where('slotId', '==', slotId).get();
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Meeting);
+    const snapshot = await db
+      .collection('meetings')
+      .where('slotId', '==', slotId)
+      .get();
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() }) as Meeting,
+    );
   }
 
   async findMeetingById(id: string): Promise<Meeting | null> {

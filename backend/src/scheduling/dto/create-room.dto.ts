@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class CreateRoomDto {
   @ApiProperty({ example: 'Room A1' })
@@ -22,4 +29,3 @@ export class CreateRoomDto {
   @IsOptional()
   active?: boolean;
 }
-

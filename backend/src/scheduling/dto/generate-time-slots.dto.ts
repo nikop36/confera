@@ -33,4 +33,3 @@ export class GenerateTimeSlotsDto {
   @Max(240)
   slotDurationMinutes: number;
 }
-
