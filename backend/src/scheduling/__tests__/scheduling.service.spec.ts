@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { SchedulingService } from '../scheduling.service';
 import { SchedulingRepository } from '../scheduling.repository';
+import { SchedulingConflictError } from '../scheduling.repository';
 
 describe('SchedulingService', () => {
   let service: SchedulingService;
@@ -18,8 +19,9 @@ describe('SchedulingService', () => {
   const mockFindTimeSlotById = jest.fn();
   const mockFindMeetingByRoomAndSlot = jest.fn();
   const mockFindMeetingsForParticipantAtSlot = jest.fn();
-  const mockCreateMeeting = jest.fn();
+  const mockCreateMeetingAtomically = jest.fn();
   const mockListMeetings = jest.fn();
+  const mockListMeetingsByStatus = jest.fn();
   const mockFindMeetingById = jest.fn();
   const mockDeleteMeeting = jest.fn();
   const mockFindMeetingsByRoomId = jest.fn();
@@ -46,8 +48,9 @@ describe('SchedulingService', () => {
             findMeetingByRoomAndSlot: mockFindMeetingByRoomAndSlot,
             findMeetingsForParticipantAtSlot:
               mockFindMeetingsForParticipantAtSlot,
-            createMeeting: mockCreateMeeting,
+            createMeetingAtomically: mockCreateMeetingAtomically,
             listMeetings: mockListMeetings,
+            listMeetingsByStatus: mockListMeetingsByStatus,
             findMeetingById: mockFindMeetingById,
             deleteMeeting: mockDeleteMeeting,
             findMeetingsByRoomId: mockFindMeetingsByRoomId,
@@ -125,9 +128,7 @@ describe('SchedulingService', () => {
         endAt: new Date(),
         createdAt: new Date(),
       });
-      mockFindMeetingByRoomAndSlot.mockResolvedValue(null);
-      mockFindMeetingsForParticipantAtSlot.mockResolvedValue([]);
-      mockCreateMeeting.mockResolvedValue({
+      mockCreateMeetingAtomically.mockResolvedValue({
         id: 'meeting-1',
         slotId: 'slot-1',
         roomId: 'room-1',
@@ -140,7 +141,7 @@ describe('SchedulingService', () => {
 
       const result = await service.assignMeeting(dto);
       expect(result.id).toBe('meeting-1');
-      expect(mockCreateMeeting).toHaveBeenCalled();
+      expect(mockCreateMeetingAtomically).toHaveBeenCalled();
     });
 
     it('throws when room is already booked', async () => {
@@ -157,14 +158,11 @@ describe('SchedulingService', () => {
         endAt: new Date(),
         createdAt: new Date(),
       });
-      mockFindMeetingByRoomAndSlot.mockResolvedValue({
-        id: 'meeting-existing',
-        slotId: 'slot-1',
-        roomId: 'room-1',
-        participantUids: ['u1', 'u2'],
-        status: 'scheduled',
-        createdAt: new Date(),
-      });
+      mockCreateMeetingAtomically.mockRejectedValue(
+        new SchedulingConflictError(
+          'Room is already booked for the selected time slot',
+        ),
+      );
 
       await expect(service.assignMeeting(dto)).rejects.toThrow(
         ConflictException,
@@ -185,10 +183,11 @@ describe('SchedulingService', () => {
         endAt: new Date(),
         createdAt: new Date(),
       });
-      mockFindMeetingByRoomAndSlot.mockResolvedValue(null);
-      mockFindMeetingsForParticipantAtSlot
-        .mockResolvedValueOnce([{ id: 'conflict' }])
-        .mockResolvedValue([]);
+      mockCreateMeetingAtomically.mockRejectedValue(
+        new SchedulingConflictError(
+          'One or more participants are already booked in this time slot',
+        ),
+      );
 
       await expect(service.assignMeeting(dto)).rejects.toThrow(
         ConflictException,
@@ -245,6 +244,56 @@ describe('SchedulingService', () => {
       await expect(service.deleteMeeting('missing-id')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('updateMeetingStatus()', () => {
+    it('throws conflict when reverting to scheduled and room is already booked', async () => {
+      mockFindMeetingById.mockResolvedValue({
+        id: 'meeting-1',
+        slotId: 'slot-1',
+        roomId: 'room-1',
+        requestedByUids: ['uid-1'],
+        requestedToUids: ['uid-2'],
+        participantUids: ['uid-1', 'uid-2'],
+        status: 'cancelled',
+        createdAt: new Date(),
+      });
+      mockFindMeetingByRoomAndSlot.mockResolvedValue({
+        id: 'meeting-2',
+        slotId: 'slot-1',
+        roomId: 'room-1',
+        requestedByUids: ['uid-9'],
+        requestedToUids: ['uid-8'],
+        participantUids: ['uid-9', 'uid-8'],
+        status: 'scheduled',
+        createdAt: new Date(),
+      });
+
+      await expect(
+        service.updateMeetingStatus('meeting-1', { status: 'scheduled' }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('throws conflict when reverting to scheduled and participant has conflict', async () => {
+      mockFindMeetingById.mockResolvedValue({
+        id: 'meeting-1',
+        slotId: 'slot-1',
+        roomId: 'room-1',
+        requestedByUids: ['uid-1'],
+        requestedToUids: ['uid-2'],
+        participantUids: ['uid-1', 'uid-2'],
+        status: 'completed',
+        createdAt: new Date(),
+      });
+      mockFindMeetingByRoomAndSlot.mockResolvedValue(null);
+      mockFindMeetingsForParticipantAtSlot
+        .mockResolvedValueOnce([{ id: 'meeting-x' }])
+        .mockResolvedValue([]);
+
+      await expect(
+        service.updateMeetingStatus('meeting-1', { status: 'scheduled' }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 

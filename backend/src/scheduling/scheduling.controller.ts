@@ -28,6 +28,7 @@ import { AssignMeetingDto } from './dto/assign-meeting.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { UpdateTimeSlotDto } from './dto/update-time-slot.dto';
 import { UpdateMeetingStatusDto } from './dto/update-meeting-status.dto';
+import type { MeetingStatus } from '../common/interfaces/meeting.interface';
 
 @ApiTags('scheduling')
 @Controller('scheduling')
@@ -114,6 +115,34 @@ export class SchedulingController {
     return this.schedulingService.listTimeSlots(from, to);
   }
 
+  @Get('time-slots/availability')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'organizer')
+  @ApiOperation({ summary: 'List time slot availability (free/booked)' })
+  @ApiQuery({
+    name: 'from',
+    required: false,
+    description: 'ISO date-time lower bound',
+  })
+  @ApiQuery({
+    name: 'to',
+    required: false,
+    description: 'ISO date-time upper bound',
+  })
+  @ApiQuery({
+    name: 'roomId',
+    required: false,
+    description: 'Room ID to view booking occupancy for one room',
+  })
+  @ApiResponse({ status: 200, description: 'Time slot availability returned' })
+  async listTimeSlotAvailability(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('roomId') roomId?: string,
+  ) {
+    return this.schedulingService.getTimeSlotAvailability(from, to, roomId);
+  }
+
   @Patch('time-slots/:id')
   @UseGuards(RolesGuard)
   @Roles('admin', 'organizer')
@@ -159,8 +188,33 @@ export class SchedulingController {
   @Roles('admin', 'organizer')
   @ApiOperation({ summary: 'List meetings' })
   @ApiResponse({ status: 200, description: 'Meetings returned' })
-  async listMeetings() {
-    return this.schedulingService.listMeetings();
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Meeting status filter: scheduled | completed | cancelled',
+  })
+  @ApiQuery({
+    name: 'roomId',
+    required: false,
+    description: 'Room ID filter',
+  })
+  @ApiQuery({
+    name: 'from',
+    required: false,
+    description: 'Slot start lower bound (ISO date-time)',
+  })
+  @ApiQuery({
+    name: 'to',
+    required: false,
+    description: 'Slot start upper bound (ISO date-time)',
+  })
+  async listMeetings(
+    @Query('status') status?: MeetingStatus,
+    @Query('roomId') roomId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.schedulingService.listMeetings(status, roomId, from, to);
   }
 
   @Patch('meetings/:id/status')

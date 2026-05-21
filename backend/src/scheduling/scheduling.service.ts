@@ -5,12 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SchedulingRepository } from './scheduling.repository';
+import { SchedulingConflictError } from './scheduling.repository';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { GenerateTimeSlotsDto } from './dto/generate-time-slots.dto';
 import { AssignMeetingDto } from './dto/assign-meeting.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { UpdateTimeSlotDto } from './dto/update-time-slot.dto';
 import { UpdateMeetingStatusDto } from './dto/update-meeting-status.dto';
+import type { MeetingStatus } from '../common/interfaces/meeting.interface';
 
 @Injectable()
 export class SchedulingService {
@@ -200,8 +202,43 @@ export class SchedulingService {
     return { message: 'Time slot deleted successfully' };
   }
 
-  async listMeetings() {
-    return this.schedulingRepository.listMeetings();
+  async listMeetings(
+    status?: MeetingStatus,
+    roomId?: string,
+    from?: string,
+    to?: string,
+  ) {
+    const meetings = status
+      ? await this.schedulingRepository.listMeetingsByStatus(status)
+      : await this.schedulingRepository.listMeetings();
+
+    const fromDate = from ? new Date(from) : null;
+    const toDate = to ? new Date(to) : null;
+    if (
+      (fromDate && Number.isNaN(fromDate.getTime())) ||
+      (toDate && Number.isNaN(toDate.getTime()))
+    ) {
+      throw new BadRequestException('Invalid from/to date');
+    }
+
+    let filtered = meetings;
+    if (roomId) {
+      filtered = filtered.filter((meeting) => meeting.roomId === roomId);
+    }
+
+    if (fromDate || toDate) {
+      const slotMap = new Map(
+        (
+          await this.schedulingRepository.listTimeSlotsInRange(
+            fromDate ?? new Date(0),
+            toDate ?? new Date('9999-12-31T23:59:59.999Z'),
+          )
+        ).map((slot) => [slot.id, slot]),
+      );
+      filtered = filtered.filter((meeting) => slotMap.has(meeting.slotId));
+    }
+
+    return filtered;
   }
 
   async deleteMeeting(id: string) {
@@ -218,8 +255,69 @@ export class SchedulingService {
     const meeting = await this.schedulingRepository.findMeetingById(id);
     if (!meeting) throw new NotFoundException('Meeting not found');
 
+    if (dto.status === 'scheduled' && meeting.status !== 'scheduled') {
+      const roomConflict =
+        await this.schedulingRepository.findMeetingByRoomAndSlot(
+          meeting.roomId,
+          meeting.slotId,
+        );
+      if (roomConflict) {
+        throw new ConflictException(
+          'Room is already booked for the selected time slot',
+        );
+      }
+
+      const participantConflictChecks = await Promise.all(
+        meeting.participantUids.map((uid) =>
+          this.schedulingRepository.findMeetingsForParticipantAtSlot(
+            uid,
+            meeting.slotId,
+          ),
+        ),
+      );
+      const hasParticipantConflict = participantConflictChecks.some(
+        (conflicts) => conflicts.length > 0,
+      );
+      if (hasParticipantConflict) {
+        throw new ConflictException(
+          'One or more participants are already booked in this time slot',
+        );
+      }
+    }
+
     await this.schedulingRepository.updateMeetingStatus(id, dto.status);
     return { message: 'Meeting status updated successfully' };
+  }
+
+  async getTimeSlotAvailability(from?: string, to?: string, roomId?: string) {
+    const fromDate = from ? new Date(from) : new Date(0);
+    const toDate = to ? new Date(to) : new Date('9999-12-31T23:59:59.999Z');
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      throw new BadRequestException('Invalid from/to date');
+    }
+
+    const [slots, meetings] = await Promise.all([
+      this.schedulingRepository.listTimeSlotsInRange(fromDate, toDate),
+      this.schedulingRepository.listMeetingsByStatus('scheduled'),
+    ]);
+
+    const relevantMeetings = roomId
+      ? meetings.filter((meeting) => meeting.roomId === roomId)
+      : meetings;
+
+    const slotMeetingCount = new Map<string, number>();
+    for (const meeting of relevantMeetings) {
+      slotMeetingCount.set(
+        meeting.slotId,
+        (slotMeetingCount.get(meeting.slotId) ?? 0) + 1,
+      );
+    }
+
+    return slots.map((slot) => ({
+      ...slot,
+      scheduledMeetingCount: slotMeetingCount.get(slot.id) ?? 0,
+      isBooked: (slotMeetingCount.get(slot.id) ?? 0) > 0,
+    }));
   }
 
   async assignMeeting(dto: AssignMeetingDto) {
@@ -252,47 +350,27 @@ export class SchedulingService {
       throw new NotFoundException('Time slot not found');
     }
 
-    const roomConflict =
-      await this.schedulingRepository.findMeetingByRoomAndSlot(
-        dto.roomId,
-        dto.slotId,
-      );
-    if (roomConflict) {
-      throw new ConflictException(
-        'Room is already booked for the selected time slot',
-      );
-    }
-
     const allParticipantUids = deduplicate([
       ...requestedByUids,
       ...requestedToUids,
     ]);
-    const participantConflictChecks = await Promise.all(
-      allParticipantUids.map((uid) =>
-        this.schedulingRepository.findMeetingsForParticipantAtSlot(
-          uid,
-          dto.slotId,
-        ),
-      ),
-    );
-    const hasParticipantConflict = participantConflictChecks.some(
-      (conflicts) => conflicts.length > 0,
-    );
-    if (hasParticipantConflict) {
-      throw new ConflictException(
-        'One or more participants are already booked in this time slot',
-      );
-    }
 
-    return this.schedulingRepository.createMeeting({
-      slotId: dto.slotId,
-      roomId: dto.roomId,
-      requestedByUids,
-      requestedToUids,
-      participantUids: allParticipantUids,
-      status: 'scheduled',
-      createdAt: new Date(),
-    });
+    try {
+      return await this.schedulingRepository.createMeetingAtomically({
+        slotId: dto.slotId,
+        roomId: dto.roomId,
+        requestedByUids,
+        requestedToUids,
+        participantUids: allParticipantUids,
+        status: 'scheduled',
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      if (error instanceof SchedulingConflictError) {
+        throw new ConflictException(error.message);
+      }
+      throw error;
+    }
   }
 }
 

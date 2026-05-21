@@ -7,6 +7,13 @@ import type {
   MeetingStatus,
 } from '../common/interfaces/meeting.interface';
 
+export class SchedulingConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SchedulingConflictError';
+  }
+}
+
 @Injectable()
 export class SchedulingRepository {
   constructor(private readonly firebaseService: FirebaseService) {}
@@ -145,10 +152,65 @@ export class SchedulingRepository {
     return { id: ref.id, ...data };
   }
 
+  async createMeetingAtomically(data: Omit<Meeting, 'id'>): Promise<Meeting> {
+    const db = this.firebaseService.getFirestore();
+    const newMeetingRef = db.collection('meetings').doc();
+
+    await db.runTransaction(async (transaction) => {
+      const roomConflict = await transaction.get(
+        db
+          .collection('meetings')
+          .where('roomId', '==', data.roomId)
+          .where('slotId', '==', data.slotId)
+          .where('status', '==', 'scheduled')
+          .limit(1),
+      );
+      if (!roomConflict.empty) {
+        throw new SchedulingConflictError(
+          'Room is already booked for the selected time slot',
+        );
+      }
+
+      for (const uid of data.participantUids) {
+        const participantConflict = await transaction.get(
+          db
+            .collection('meetings')
+            .where('slotId', '==', data.slotId)
+            .where('status', '==', 'scheduled')
+            .where('participantUids', 'array-contains', uid)
+            .limit(1),
+        );
+        if (!participantConflict.empty) {
+          throw new SchedulingConflictError(
+            'One or more participants are already booked in this time slot',
+          );
+        }
+      }
+
+      transaction.set(newMeetingRef, data);
+    });
+
+    return { id: newMeetingRef.id, ...data };
+  }
+
   async listMeetings(): Promise<Meeting[]> {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db
       .collection('meetings')
+      .orderBy('createdAt', 'desc')
+      .limit(500)
+      .get();
+
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() }) as Meeting,
+    );
+  }
+
+  async listMeetingsByStatus(status: MeetingStatus): Promise<Meeting[]> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db
+      .collection('meetings')
+      .where('status', '==', status)
       .orderBy('createdAt', 'desc')
       .limit(500)
       .get();

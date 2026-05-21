@@ -7,7 +7,13 @@ import { clearStoredUser, useStoredUser } from '../lib/auth';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
-const NAV = [
+type NavItem = {
+  label: string;
+  href: string;
+  badge?: number;
+};
+
+const NAV: NavItem[] = [
   { label: 'Novice', href: '/home' },
   { label: 'Profil', href: '/profile' },
   { label: 'Srečanja', href: '/meetings', badge: 3 },
@@ -29,6 +35,39 @@ type MatchSuggestion = {
   affiliation?: string;
 };
 
+type ConnectionOverview = {
+  pendingCount: number;
+  pendingSent: Array<{
+    counterpart: {
+      uid: string;
+    };
+  }>;
+  accepted: Array<{
+    counterpart: {
+      uid: string;
+    };
+  }>;
+};
+
+type ApiNotification = {
+  id: string;
+  message: string;
+  read: boolean;
+  createdAt:
+    | string
+    | {
+        _seconds?: number;
+        seconds?: number;
+      };
+};
+
+type SidebarNotification = {
+  id: string;
+  text: string;
+  time: string;
+  unread: boolean;
+};
+
 const RECOMMENDATIONS = [
   { label: 'AI in robotika', bg: '#1d1d1f', fg: '#ffffff' },
   { label: 'Industrija', bg: '#ff6b6b', fg: '#ffffff' },
@@ -36,27 +75,30 @@ const RECOMMENDATIONS = [
   { label: 'Vzdržnost', bg: '#7c3aed', fg: '#ffffff' },
 ];
 
-const NOTIFICATIONS = [
-  { text: 'Ana Kovač vas je povabila k srečanju', time: '2h', unread: true },
-  { text: 'Vaša registracija je potrjena za Confera 2026', time: '1d', unread: false },
-  { text: 'Novo srečanje dodano v vaš razpored', time: '2d', unread: false },
-];
-
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = useStoredUser();
   const pathname = usePathname();
   const router = useRouter();
   const [matches, setMatches] = useState<MatchSuggestion[]>([]);
+  const [pendingFriendRequests, setPendingFriendRequests] = useState(0);
+  const [connectingUids, setConnectingUids] = useState<Record<string, boolean>>({});
+  const [connectedUids, setConnectedUids] = useState<Set<string>>(new Set());
+  const [pendingSentUids, setPendingSentUids] = useState<Set<string>>(new Set());
+  const [notifications, setNotifications] = useState<SidebarNotification[]>([]);
 
   const initials = user?.displayName
     .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() ?? '??';
   const suggestions = user?.idToken && matches.length
-    ? matches.slice(0, 3).map((match, index) => ({
+    ? matches
+      .filter((match) => !connectedUids.has(match.uid))
+      .slice(0, 3)
+      .map((match, index) => ({
+      uid: match.uid,
       name: match.displayName,
       org: match.affiliation || 'Confera',
       hue: [200, 280, 155][index] ?? 210,
     }))
-    : SUGGESTIONS;
+    : SUGGESTIONS.map((entry) => ({ ...entry, uid: '' }));
 
   useEffect(() => {
     if (!user?.idToken) return;
@@ -82,10 +124,87 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     void loadMatches(user.idToken);
   }, [user?.idToken]);
 
+  useEffect(() => {
+    if (!user?.idToken) return;
+    const idToken = user.idToken;
+
+    async function loadConnections(idToken: string) {
+      try {
+        const response = await fetch(`${API}/connections/me`, {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+        if (!response.ok) return;
+        const data = (await response.json()) as ConnectionOverview;
+        setPendingFriendRequests(data.pendingCount ?? 0);
+        setConnectedUids(
+          new Set((data.accepted ?? []).map((item) => item.counterpart.uid)),
+        );
+        setPendingSentUids(
+          new Set((data.pendingSent ?? []).map((item) => item.counterpart.uid)),
+        );
+      } catch {
+        // ignore sidebar badge refresh errors
+      }
+    }
+
+    const refresh = () => void loadConnections(idToken);
+    void loadConnections(idToken);
+    window.addEventListener('connections:refresh', refresh);
+    return () => window.removeEventListener('connections:refresh', refresh);
+  }, [user?.idToken, pathname]);
+
+  useEffect(() => {
+    if (!user?.idToken) return;
+    const idToken = user.idToken;
+
+    async function loadNotifications(token: string) {
+      try {
+        const response = await fetch(`${API}/notifications`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) return;
+        const data = (await response.json()) as ApiNotification[];
+        const mapped = data.slice(0, 5).map((item) => ({
+          id: item.id,
+          text: item.message,
+          time: formatRelativeTime(item.createdAt),
+          unread: !item.read,
+        }));
+        setNotifications(mapped);
+      } catch {
+        // ignore notification refresh errors
+      }
+    }
+
+    void loadNotifications(idToken);
+  }, [user?.idToken, pathname]);
+
   function handleLogout() {
     clearStoredUser();
     setMatches([]);
     router.replace('/login');
+  }
+
+  async function handleConnect(targetUid: string) {
+    if (!user?.idToken || !targetUid) return;
+    setConnectingUids((prev) => ({ ...prev, [targetUid]: true }));
+    try {
+      const response = await fetch(`${API}/connections/requests`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${user.idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ recipientUid: targetUid }),
+      });
+      if (!response.ok) {
+        return;
+      }
+      setPendingSentUids((prev) => new Set([...prev, targetUid]));
+      window.dispatchEvent(new Event('connections:refresh'));
+    } finally {
+      setConnectingUids((prev) => ({ ...prev, [targetUid]: false }));
+    }
   }
 
   return (
@@ -114,6 +233,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <nav className="flex flex-col gap-0.5 flex-1">
             {NAV.map(({ label, href, badge }) => {
               const active = pathname === href;
+              const dynamicBadge = label === 'Prijatelji' ? pendingFriendRequests : badge;
               return (
                 <Link
                   key={href}
@@ -126,11 +246,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <NavIcon label={label} active={active} />
                   <span className="flex-1">{label}</span>
-                  {badge && badge > 0 && (
-                    <span className={`min-w-5 h-5 px-[5px] rounded-[10px] text-[11px] font-bold flex items-center justify-center ${
-                      active ? 'bg-white text-[#0d0d0d]' : 'bg-[#0d0d0d] text-white'
-                    }`}>
-                      {badge}
+                  {typeof dynamicBadge === 'number' && dynamicBadge > 0 && (
+                    <span
+                      className={`min-w-5 h-5 px-[5px] rounded-[10px] text-[11px] font-bold flex items-center justify-center ${
+                        active ? 'bg-white text-[#0d0d0d]' : 'bg-[#0d0d0d] text-white'
+                      }`}
+                    >
+                      {dynamicBadge}
                     </span>
                   )}
                 </Link>
@@ -174,8 +296,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <section>
             <h3 className="text-lg font-bold mb-[14px]">Obvestila</h3>
             <div className="flex flex-col gap-2">
-              {NOTIFICATIONS.map((n, i) => (
-                <div key={i} className={`flex gap-[10px] px-3 py-2.5 rounded-xl ${n.unread ? 'bg-[#f0f7ff]' : ''}`}>
+              {notifications.map((n) => (
+                <div key={n.id} className={`flex gap-[10px] px-3 py-2.5 rounded-xl ${n.unread ? 'bg-[#f0f7ff]' : ''}`}>
                   <div className={`w-[7px] h-[7px] rounded-full shrink-0 mt-[5px] ${n.unread ? 'bg-[#007AFF]' : 'bg-[#d1d1d6]'}`} />
                   <div>
                     <p className="text-[13px] leading-relaxed">{n.text}</p>
@@ -183,6 +305,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
               ))}
+              {notifications.length === 0 && (
+                <div className="px-3 py-2.5 text-[13px] text-[#8e8e93]">
+                  Ni novih obvestil.
+                </div>
+              )}
             </div>
           </section>
 
@@ -205,8 +332,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     <p className="text-[13px] font-semibold truncate">{sug.name}</p>
                     <p className="text-[11px] text-[#8e8e93] truncate">{sug.org}</p>
                   </div>
-                  <button className="px-[14px] py-[5px] rounded-full text-xs font-semibold bg-[#0d0d0d] text-white border-0 cursor-pointer shrink-0 font-sans">
-                    Poveži
+                  <button
+                    type="button"
+                    onClick={() => void handleConnect(sug.uid)}
+                    disabled={
+                      !sug.uid ||
+                      Boolean(connectingUids[sug.uid]) ||
+                      pendingSentUids.has(sug.uid) ||
+                      connectedUids.has(sug.uid)
+                    }
+                    className="px-[14px] py-[5px] rounded-full text-xs font-semibold bg-[#0d0d0d] text-white border-0 cursor-pointer shrink-0 font-sans disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {connectingUids[sug.uid]
+                      ? 'Pošiljanje...'
+                      : pendingSentUids.has(sug.uid)
+                        ? 'Poslano'
+                        : 'Poveži'}
                   </button>
                 </div>
               ))}
@@ -260,4 +401,37 @@ function RecommIcon({ index, fg }: { index: number; fg: string }) {
     case 3: return <svg {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
     default: return <svg {...props}><circle cx="12" cy="12" r="4" /></svg>;
   }
+}
+
+function formatRelativeTime(
+  createdAt: ApiNotification['createdAt'],
+): string {
+  const createdAtDate = normalizeDate(createdAt);
+  if (!createdAtDate) return '';
+
+  const diffMs = Date.now() - createdAtDate.getTime();
+  const diffMin = Math.max(0, Math.floor(diffMs / 60_000));
+
+  if (diffMin < 1) return 'zdaj';
+  if (diffMin < 60) return `${diffMin} min`;
+
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours} h`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} d`;
+}
+
+function normalizeDate(createdAt: ApiNotification['createdAt']): Date | null {
+  if (typeof createdAt === 'string') {
+    const date = new Date(createdAt);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const seconds = createdAt._seconds ?? createdAt.seconds;
+  if (typeof seconds === 'number') {
+    return new Date(seconds * 1000);
+  }
+
+  return null;
 }

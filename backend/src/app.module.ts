@@ -10,6 +10,7 @@ import { MatchingModule } from './matching/matching.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ExportModule } from './export/export.module';
 import { SchedulingModule } from './scheduling/scheduling.module';
+import { ConnectionsModule } from './connections/connections.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { SchedulingModule } from './scheduling/scheduling.module';
     NotificationsModule,
     ExportModule,
     SchedulingModule,
+    ConnectionsModule,
   ],
   controllers: [AppController],
   providers: [],
