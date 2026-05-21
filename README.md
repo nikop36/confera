@@ -39,7 +39,5 @@ Create a local root `.env` file for Docker Compose with:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-NEXT_PUBLIC_SUPABASE_PROFILE_BUCKET=pplProfilePics
+NEXT_PUBLIC_SUPABASE_PROFILE_BUCKET=your-supabase-bucket-name
 ```
-
-The default bucket name used by the app is `pplProfilePics`.
