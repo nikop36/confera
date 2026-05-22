@@ -3,6 +3,7 @@ import { FirebaseService } from '../firebase/firebase.service';
 import * as admin from 'firebase-admin';
 import type {
   CareerInterview,
+  CareerInterviewInvitationStatus,
   CareerInterviewStatusEntry,
   CareerInterviewStatus,
 } from '../common/interfaces/career-interview.interface';
@@ -54,6 +55,54 @@ export class CareerInterviewsRepository {
   async delete(id: string): Promise<void> {
     const db = this.firebaseService.getFirestore();
     await db.collection('careerInterviews').doc(id).delete();
+  }
+
+  async listByInterviewerUid(
+    interviewerUid: string,
+  ): Promise<CareerInterview[]> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db
+      .collection('careerInterviews')
+      .where('interviewerUid', '==', interviewerUid)
+      .limit(500)
+      .get();
+
+    return snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }) as CareerInterview)
+      .sort((a, b) => {
+        const aTime = toEpochMillis(a.createdAt);
+        const bTime = toEpochMillis(b.createdAt);
+        return bTime - aTime;
+      });
+  }
+
+  async listByCandidateUid(candidateUid: string): Promise<CareerInterview[]> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db
+      .collection('careerInterviews')
+      .where('candidateUid', '==', candidateUid)
+      .limit(500)
+      .get();
+
+    return snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }) as CareerInterview)
+      .sort((a, b) => {
+        const aTime = toEpochMillis(a.createdAt);
+        const bTime = toEpochMillis(b.createdAt);
+        return bTime - aTime;
+      });
+  }
+
+  async updateInvitationStatus(
+    id: string,
+    invitationStatus: CareerInterviewInvitationStatus,
+  ): Promise<void> {
+    const db = this.firebaseService.getFirestore();
+    await db.collection('careerInterviews').doc(id).update({
+      invitationStatus,
+      invitationRespondedAt: new Date(),
+      updatedAt: new Date(),
+    });
   }
 
   async list(status?: CareerInterviewStatus): Promise<CareerInterview[]> {
@@ -122,4 +171,25 @@ export class CareerInterviewsRepository {
       (doc) => ({ id: doc.id, ...doc.data() }) as CareerInterview,
     );
   }
+}
+
+function toEpochMillis(value: unknown): number {
+  if (value instanceof Date) return value.getTime();
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate?: () => Date }).toDate === 'function'
+  ) {
+    return (value as { toDate: () => Date }).toDate().getTime();
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'seconds' in value &&
+    typeof (value as { seconds?: number }).seconds === 'number'
+  ) {
+    return ((value as { seconds: number }).seconds ?? 0) * 1000;
+  }
+  return 0;
 }

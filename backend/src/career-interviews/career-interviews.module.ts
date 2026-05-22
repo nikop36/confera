@@ -18,5 +18,6 @@ import { CareerInterviewsRepository } from './career-interviews.repository';
   ],
   controllers: [CareerInterviewsController],
   providers: [CareerInterviewsService, CareerInterviewsRepository],
+  exports: [CareerInterviewsService, CareerInterviewsRepository],
 })
 export class CareerInterviewsModule {}

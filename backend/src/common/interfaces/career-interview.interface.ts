@@ -4,6 +4,11 @@ export type CareerInterviewStatus =
   | 'completed'
   | 'cancelled';
 
+export type CareerInterviewInvitationStatus =
+  | 'pending'
+  | 'accepted'
+  | 'rejected';
+
 export interface CareerInterviewStatusEntry {
   status: CareerInterviewStatus;
   changedAt: Date;
@@ -18,6 +23,8 @@ export interface CareerInterview {
   roomId?: string;
   notes?: string;
   status: CareerInterviewStatus;
+  invitationStatus?: CareerInterviewInvitationStatus;
+  invitationRespondedAt?: Date;
   createdByUid: string;
   updatedByUid: string;
   statusHistory: CareerInterviewStatusEntry[];

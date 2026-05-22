@@ -16,8 +16,8 @@ type NavItem = {
 const NAV: NavItem[] = [
   { label: 'Novice', href: '/home' },
   { label: 'Profil', href: '/profile' },
-  { label: 'Srečanja', href: '/meetings', badge: 3 },
-  { label: 'Povabila', href: '/invites', badge: 1 },
+  { label: 'Srečanja', href: '/meetings' },
+  { label: 'Povabila', href: '/invites' },
   { label: 'Prijatelji', href: '/connections' },
   { label: 'Skupnost', href: '/community' },
   { label: 'Nastavitve', href: '/settings' },
@@ -46,6 +46,19 @@ type ConnectionOverview = {
     counterpart: {
       uid: string;
     };
+  }>;
+};
+
+type InviteOverview = {
+  pendingCount: number;
+  processed?: Array<{
+    invitationStatus?: 'pending' | 'accepted' | 'rejected';
+  }>;
+  interviewerPending?: Array<{
+    invitationStatus?: 'pending' | 'accepted' | 'rejected';
+  }>;
+  interviewerProcessed?: Array<{
+    invitationStatus?: 'pending' | 'accepted' | 'rejected';
   }>;
 };
 
@@ -81,10 +94,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [matches, setMatches] = useState<MatchSuggestion[]>([]);
   const [pendingFriendRequests, setPendingFriendRequests] = useState(0);
+  const [pendingInvites, setPendingInvites] = useState(0);
+  const [meetingsBadgeCount, setMeetingsBadgeCount] = useState(0);
   const [connectingUids, setConnectingUids] = useState<Record<string, boolean>>({});
   const [connectedUids, setConnectedUids] = useState<Set<string>>(new Set());
   const [pendingSentUids, setPendingSentUids] = useState<Set<string>>(new Set());
   const [notifications, setNotifications] = useState<SidebarNotification[]>([]);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const unreadNotificationsCount = notifications.filter(
+    (item) => item.unread,
+  ).length;
 
   const initials = user?.displayName
     .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() ?? '??';
@@ -157,6 +176,37 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (!user?.idToken) return;
     const idToken = user.idToken;
 
+    async function loadInvites(token: string) {
+      try {
+        const response = await fetch(`${API}/invites/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) return;
+        const data = (await response.json()) as InviteOverview;
+        setPendingInvites(data.pendingCount ?? 0);
+        const candidateAcceptedCount = (data.processed ?? []).filter(
+          (item) => item.invitationStatus === 'accepted',
+        ).length;
+        const interviewerActiveCount = [
+          ...(data.interviewerPending ?? []),
+          ...(data.interviewerProcessed ?? []),
+        ].filter((item) => item.invitationStatus !== 'rejected').length;
+        setMeetingsBadgeCount(candidateAcceptedCount + interviewerActiveCount);
+      } catch {
+        // ignore sidebar badge refresh errors
+      }
+    }
+
+    const refresh = () => void loadInvites(idToken);
+    void loadInvites(idToken);
+    window.addEventListener('invites:refresh', refresh);
+    return () => window.removeEventListener('invites:refresh', refresh);
+  }, [user?.idToken, pathname]);
+
+  useEffect(() => {
+    if (!user?.idToken) return;
+    const idToken = user.idToken;
+
     async function loadNotifications(token: string) {
       try {
         const response = await fetch(`${API}/notifications`, {
@@ -164,7 +214,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         });
         if (!response.ok) return;
         const data = (await response.json()) as ApiNotification[];
-        const mapped = data.slice(0, 5).map((item) => ({
+        const mapped = data.map((item) => ({
           id: item.id,
           text: item.message,
           time: formatRelativeTime(item.createdAt),
@@ -178,6 +228,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
     void loadNotifications(idToken);
   }, [user?.idToken, pathname]);
+
+  useEffect(() => {
+    if (!isNotificationsOpen) {
+      document.body.style.overflow = '';
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isNotificationsOpen]);
 
   function handleLogout() {
     clearStoredUser();
@@ -207,6 +270,40 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function handleNotificationClick(notificationId: string) {
+    if (!user?.idToken) return;
+
+    const target = notifications.find((item) => item.id === notificationId);
+    if (!target || !target.unread) return;
+
+    setNotifications((prev) =>
+      prev.map((item) =>
+        item.id === notificationId ? { ...item, unread: false } : item,
+      ),
+    );
+
+    try {
+      const response = await fetch(`${API}/notifications/${notificationId}/read`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${user.idToken}` },
+      });
+
+      if (!response.ok) {
+        setNotifications((prev) =>
+          prev.map((item) =>
+            item.id === notificationId ? { ...item, unread: true } : item,
+          ),
+        );
+      }
+    } catch {
+      setNotifications((prev) =>
+        prev.map((item) =>
+          item.id === notificationId ? { ...item, unread: true } : item,
+        ),
+      );
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white text-[#0d0d0d] font-sans">
       <div className="max-w-[1280px] mx-auto flex min-h-screen px-5 gap-6">
@@ -221,9 +318,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 className="absolute w-[46px] h-[46px] rounded-full bg-gradient-to-br from-[#a8edea] to-[#fed6e3] blur-sm opacity-85 z-0"
                 style={{ top: -4, left: -6 }}
               />
-              <div className="relative w-14 h-14 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center text-lg font-bold z-10 border-[3px] border-white shadow-md">
-                {initials}
-              </div>
+              {user?.profileImageUrl ? (
+                <div className="relative w-14 h-14 rounded-full z-10 border-[3px] border-white shadow-md overflow-hidden bg-[#f3f4f6]">
+                  <img
+                    src={user.profileImageUrl}
+                    alt={user.displayName ?? 'Profilna slika'}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="relative w-14 h-14 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center text-lg font-bold z-10 border-[3px] border-white shadow-md">
+                  {initials}
+                </div>
+              )}
             </div>
             <p className="font-bold text-[15px] mb-0.5 leading-tight">{user?.displayName ?? 'Udeleženec'}</p>
             <p className="text-xs text-[#8e8e93] truncate max-w-[200px]">{user?.email ?? '—'}</p>
@@ -233,7 +340,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <nav className="flex flex-col gap-0.5 flex-1">
             {NAV.map(({ label, href, badge }) => {
               const active = pathname === href;
-              const dynamicBadge = label === 'Prijatelji' ? pendingFriendRequests : badge;
+              const dynamicBadge =
+                label === 'Prijatelji'
+                  ? pendingFriendRequests
+                  : label === 'Povabila'
+                    ? pendingInvites
+                    : label === 'Srečanja'
+                      ? meetingsBadgeCount
+                    : badge;
               return (
                 <Link
                   key={href}
@@ -294,16 +408,46 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Notifications */}
           <section>
-            <h3 className="text-lg font-bold mb-[14px]">Obvestila</h3>
+            <div className="flex items-center justify-between mb-[14px]">
+              <h3 className="text-lg font-bold">Obvestila</h3>
+              <button
+                type="button"
+                onClick={() => setIsNotificationsOpen(true)}
+                className="relative mr-2 w-9 h-9 rounded-full border border-[#e5e7eb] bg-white flex items-center justify-center hover:bg-[#f7f7f7]"
+                aria-label="Prikaži vsa obvestila"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#111827"
+                  strokeWidth="1.8"
+                >
+                  <path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
+                  <path d="M9 17a3 3 0 0 0 6 0" />
+                </svg>
+                {unreadNotificationsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-[#111827] text-white text-[10px] font-bold leading-4">
+                    {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                  </span>
+                )}
+              </button>
+            </div>
             <div className="flex flex-col gap-2">
-              {notifications.map((n) => (
-                <div key={n.id} className={`flex gap-[10px] px-3 py-2.5 rounded-xl ${n.unread ? 'bg-[#f0f7ff]' : ''}`}>
+              {notifications.slice(0, 3).map((n) => (
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => void handleNotificationClick(n.id)}
+                  className={`text-left flex gap-[10px] px-3 py-2.5 rounded-xl border-0 w-full ${n.unread ? 'bg-[#f0f7ff]' : 'bg-[#f8fafc]'} hover:bg-[#eef2f7]`}
+                >
                   <div className={`w-[7px] h-[7px] rounded-full shrink-0 mt-[5px] ${n.unread ? 'bg-[#007AFF]' : 'bg-[#d1d1d6]'}`} />
                   <div>
                     <p className="text-[13px] leading-relaxed">{n.text}</p>
                     <p className="text-[11px] text-[#8e8e93] mt-0.5">{n.time}</p>
                   </div>
-                </div>
+                </button>
               ))}
               {notifications.length === 0 && (
                 <div className="px-3 py-2.5 text-[13px] text-[#8e8e93]">
@@ -373,6 +517,49 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         </aside>
       </div>
+      {isNotificationsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <button
+            type="button"
+            aria-label="Zapri"
+            className="absolute inset-0 bg-black/25"
+            onClick={() => setIsNotificationsOpen(false)}
+          />
+          <div className="relative w-full max-w-[680px] max-h-[75vh] overflow-hidden rounded-2xl bg-white shadow-xl border border-[#e5e7eb] p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[18px] font-bold">Vsa obvestila</h3>
+              <button
+                type="button"
+                onClick={() => setIsNotificationsOpen(false)}
+                className="px-3 py-1.5 rounded-[8px] border border-[#e5e7eb] text-sm text-[#374151] hover:bg-[#f7f7f7]"
+              >
+                Zapri
+              </button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto pr-1 flex flex-col gap-2">
+              {notifications.length === 0 && (
+                <div className="px-3 py-2.5 text-[13px] text-[#8e8e93]">
+                  Ni novih obvestil.
+                </div>
+              )}
+              {notifications.map((n) => (
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => void handleNotificationClick(n.id)}
+                  className={`text-left flex gap-[10px] px-3 py-2.5 rounded-xl border-0 w-full ${n.unread ? 'bg-[#f0f7ff]' : 'bg-[#f8fafc]'} hover:bg-[#eef2f7]`}
+                >
+                  <div className={`w-[7px] h-[7px] rounded-full shrink-0 mt-[5px] ${n.unread ? 'bg-[#007AFF]' : 'bg-[#d1d1d6]'}`} />
+                  <div>
+                    <p className="text-[13px] leading-relaxed">{n.text}</p>
+                    <p className="text-[11px] text-[#8e8e93] mt-0.5">{n.time}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

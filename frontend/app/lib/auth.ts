@@ -6,6 +6,7 @@ export type StoredUser = {
   email: string;
   role?: string;
   idToken?: string;
+  profileImageUrl?: string;
 };
 
 const STORAGE_KEY = 'confera_user';

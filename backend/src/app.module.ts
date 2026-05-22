@@ -12,6 +12,7 @@ import { ExportModule } from './export/export.module';
 import { SchedulingModule } from './scheduling/scheduling.module';
 import { ConnectionsModule } from './connections/connections.module';
 import { CareerInterviewsModule } from './career-interviews/career-interviews.module';
+import { InvitesModule } from './invites/invites.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { CareerInterviewsModule } from './career-interviews/career-interviews.mo
     SchedulingModule,
     ConnectionsModule,
     CareerInterviewsModule,
+    InvitesModule,
   ],
   controllers: [AppController],
   providers: [],

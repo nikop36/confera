@@ -148,6 +148,7 @@ export class CareerInterviewsService {
       interviewerUid: dto.interviewerUid,
       roomId: dto.roomId,
       slotId: dto.slotId,
+      invitationStatus: 'pending',
       updatedByUid: user.uid,
       updatedAt: new Date(),
     });
@@ -163,7 +164,12 @@ export class CareerInterviewsService {
     );
 
     const roomLabel = room.name;
-    const slotLabel = `${slot.startAt.toISOString()} - ${slot.endAt.toISOString()}`;
+    const slotStart = toDate(slot.startAt);
+    const slotEnd = toDate(slot.endAt);
+    const slotLabel =
+      slotStart && slotEnd
+        ? `${slotStart.toISOString()} - ${slotEnd.toISOString()}`
+        : dto.slotId;
     const isReschedule = wasScheduled && !wasSameAssignment;
 
     const notificationType = isReschedule
@@ -183,6 +189,11 @@ export class CareerInterviewsService {
         uid: dto.interviewerUid,
         type: notificationType,
         message,
+      }),
+      this.notificationsService.createNotification({
+        uid: dto.interviewerUid,
+        type: NotificationTypeEnum.MEETING_REQUEST,
+        message: `You have a new career interview invite at ${slotLabel} in ${roomLabel}.`,
       }),
     ]);
     return { message: 'Career interview assigned successfully' };
@@ -366,4 +377,19 @@ export class CareerInterviewsService {
       );
     }
   }
+}
+
+function toDate(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  if (typeof value === 'object') {
+    const candidate = value as { _seconds?: number; seconds?: number };
+    const seconds = candidate._seconds ?? candidate.seconds;
+    if (typeof seconds === 'number') return new Date(seconds * 1000);
+  }
+  return null;
 }

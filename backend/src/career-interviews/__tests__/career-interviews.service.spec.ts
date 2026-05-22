@@ -174,7 +174,7 @@ describe('CareerInterviewsService', () => {
         }),
         actingUser.uid,
       );
-      expect(mockCreateNotification).toHaveBeenCalledTimes(2);
+      expect(mockCreateNotification).toHaveBeenCalledTimes(3);
     });
 
     it('throws when interviewer has conflict at slot', async () => {

@@ -204,6 +204,7 @@ export default function ProfilePage() {
           displayName: data.displayName ?? currentUser.displayName,
           email: data.email ?? currentUser.email,
           role: data.role ?? currentUser.role,
+          profileImageUrl: profileImageValue(data, 'profileImageUrl'),
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Prišlo je do napake');
@@ -411,6 +412,14 @@ export default function ProfilePage() {
         displayName,
         email,
       }));
+      if (user) {
+        saveStoredUser({
+          ...user,
+          displayName,
+          email,
+          profileImageUrl: form.profileImageUrl,
+        });
+      }
       setSuccess('Profil je shranjen.');
       setEditMode(false);
     } catch (err) {

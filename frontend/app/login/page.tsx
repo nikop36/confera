@@ -42,18 +42,34 @@ export default function LoginPage() {
 
       let displayName = form.email.split('@')[0];
       let role = 'participant';
+      let profileImageUrl = '';
 
       const profileRes = await fetch(`${API}/profile/me`, {
         headers: { Authorization: `Bearer ${idToken}` },
       });
 
       if (profileRes.ok) {
-        const profile = await profileRes.json() as { displayName?: string; role?: string };
+        const profile = await profileRes.json() as {
+          displayName?: string;
+          role?: string;
+          roleProfile?: { profileImageUrl?: unknown };
+        };
         displayName = profile.displayName ?? displayName;
         role = profile.role ?? role;
+        profileImageUrl =
+          typeof profile.roleProfile?.profileImageUrl === 'string'
+            ? profile.roleProfile.profileImageUrl
+            : '';
       }
 
-      saveStoredUser({ uid, idToken, displayName, email: form.email, role });
+      saveStoredUser({
+        uid,
+        idToken,
+        displayName,
+        email: form.email,
+        role,
+        profileImageUrl,
+      });
       router.push(role === 'admin' ? '/admin' : '/home');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Prišlo je do napake');
