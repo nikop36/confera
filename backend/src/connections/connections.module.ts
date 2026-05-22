@@ -10,6 +10,6 @@ import { ConnectionsRepository } from './connections.repository';
   imports: [FirebaseModule, UsersModule, NotificationsModule],
   controllers: [ConnectionsController],
   providers: [ConnectionsService, ConnectionsRepository],
-  exports: [ConnectionsService],
+  exports: [ConnectionsService, ConnectionsRepository],
 })
 export class ConnectionsModule {}

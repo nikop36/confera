@@ -53,6 +53,18 @@ function getServerStoredUserSnapshot() {
   return 'null';
 }
 
+function subscribeNoop() {
+  return () => {};
+}
+
+function getHydratedClientSnapshot() {
+  return true;
+}
+
+function getHydratedServerSnapshot() {
+  return false;
+}
+
 export function useStoredUser(): StoredUser | null {
   const snapshot = useSyncExternalStore(
     subscribeToStoredUser,
@@ -61,4 +73,12 @@ export function useStoredUser(): StoredUser | null {
   );
 
   return useMemo(() => JSON.parse(snapshot) as StoredUser | null, [snapshot]);
+}
+
+export function useHydrated(): boolean {
+  return useSyncExternalStore(
+    subscribeNoop,
+    getHydratedClientSnapshot,
+    getHydratedServerSnapshot,
+  );
 }

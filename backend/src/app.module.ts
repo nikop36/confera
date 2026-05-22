@@ -11,6 +11,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ExportModule } from './export/export.module';
 import { SchedulingModule } from './scheduling/scheduling.module';
 import { ConnectionsModule } from './connections/connections.module';
+import { CareerInterviewsModule } from './career-interviews/career-interviews.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ConnectionsModule } from './connections/connections.module';
     ExportModule,
     SchedulingModule,
     ConnectionsModule,
+    CareerInterviewsModule,
   ],
   controllers: [AppController],
   providers: [],

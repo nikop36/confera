@@ -31,6 +31,10 @@ type UserProfile = {
   roleProfile?: Record<string, unknown>;
 };
 
+type ConnectionsOverview = {
+  accepted: Array<{ id: string }>;
+};
+
 type ProfileForm = {
   bio: string;
   affiliation: string;
@@ -154,6 +158,7 @@ export default function ProfilePage() {
   const [roleRequestedRole, setRoleRequestedRole] = useState<'organizer' | 'industry'>('organizer');
   const [roleRequestReason, setRoleRequestReason] = useState('');
   const [roleRequestError, setRoleRequestError] = useState('');
+  const [connectionCount, setConnectionCount] = useState(0);
 
   const token = user?.idToken;
   const displayName = profile?.displayName ?? user?.displayName ?? 'Udeleženec';
@@ -209,6 +214,26 @@ export default function ProfilePage() {
 
     void loadProfile();
   }, [user]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    async function loadConnectionCount() {
+      try {
+        const res = await fetch(`${API}/connections/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) return;
+        const payload = (await res.json()) as ConnectionsOverview;
+        setConnectionCount(payload.accepted?.length ?? 0);
+      } catch {
+        // keep previous count on transient errors
+      }
+    }
+
+    void loadConnectionCount();
+  }, [token]);
 
   const initials = useMemo(
     () => displayName.split(' ').map((word) => word[0]).slice(0, 2).join('').toUpperCase(),
@@ -479,7 +504,7 @@ export default function ProfilePage() {
               <span className="text-[13px] text-[#8e8e93]">Srečanj</span>
             </div>
             <div className="text-center">
-              <span className="text-base font-bold">0 </span>
+              <span className="text-base font-bold">{connectionCount} </span>
               <span className="text-[13px] text-[#8e8e93]">Povezav</span>
             </div>
           </div>

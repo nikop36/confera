@@ -125,4 +125,17 @@ export class ConnectionsRepository {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
   }
+
+  async listAccepted(limit = 2000): Promise<ConnectionRequest[]> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db
+      .collection('connectionRequests')
+      .where('status', '==', 'accepted')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() }) as ConnectionRequest,
+    );
+  }
 }

@@ -9,6 +9,6 @@ import { SchedulingService } from './scheduling.service';
   imports: [FirebaseModule, UsersModule],
   controllers: [SchedulingController],
   providers: [SchedulingRepository, SchedulingService],
-  exports: [SchedulingService],
+  exports: [SchedulingService, SchedulingRepository],
 })
 export class SchedulingModule {}

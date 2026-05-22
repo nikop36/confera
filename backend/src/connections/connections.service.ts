@@ -174,4 +174,13 @@ export class ConnectionsService {
       accepted: accepted.map(toView),
     };
   }
+
+  async listAcceptedPairs() {
+    const accepted = await this.connectionsRepository.listAccepted();
+    return accepted.map((entry) => ({
+      id: entry.id,
+      requesterUid: entry.requesterUid,
+      recipientUid: entry.recipientUid,
+    }));
+  }
 }

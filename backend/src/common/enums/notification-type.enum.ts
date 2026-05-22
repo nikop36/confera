@@ -7,4 +7,7 @@ export enum NotificationTypeEnum {
   CONNECTION_REQUEST = 'connection_request',
   CONNECTION_ACCEPTED = 'connection_accepted',
   CONNECTION_REJECTED = 'connection_rejected',
+  CAREER_INTERVIEW_ASSIGNED = 'career_interview_assigned',
+  CAREER_INTERVIEW_RESCHEDULED = 'career_interview_rescheduled',
+  CAREER_INTERVIEW_CANCELLED = 'career_interview_cancelled',
 }

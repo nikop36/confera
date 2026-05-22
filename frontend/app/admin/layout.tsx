@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { useStoredUser } from '../lib/auth';
+import { getStoredUser, useHydrated, useStoredUser } from '../lib/auth';
 
 type AdminNavItem = {
   label: string;
@@ -52,28 +52,43 @@ function ClipboardIcon() {
   );
 }
 
+function BriefcaseIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+      <path d="M2 13h20" />
+    </svg>
+  );
+}
+
 const ADMIN_NAV: AdminNavItem[] = [
   { label: 'Role Requests', href: '/admin/role-requests', icon: <CheckIcon /> },
   { label: 'Scheduling', href: '/admin/scheduling', icon: <CalendarIcon /> },
   { label: 'Meetings', href: '/admin/meetings', icon: <ClipboardIcon /> },
+  { label: 'Career Interviews', href: '/admin/career-interviews', icon: <BriefcaseIcon /> },
   { label: 'Users', href: '/admin/users', icon: <UsersIcon />, disabled: true },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
+  const hydrated = useHydrated();
   const user = useStoredUser();
+  const currentUser = hydrated ? user ?? getStoredUser() : null;
   const router = useRouter();
   const pathname = usePathname();
+
   useEffect(() => {
-    if (user === null) {
-      router.push('/login');
+    if (!hydrated) return;
+    if (!currentUser?.idToken) {
+      router.replace('/login');
       return;
     }
-    if (user.role !== 'admin') {
-      router.push('/home');
+    if (currentUser.role !== 'admin') {
+      router.replace('/home');
     }
-  }, [user, router]);
+  }, [currentUser?.idToken, currentUser?.role, hydrated, router]);
 
-  if (!user || user.role !== 'admin') {
+  if (!currentUser || currentUser.role !== 'admin') {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <p className="text-sm text-[#8e8e93]">Preverjanje dostopa...</p>
@@ -81,7 +96,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  const initials = user.displayName
+  const initials = currentUser.displayName
     .split(' ')
     .filter((w) => w.length > 0)
     .map((w) => w[0])
@@ -161,8 +176,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 {initials}
               </div>
               <div className="min-w-0">
-                <p className="text-[12px] font-semibold text-[#0d0d0d] truncate">{user.displayName}</p>
-                <p className="text-[11px] text-[#8e8e93] truncate">{user.email}</p>
+                <p className="text-[12px] font-semibold text-[#0d0d0d] truncate">{currentUser.displayName}</p>
+                <p className="text-[11px] text-[#8e8e93] truncate">{currentUser.email}</p>
               </div>
             </div>
           </div>

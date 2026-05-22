@@ -21,6 +21,8 @@ import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { FirebaseUser } from '../common/interfaces/firebase-user.interface';
 import { CreateConnectionRequestDto } from './dto/create-connection-request.dto';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('connections')
 @Controller('connections')
@@ -67,6 +69,18 @@ export class ConnectionsController {
   @ApiResponse({ status: 200, description: 'Connections returned' })
   async getMyConnections(@CurrentUser() user: FirebaseUser) {
     return this.connectionsService.getMyConnections(user);
+  }
+
+  @Get('accepted-pairs')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'organizer')
+  @ApiOperation({ summary: 'List accepted connection pairs' })
+  @ApiResponse({
+    status: 200,
+    description: 'Accepted connection pairs returned',
+  })
+  async getAcceptedPairs() {
+    return this.connectionsService.listAcceptedPairs();
   }
 
   @Delete(':id')
