@@ -35,6 +35,18 @@ type ConnectionsOverview = {
   accepted: Array<{ id: string }>;
 };
 
+type InvitesOverview = {
+  processed?: Array<{
+    invitationStatus?: 'pending' | 'accepted' | 'rejected';
+  }>;
+  interviewerPending?: Array<{
+    invitationStatus?: 'pending' | 'accepted' | 'rejected';
+  }>;
+  interviewerProcessed?: Array<{
+    invitationStatus?: 'pending' | 'accepted' | 'rejected';
+  }>;
+};
+
 type ProfileForm = {
   bio: string;
   affiliation: string;
@@ -159,6 +171,7 @@ export default function ProfilePage() {
   const [roleRequestReason, setRoleRequestReason] = useState('');
   const [roleRequestError, setRoleRequestError] = useState('');
   const [connectionCount, setConnectionCount] = useState(0);
+  const [meetingCount, setMeetingCount] = useState(0);
 
   const token = user?.idToken;
   const displayName = profile?.displayName ?? user?.displayName ?? 'Udeleženec';
@@ -233,7 +246,39 @@ export default function ProfilePage() {
       }
     }
 
+    const refresh = () => void loadConnectionCount();
     void loadConnectionCount();
+    window.addEventListener('connections:refresh', refresh);
+    return () => window.removeEventListener('connections:refresh', refresh);
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    async function loadMeetingCount() {
+      try {
+        const res = await fetch(`${API}/invites/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const payload = (await res.json()) as InvitesOverview;
+        const candidateAcceptedCount = (payload.processed ?? []).filter(
+          (item) => item.invitationStatus === 'accepted',
+        ).length;
+        const interviewerActiveCount = [
+          ...(payload.interviewerPending ?? []),
+          ...(payload.interviewerProcessed ?? []),
+        ].filter((item) => item.invitationStatus !== 'rejected').length;
+        setMeetingCount(candidateAcceptedCount + interviewerActiveCount);
+      } catch {
+        // keep previous count on transient errors
+      }
+    }
+
+    const refresh = () => void loadMeetingCount();
+    void loadMeetingCount();
+    window.addEventListener('invites:refresh', refresh);
+    return () => window.removeEventListener('invites:refresh', refresh);
   }, [token]);
 
   const initials = useMemo(
@@ -509,7 +554,7 @@ export default function ProfilePage() {
         <div className="flex items-center w-full">
           <div className="flex-1 flex flex-row gap-6">
             <div className="text-center">
-              <span className="text-base font-bold">0 </span>
+              <span className="text-base font-bold">{meetingCount} </span>
               <span className="text-[13px] text-[#8e8e93]">Srečanj</span>
             </div>
             <div className="text-center">
