@@ -101,7 +101,8 @@ export class CareerInterviewsService {
     const interview = await this.careerInterviewsRepository.findById(id);
     if (!interview) throw new NotFoundException('Career interview not found');
 
-    const [interviewer, room, slot] = await Promise.all([
+    const [candidate, interviewer, room, slot] = await Promise.all([
+      this.usersRepository.findByUid(interview.candidateUid),
       this.usersRepository.findByUid(dto.interviewerUid),
       this.schedulingRepository.findRoomById(dto.roomId),
       this.schedulingRepository.findTimeSlotById(dto.slotId),
@@ -182,16 +183,22 @@ export class CareerInterviewsService {
     await Promise.all([
       this.notificationsService.createNotification({
         uid: interview.candidateUid,
+        email: candidate?.email,
+        displayName: candidate?.displayName,
         type: notificationType,
         message,
       }),
       this.notificationsService.createNotification({
         uid: dto.interviewerUid,
+        email: interviewer.email,
+        displayName: interviewer.displayName,
         type: notificationType,
         message,
       }),
       this.notificationsService.createNotification({
         uid: dto.interviewerUid,
+        email: interviewer.email,
+        displayName: interviewer.displayName,
         type: NotificationTypeEnum.MEETING_REQUEST,
         message: `You have a new career interview invite at ${slotLabel} in ${roomLabel}.`,
       }),
@@ -236,14 +243,24 @@ export class CareerInterviewsService {
 
     if (dto.status === 'cancelled' && interview.interviewerUid) {
       const message = 'Career interview was cancelled.';
+
+      const [candidate, interviewer] = await Promise.all([
+        this.usersRepository.findByUid(interview.candidateUid),
+        this.usersRepository.findByUid(interview.interviewerUid),
+      ]);
+
       await Promise.all([
         this.notificationsService.createNotification({
           uid: interview.candidateUid,
+          email: candidate?.email,
+          displayName: candidate?.displayName,
           type: NotificationTypeEnum.CAREER_INTERVIEW_CANCELLED,
           message,
         }),
         this.notificationsService.createNotification({
           uid: interview.interviewerUid,
+          email: interviewer?.email,
+          displayName: interviewer?.displayName,
           type: NotificationTypeEnum.CAREER_INTERVIEW_CANCELLED,
           message,
         }),

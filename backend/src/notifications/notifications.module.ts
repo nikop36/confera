@@ -3,9 +3,10 @@ import { FirebaseModule } from '../firebase/firebase.module';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationsRepository } from './notifications.repository';
+import { EmailModule } from '../email/email.module';
 
 @Module({
-  imports: [FirebaseModule],
+  imports: [FirebaseModule, EmailModule],
   controllers: [NotificationsController],
   providers: [NotificationsService, NotificationsRepository],
   exports: [NotificationsService],

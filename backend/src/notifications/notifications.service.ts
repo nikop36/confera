@@ -1,15 +1,20 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { NotificationsRepository } from './notifications.repository';
 import type { NotificationTypeEnum } from '../common/enums/notification-type.enum';
 import type { FirebaseUser } from '../common/interfaces/firebase-user.interface';
 import * as admin from 'firebase-admin';
+import { EmailService } from '../email/email.service';
+import { shouldSendEmail } from '../common/constants/notification-config';
 
 interface CreateNotificationParams {
   uid: string;
+  email?: string;
+  displayName?: string;
   type: NotificationTypeEnum;
   message: string;
   sendEmail?: boolean;
@@ -17,8 +22,11 @@ interface CreateNotificationParams {
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
+    private readonly emailService: EmailService,
   ) {}
 
   async createNotification(params: CreateNotificationParams) {
@@ -31,7 +39,29 @@ export class NotificationsService {
       createdAt: new Date(),
     });
 
-    // TODO: Email logic
+    const willSendEmail =
+      shouldSendEmail(params.type) || params.sendEmail === true;
+
+    if (willSendEmail) {
+      if (!params.email) {
+        this.logger.warn(
+          `Email skipped for type ${params.type} — no email address provided`,
+        );
+      } else {
+        try {
+          await this.emailService.sendNotificationEmail({
+            to: params.email,
+            type: params.type,
+            message: params.message,
+            displayName: params.displayName,
+          });
+        } catch (err) {
+          this.logger.error(
+            `Email failed for uid ${params.uid} type ${params.type}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }
+    }
 
     return notification;
   }

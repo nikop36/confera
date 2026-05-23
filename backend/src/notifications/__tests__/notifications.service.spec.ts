@@ -5,6 +5,7 @@ import { NotificationsRepository } from '../notifications.repository';
 import { NotificationTypeEnum } from '../../common/enums/notification-type.enum';
 import type { FirebaseUser } from '../../common/interfaces/firebase-user.interface';
 import type { Notification } from '../../common/interfaces/notification.interface';
+import { EmailService } from '../../email/email.service';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -44,6 +45,12 @@ describe('NotificationsService', () => {
             markAsRead: mockMarkAsRead,
             markAllAsRead: mockMarkAllAsRead,
             archive: mockArchive,
+          },
+        },
+        {
+          provide: EmailService,
+          useValue: {
+            sendNotificationEmail: jest.fn(),
           },
         },
       ],

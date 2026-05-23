@@ -81,6 +81,7 @@ export class RoleRequestsService {
 
     await this.notificationsService.createNotification({
       uid: request.uid,
+      email: request.email,
       type: NotificationTypeEnum.ROLE_APPROVED,
       message: `Your request for "${request.requestedRole}" has been approved.`,
     });
@@ -102,6 +103,7 @@ export class RoleRequestsService {
 
     await this.notificationsService.createNotification({
       uid: request.uid,
+      email: request.email,
       type: NotificationTypeEnum.ROLE_REJECTED,
       message: `Your request for "${request.requestedRole}" has been rejected.`,
     });

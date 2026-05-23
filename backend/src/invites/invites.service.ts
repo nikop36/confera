@@ -162,8 +162,13 @@ export class InvitesService {
       );
     }
 
+    const notifyUid = interview.interviewerUid ?? interview.createdByUid;
+    const notifyUser = await this.usersRepository.findByUid(notifyUid);
+
     await this.notificationsService.createNotification({
-      uid: interview.interviewerUid ?? interview.createdByUid,
+      uid: notifyUid,
+      email: notifyUser?.email,
+      displayName: notifyUser?.displayName,
       type:
         action === 'accepted'
           ? NotificationTypeEnum.MEETING_ACCEPTED
