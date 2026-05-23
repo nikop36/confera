@@ -1,0 +1,426 @@
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { SchedulingRepository } from '../scheduling/scheduling.repository';
+import { CareerInterviewsRepository } from '../career-interviews/career-interviews.repository';
+import type { TimeSlot } from '../common/interfaces/time-slot.interface';
+
+@Injectable()
+export class StatisticsService {
+  constructor(
+    private readonly schedulingRepository: SchedulingRepository,
+    private readonly careerInterviewsRepository: CareerInterviewsRepository,
+  ) {}
+
+  async getRoomOccupancyStats(from?: string, to?: string) {
+    const { fromDate, toDate: endDate } = resolveRange(from, to);
+    const slots = await this.schedulingRepository.listTimeSlotsInRange(
+      fromDate,
+      endDate,
+    );
+    const [rooms, confirmedMeetings, confirmedInterviews] = await Promise.all([
+      this.schedulingRepository.listAllRooms(),
+      this.getConfirmedMeetings(),
+      this.getConfirmedCareerInterviews(),
+    ]);
+
+    const slotMap = createSlotMap(slots);
+    const roomStats = rooms.map((room) => {
+      const bookedSlotIds = new Set<string>();
+      let usedSeats = 0;
+      const totalSeats = slots.length * room.capacity;
+
+      for (const meeting of confirmedMeetings) {
+        if (meeting.roomId !== room.id || !slotMap.has(meeting.slotId))
+          continue;
+        bookedSlotIds.add(meeting.slotId);
+        usedSeats += meeting.participantUids?.length ?? 0;
+      }
+      for (const interview of confirmedInterviews) {
+        if (
+          interview.roomId !== room.id ||
+          !interview.slotId ||
+          !slotMap.has(interview.slotId)
+        ) {
+          continue;
+        }
+        bookedSlotIds.add(interview.slotId);
+        usedSeats += interview.interviewerUid ? 2 : 1;
+      }
+
+      const totalSlots = slots.length;
+      const bookedSlots = bookedSlotIds.size;
+      return {
+        roomId: room.id,
+        roomName: room.name,
+        capacity: room.capacity,
+        active: room.active,
+        bookedSlots,
+        totalSlots,
+        usedSeats,
+        totalSeats,
+        occupancyRatePercent: totalSlots
+          ? round2((bookedSlots / totalSlots) * 100)
+          : 0,
+        capacityUtilizationPercent: totalSeats
+          ? round2((usedSeats / totalSeats) * 100)
+          : 0,
+      };
+    });
+
+    const allUsedSeats = roomStats.reduce(
+      (sum, room) => sum + room.usedSeats,
+      0,
+    );
+    const allTotalSeats = roomStats.reduce(
+      (sum, room) => sum + room.totalSeats,
+      0,
+    );
+
+    return {
+      range: {
+        from: fromDate.toISOString(),
+        to: endDate.toISOString(),
+      },
+      summary: {
+        roomsCount: rooms.length,
+        activeRoomsCount: rooms.filter((room) => room.active).length,
+        totalSlots: slots.length,
+        averageOccupancyPercent:
+          roomStats.length > 0
+            ? round2(
+                roomStats.reduce(
+                  (sum, room) => sum + room.occupancyRatePercent,
+                  0,
+                ) / roomStats.length,
+              )
+            : 0,
+        averageCapacityUtilizationPercent: allTotalSeats
+          ? round2((allUsedSeats / allTotalSeats) * 100)
+          : 0,
+      },
+      rooms: roomStats,
+    };
+  }
+
+  async getConfirmedMeetingsStats(from?: string, to?: string) {
+    const { fromDate, toDate: endDate } = resolveRange(from, to);
+    const slots = await this.schedulingRepository.listTimeSlotsInRange(
+      fromDate,
+      endDate,
+    );
+    const [confirmedMeetings, confirmedInterviews] = await Promise.all([
+      this.getConfirmedMeetings(),
+      this.getConfirmedCareerInterviews(),
+    ]);
+
+    const slotMap = createSlotMap(slots);
+    const meetingCountBySlotId = new Map<string, number>();
+    const interviewCountBySlotId = new Map<string, number>();
+
+    const rangeMeetings = confirmedMeetings.filter((meeting) =>
+      slotMap.has(meeting.slotId),
+    );
+    const rangeInterviews = confirmedInterviews.filter(
+      (interview) => interview.slotId && slotMap.has(interview.slotId),
+    );
+
+    for (const meeting of rangeMeetings) {
+      if (!slotMap.has(meeting.slotId)) continue;
+      meetingCountBySlotId.set(
+        meeting.slotId,
+        (meetingCountBySlotId.get(meeting.slotId) ?? 0) + 1,
+      );
+    }
+
+    for (const interview of rangeInterviews) {
+      if (!interview.slotId || !slotMap.has(interview.slotId)) continue;
+      interviewCountBySlotId.set(
+        interview.slotId,
+        (interviewCountBySlotId.get(interview.slotId) ?? 0) + 1,
+      );
+    }
+
+    const seriesByDay = new Map<
+      string,
+      { date: string; meetings: number; interviews: number; total: number }
+    >();
+    const heatmapByHour = new Map<
+      number,
+      { hour: number; meetings: number; interviews: number; total: number }
+    >();
+
+    for (const slot of slots) {
+      const startAt = normalizeDate(slot.startAt);
+      if (!startAt) continue;
+      const date = startAt.toISOString().slice(0, 10);
+      const hour = startAt.getHours();
+      const slotMeetings = meetingCountBySlotId.get(slot.id) ?? 0;
+      const slotInterviews = interviewCountBySlotId.get(slot.id) ?? 0;
+      const entry = seriesByDay.get(date) ?? {
+        date,
+        meetings: 0,
+        interviews: 0,
+        total: 0,
+      };
+      entry.meetings += slotMeetings;
+      entry.interviews += slotInterviews;
+      entry.total = entry.meetings + entry.interviews;
+      seriesByDay.set(date, entry);
+
+      const hourEntry = heatmapByHour.get(hour) ?? {
+        hour,
+        meetings: 0,
+        interviews: 0,
+        total: 0,
+      };
+      hourEntry.meetings += slotMeetings;
+      hourEntry.interviews += slotInterviews;
+      hourEntry.total = hourEntry.meetings + hourEntry.interviews;
+      heatmapByHour.set(hour, hourEntry);
+    }
+
+    const series = [...seriesByDay.values()].sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
+    const confirmedMeetingsCount = [...meetingCountBySlotId.values()].reduce(
+      (sum, count) => sum + count,
+      0,
+    );
+    const confirmedInterviewsCount = [
+      ...interviewCountBySlotId.values(),
+    ].reduce((sum, count) => sum + count, 0);
+    const [scheduledInterviews, cancelledInterviews] = await Promise.all([
+      this.careerInterviewsRepository.list('scheduled'),
+      this.careerInterviewsRepository.list('cancelled'),
+    ]);
+    const pendingInterviewInvitesCount = scheduledInterviews.filter(
+      (item) => (item.invitationStatus ?? 'pending') === 'pending',
+    ).length;
+    const acceptedInterviewInvitesCount = scheduledInterviews.filter(
+      (item) => item.invitationStatus === 'accepted',
+    ).length;
+    const rejectedInterviewInvitesCount = cancelledInterviews.filter(
+      (item) => item.invitationStatus === 'rejected',
+    ).length;
+    const inviteDecisionBase =
+      acceptedInterviewInvitesCount + rejectedInterviewInvitesCount;
+    const inviteAcceptanceRatePercent = inviteDecisionBase
+      ? round2((acceptedInterviewInvitesCount / inviteDecisionBase) * 100)
+      : 0;
+
+    const conflictMetrics = calculateConflictMetrics(
+      rangeMeetings,
+      rangeInterviews,
+    );
+    const currentTotal = confirmedMeetingsCount + confirmedInterviewsCount;
+    const previous =
+      from && to
+        ? await this.getPreviousPeriodSummary(fromDate, endDate, currentTotal)
+        : {
+            confirmedTotalCount: 0,
+            confirmedMeetingsCount: 0,
+            confirmedCareerInterviewsCount: 0,
+            deltaTotalPercent: 0,
+          };
+
+    return {
+      range: {
+        from: fromDate.toISOString(),
+        to: endDate.toISOString(),
+      },
+      summary: {
+        confirmedMeetingsCount,
+        confirmedCareerInterviewsCount: confirmedInterviewsCount,
+        confirmedTotalCount: currentTotal,
+        pendingInterviewInvitesCount,
+        acceptedInterviewInvitesCount,
+        rejectedInterviewInvitesCount,
+        inviteAcceptanceRatePercent,
+        conflictMetrics,
+        previousPeriod: previous,
+      },
+      series,
+      heatmap: [...heatmapByHour.values()].sort((a, b) => a.hour - b.hour),
+      funnel: [
+        { stage: 'pending_invites', value: pendingInterviewInvitesCount },
+        { stage: 'accepted_invites', value: acceptedInterviewInvitesCount },
+        { stage: 'rejected_invites', value: rejectedInterviewInvitesCount },
+        {
+          stage: 'confirmed_total',
+          value: confirmedMeetingsCount + confirmedInterviewsCount,
+        },
+      ],
+    };
+  }
+
+  private async getConfirmedMeetings() {
+    const [scheduled, completed] = await Promise.all([
+      this.schedulingRepository.listMeetingsByStatus('scheduled'),
+      this.schedulingRepository.listMeetingsByStatus('completed'),
+    ]);
+    return [...scheduled, ...completed];
+  }
+
+  private async getConfirmedCareerInterviews() {
+    const [scheduled, completed] = await Promise.all([
+      this.careerInterviewsRepository.list('scheduled'),
+      this.careerInterviewsRepository.list('completed'),
+    ]);
+    return [...scheduled, ...completed];
+  }
+
+  private async getPreviousPeriodSummary(
+    fromDate: Date,
+    endDate: Date,
+    currentTotal: number,
+  ) {
+    const windowMs = endDate.getTime() - fromDate.getTime();
+    if (windowMs <= 0) {
+      return {
+        confirmedTotalCount: 0,
+        confirmedMeetingsCount: 0,
+        confirmedCareerInterviewsCount: 0,
+        deltaTotalPercent: 0,
+      };
+    }
+    const prevFrom = new Date(fromDate.getTime() - windowMs);
+    const prevTo = new Date(fromDate.getTime());
+    const slots = await this.schedulingRepository.listTimeSlotsInRange(
+      prevFrom,
+      prevTo,
+    );
+    const slotMap = createSlotMap(slots);
+    const [meetings, interviews] = await Promise.all([
+      this.getConfirmedMeetings(),
+      this.getConfirmedCareerInterviews(),
+    ]);
+    const prevMeetings = meetings.filter((meeting) =>
+      slotMap.has(meeting.slotId),
+    );
+    const prevInterviews = interviews.filter(
+      (interview) => interview.slotId && slotMap.has(interview.slotId),
+    );
+    const previousTotal = prevMeetings.length + prevInterviews.length;
+    const deltaTotalPercent =
+      previousTotal === 0
+        ? currentTotal > 0
+          ? 100
+          : 0
+        : round2(((currentTotal - previousTotal) / previousTotal) * 100);
+
+    return {
+      confirmedTotalCount: previousTotal,
+      confirmedMeetingsCount: prevMeetings.length,
+      confirmedCareerInterviewsCount: prevInterviews.length,
+      deltaTotalPercent,
+    };
+  }
+}
+
+function resolveRange(from?: string, to?: string) {
+  const fromDate = from ? new Date(from) : new Date('1970-01-01T00:00:00.000Z');
+  const toDate = to ? new Date(to) : new Date('9999-12-31T23:59:59.999Z');
+
+  if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+    throw new BadRequestException('Invalid from/to date');
+  }
+  if (toDate <= fromDate) {
+    throw new BadRequestException('to must be after from');
+  }
+
+  return { fromDate, toDate };
+}
+
+function createSlotMap(slots: TimeSlot[]) {
+  return new Map(
+    slots
+      .filter((slot) => Boolean(slot.id))
+      .map((slot) => [slot.id, slot] as const),
+  );
+}
+
+function round2(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function normalizeDate(value: unknown): Date | null {
+  if (value instanceof Date) return value;
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate?: () => Date }).toDate === 'function'
+  ) {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  if (typeof value === 'string') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  return null;
+}
+
+function calculateConflictMetrics(
+  meetings: Array<{
+    roomId: string;
+    slotId: string;
+    participantUids: string[];
+  }>,
+  interviews: Array<{
+    roomId?: string;
+    slotId?: string;
+    interviewerUid?: string;
+    candidateUid: string;
+  }>,
+) {
+  const roomSlotMap = new Map<string, number>();
+  const participantSlotMap = new Map<string, number>();
+  const interviewerSlotMap = new Map<string, number>();
+  const candidateSlotMap = new Map<string, number>();
+
+  for (const meeting of meetings) {
+    const roomKey = `${meeting.roomId}_${meeting.slotId}`;
+    roomSlotMap.set(roomKey, (roomSlotMap.get(roomKey) ?? 0) + 1);
+    for (const uid of meeting.participantUids ?? []) {
+      const participantKey = `${uid}_${meeting.slotId}`;
+      participantSlotMap.set(
+        participantKey,
+        (participantSlotMap.get(participantKey) ?? 0) + 1,
+      );
+    }
+  }
+
+  for (const interview of interviews) {
+    if (!interview.slotId) continue;
+    if (interview.roomId) {
+      const roomKey = `${interview.roomId}_${interview.slotId}`;
+      roomSlotMap.set(roomKey, (roomSlotMap.get(roomKey) ?? 0) + 1);
+    }
+    const candidateKey = `${interview.candidateUid}_${interview.slotId}`;
+    candidateSlotMap.set(
+      candidateKey,
+      (candidateSlotMap.get(candidateKey) ?? 0) + 1,
+    );
+    if (interview.interviewerUid) {
+      const interviewerKey = `${interview.interviewerUid}_${interview.slotId}`;
+      interviewerSlotMap.set(
+        interviewerKey,
+        (interviewerSlotMap.get(interviewerKey) ?? 0) + 1,
+      );
+    }
+  }
+
+  return {
+    roomSlotConflicts: countConflicts(roomSlotMap),
+    participantConflicts: countConflicts(participantSlotMap),
+    interviewerConflicts: countConflicts(interviewerSlotMap),
+    candidateConflicts: countConflicts(candidateSlotMap),
+  };
+}
+
+function countConflicts(source: Map<string, number>) {
+  let conflicts = 0;
+  for (const count of source.values()) {
+    if (count > 1) conflicts += count - 1;
+  }
+  return conflicts;
+}

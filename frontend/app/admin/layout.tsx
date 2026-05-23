@@ -62,11 +62,23 @@ function BriefcaseIcon() {
   );
 }
 
+function BarChartIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 3v18h18" />
+      <rect x="7" y="11" width="3" height="7" rx="0.5" />
+      <rect x="12" y="7" width="3" height="11" rx="0.5" />
+      <rect x="17" y="9" width="3" height="9" rx="0.5" />
+    </svg>
+  );
+}
+
 const ADMIN_NAV: AdminNavItem[] = [
   { label: 'Role Requests', href: '/admin/role-requests', icon: <CheckIcon /> },
   { label: 'Scheduling', href: '/admin/scheduling', icon: <CalendarIcon /> },
   { label: 'Meetings', href: '/admin/meetings', icon: <ClipboardIcon /> },
   { label: 'Career Interviews', href: '/admin/career-interviews', icon: <BriefcaseIcon /> },
+  { label: 'Statistics', href: '/admin/statistics', icon: <BarChartIcon /> },
   { label: 'Users', href: '/admin/users', icon: <UsersIcon />, disabled: true },
 ];
 

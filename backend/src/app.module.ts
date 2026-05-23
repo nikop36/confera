@@ -13,6 +13,7 @@ import { SchedulingModule } from './scheduling/scheduling.module';
 import { ConnectionsModule } from './connections/connections.module';
 import { CareerInterviewsModule } from './career-interviews/career-interviews.module';
 import { InvitesModule } from './invites/invites.module';
+import { StatisticsModule } from './statistics/statistics.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { InvitesModule } from './invites/invites.module';
     ConnectionsModule,
     CareerInterviewsModule,
     InvitesModule,
+    StatisticsModule,
   ],
   controllers: [AppController],
   providers: [],

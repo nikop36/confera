@@ -211,13 +211,12 @@ export class SchedulingRepository {
     const snapshot = await db
       .collection('meetings')
       .where('status', '==', status)
-      .orderBy('createdAt', 'desc')
       .limit(500)
       .get();
 
-    return snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() }) as Meeting,
-    );
+    return snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }) as Meeting)
+      .sort((a, b) => toEpochMillis(b.createdAt) - toEpochMillis(a.createdAt));
   }
 
   async findMeetingsByRoomId(roomId: string): Promise<Meeting[]> {
@@ -258,4 +257,25 @@ export class SchedulingRepository {
     const db = this.firebaseService.getFirestore();
     await db.collection('meetings').doc(id).update({ status });
   }
+}
+
+function toEpochMillis(value: unknown): number {
+  if (value instanceof Date) return value.getTime();
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate?: () => Date }).toDate === 'function'
+  ) {
+    return (value as { toDate: () => Date }).toDate().getTime();
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'seconds' in value &&
+    typeof (value as { seconds?: number }).seconds === 'number'
+  ) {
+    return ((value as { seconds: number }).seconds ?? 0) * 1000;
+  }
+  return 0;
 }

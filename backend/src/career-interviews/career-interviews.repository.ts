@@ -108,16 +108,19 @@ export class CareerInterviewsRepository {
   async list(status?: CareerInterviewStatus): Promise<CareerInterview[]> {
     const db = this.firebaseService.getFirestore();
     const query = status
-      ? db
-          .collection('careerInterviews')
-          .where('status', '==', status)
-          .orderBy('createdAt', 'desc')
+      ? db.collection('careerInterviews').where('status', '==', status)
       : db.collection('careerInterviews').orderBy('createdAt', 'desc');
 
     const snapshot = await query.limit(500).get();
-    return snapshot.docs.map(
+    const interviews = snapshot.docs.map(
       (doc) => ({ id: doc.id, ...doc.data() }) as CareerInterview,
     );
+    if (status) {
+      return interviews.sort(
+        (a, b) => toEpochMillis(b.createdAt) - toEpochMillis(a.createdAt),
+      );
+    }
+    return interviews;
   }
 
   async findScheduledByRoomAndSlot(
