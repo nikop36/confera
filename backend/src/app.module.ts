@@ -15,6 +15,7 @@ import { CareerInterviewsModule } from './career-interviews/career-interviews.mo
 import { InvitesModule } from './invites/invites.module';
 import { StatisticsModule } from './statistics/statistics.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     InvitesModule,
     StatisticsModule,
     AnalyticsModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [],

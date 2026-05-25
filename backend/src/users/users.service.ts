@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UsersRepository } from './users.repository';
-import { User, UserProfile } from '../common/interfaces/user.interface';
+import { User, UserProfile, MeetingType } from '../common/interfaces/user.interface';
+import { UserRoleEnum } from '../common/enums/roles.enum';
 
 @Injectable()
 export class UsersService {
@@ -32,5 +33,32 @@ export class UsersService {
       const email = user.email?.toLowerCase() ?? '';
       return displayName.includes(term) || email.includes(term);
     });
+  }
+
+  async listCommunityUsers(): Promise<
+    Array<{
+      uid: string;
+      displayName: string;
+      affiliation?: string;
+      role: string;
+      bio?: string;
+      interests?: string[];
+      goals?: string[];
+      meetingType?: MeetingType;
+    }>
+  > {
+    const users = await this.usersRepository.listUsers(500);
+    return users
+      .filter((user) => user.role !== UserRoleEnum.ADMIN)
+      .map((user) => ({
+        uid: user.uid,
+        displayName: user.displayName,
+        affiliation: user.affiliation,
+        role: user.role,
+        bio: user.bio,
+        interests: user.interests,
+        goals: user.goals,
+        meetingType: user.meetingType,
+      }));
   }
 }
