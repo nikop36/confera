@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "test:api": "cd tests/bruno && npx @usebruno/cli run . -r --env local --verbose",
+    "test:api:auth": "cd tests/bruno && npx @usebruno/cli run auth -r --env local",
+    "test:api:scheduling": "cd tests/bruno && npx @usebruno/cli run scheduling -r --env local",
+    "test:api:interviews": "cd tests/bruno && npx @usebruno/cli run career-interviews -r --env local"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.9.1",
+    "dotenv": "^17.4.2"
+  }
+}

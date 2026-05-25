@@ -1,0 +1,37 @@
+meta {
+  name: Generate time slots
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/scheduling/time-slots/generate
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "startDate": "2026-06-10",
+    "endDate": "2026-06-10",
+    "dayStartTime": "09:00",
+    "dayEndTime": "11:00",
+    "slotDurationMinutes": 30
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.generatedCount: gte 1
+}
+
+script:post-response {
+  const slots = res.body.slots;
+  if (slots && slots.length > 0) {
+    bru.setVar("slotId", slots[0].id);
+  }
+}

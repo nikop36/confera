@@ -1,0 +1,27 @@
+meta {
+  name: Login user
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "testuser@confera.com",
+    "password": "TestPassword1!"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.idToken: isDefined
+}
+
+script:post-response {
+  bru.setVar("token", res.body.idToken);
+}

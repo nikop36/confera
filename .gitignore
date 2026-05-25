@@ -19,3 +19,10 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Bruno environment secrets
+tests/bruno/environments/local.bru
+
+# Playwright
+playwright-report/
+test-results/

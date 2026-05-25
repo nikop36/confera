@@ -1,0 +1,34 @@
+meta {
+  name: Assign meeting
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/scheduling/meetings/assign
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "roomId": "{{roomId}}",
+    "slotId": "{{slotId}}",
+    "requestedByUids": ["user-uid-1"],
+    "requestedToUids": ["user-uid-2"]
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.status: eq scheduled
+}
+
+script:post-response {
+  bru.setVar("meetingId", res.body.id);
+}

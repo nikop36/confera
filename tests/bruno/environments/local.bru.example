@@ -1,0 +1,10 @@
+vars {
+  baseUrl: http://localhost:3001
+  token: 
+  adminToken: 
+  roomId: 
+  slotId: 
+  meetingId: 
+  interviewId: 
+  interviewerUid: 
+}

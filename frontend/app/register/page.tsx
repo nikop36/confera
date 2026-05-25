@@ -154,8 +154,9 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-[#6e6e73] mb-1.5">Polno ime</label>
+              <label htmlFor="displayName" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">Polno ime</label>
               <input
+                id="displayName"
                 type="text"
                 value={form.displayName}
                 onChange={field('displayName')}
@@ -166,8 +167,9 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#6e6e73] mb-1.5">E-pošta</label>
+              <label htmlFor="email" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">E-pošta</label>
               <input
+                id="email"
                 type="email"
                 value={form.email}
                 onChange={field('email')}
@@ -178,9 +180,10 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#6e6e73] mb-1.5">Geslo</label>
+              <label htmlFor="password" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">Geslo</label>
               <div className="relative">
                 <input
+                  id="password"
                   type={showPw ? 'text' : 'password'}
                   value={form.password}
                   onChange={field('password')}

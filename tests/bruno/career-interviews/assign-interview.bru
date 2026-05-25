@@ -1,0 +1,28 @@
+meta {
+  name: Assign career interview
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/career-interviews/{{interviewId}}/assign
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "interviewerUid": "{{interviewerUid}}",
+    "roomId": "{{roomId}}",
+    "slotId": "{{slotId}}"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.message: isDefined
+}

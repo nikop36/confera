@@ -150,8 +150,9 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-[#6e6e73] mb-1.5">E-pošta</label>
+              <label htmlFor="email" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">E-pošta</label>
               <input
+                id="email"
                 type="email"
                 value={form.email}
                 onChange={field('email')}
@@ -162,9 +163,10 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#6e6e73] mb-1.5">Geslo</label>
+              <label htmlFor="password" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">Geslo</label>
               <div className="relative">
                 <input
+                  id="password"
                   type={showPw ? 'text' : 'password'}
                   value={form.password}
                   onChange={field('password')}

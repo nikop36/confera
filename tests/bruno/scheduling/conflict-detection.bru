@@ -1,0 +1,28 @@
+meta {
+  name: Conflict detection same room and slot
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/scheduling/meetings/assign
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "roomId": "{{roomId}}",
+    "slotId": "{{slotId}}",
+    "requestedByUids": ["user-uid-3"],
+    "requestedToUids": ["user-uid-4"]
+  }
+}
+
+assert {
+  res.status: eq 409
+}

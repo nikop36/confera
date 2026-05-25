@@ -1,0 +1,23 @@
+meta {
+  name: Register duplicate email
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "testuser@confera.com",
+    "password": "TestPassword1!",
+    "displayName": "Test User"
+  }
+}
+
+assert {
+  res.status: eq 409
+}
