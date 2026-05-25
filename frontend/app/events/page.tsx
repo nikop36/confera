@@ -262,6 +262,7 @@ export default function EventsPage() {
 
       {modalEvent !== undefined && (
         <EventFormModal
+          key={modalEvent?.id ?? 'create'}
           event={modalEvent}
           onClose={() => setModalEvent(undefined)}
           onSave={handleSave}

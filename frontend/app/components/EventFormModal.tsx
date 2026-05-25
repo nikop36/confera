@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { EventItem } from './EventCard';
 
 export type EventFormValues = {
@@ -37,24 +37,41 @@ function toDatetimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function eventToForm(event: EventItem): EventFormValues {
+  return {
+    title: event.title,
+    speakerName: event.speakerName,
+    speakerBio: event.speakerBio ?? '',
+    description: event.description,
+    startAt: toDatetimeLocal(event.startAt),
+    endAt: toDatetimeLocal(event.endAt),
+    location: event.location,
+    capacity: event.capacity,
+  };
+}
+
 export default function EventFormModal({
   event,
   onClose,
   onSave,
 }: EventFormModalProps) {
-  const [form, setForm] = useState<EventFormValues>(EMPTY);
+  const [form, setForm] = useState<EventFormValues>(() =>
+    event ? eventToForm(event) : EMPTY,
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const firstInputRef = useRef<HTMLInputElement>(null);
 
+  const handleClose = useCallback(() => onClose(), [onClose]);
+
   useEffect(() => {
     firstInputRef.current?.focus();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') handleClose();
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [handleClose]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -63,23 +80,6 @@ export default function EventFormModal({
       document.body.style.overflow = prev;
     };
   }, []);
-
-  useEffect(() => {
-    if (event) {
-      setForm({
-        title: event.title,
-        speakerName: event.speakerName,
-        speakerBio: event.speakerBio ?? '',
-        description: event.description,
-        startAt: toDatetimeLocal(event.startAt),
-        endAt: toDatetimeLocal(event.endAt),
-        location: event.location,
-        capacity: event.capacity,
-      });
-    } else {
-      setForm(EMPTY);
-    }
-  }, [event]);
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
