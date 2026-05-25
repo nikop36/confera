@@ -13,7 +13,7 @@ interface SendNotificationEmailParams {
 
 @Injectable()
 export class EmailService {
-  private readonly resend: Resend;
+  private readonly resend: Resend | null;
   private readonly from: string;
   private readonly logger = new Logger(EmailService.name);
 
@@ -21,15 +21,25 @@ export class EmailService {
     const apiKey = this.configService.get<string>('RESEND_API_KEY') ?? '';
     this.from =
       this.configService.get<string>('EMAIL_FROM') ?? 'onboarding@resend.dev';
+    if (!apiKey) {
+      this.resend = null;
+      this.logger.warn(
+        'Email service disabled — RESEND_API_KEY is not configured.',
+      );
+      return;
+    }
+
     this.resend = new Resend(apiKey);
-    this.logger.log(
-      `Email service ready — from: ${this.from}, key set: ${!!apiKey}`,
-    );
+    this.logger.log(`Email service ready — from: ${this.from}`);
   }
 
   async sendNotificationEmail(
     params: SendNotificationEmailParams,
   ): Promise<void> {
+    if (!this.resend) {
+      throw new Error('RESEND_API_KEY is not configured.');
+    }
+
     const template = getTemplate(params.type);
     const { subject, html } = template({
       message: params.message,
