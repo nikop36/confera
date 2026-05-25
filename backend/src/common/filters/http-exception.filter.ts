@@ -33,6 +33,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
         : exception instanceof HttpException
           ? exception.message
           : 'Internal server error';
+    const errorCode =
+      typeof exceptionResponse === 'object' &&
+      exceptionResponse !== null &&
+      'code' in exceptionResponse &&
+      typeof (exceptionResponse as { code?: string }).code === 'string'
+        ? (exceptionResponse as { code: string }).code
+        : (HttpStatus[status] ?? 'ERROR');
 
     if (!(exception instanceof HttpException)) {
       this.logger.error(
@@ -43,9 +50,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     response.status(status).json({
       statusCode: status,
+      errorCode,
       message,
       timestamp: new Date().toISOString(),
       path: request.url,
+      error: true,
     });
   }
 }

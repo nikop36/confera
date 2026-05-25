@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getStoredUser, useHydrated, useStoredUser } from '../lib/auth';
 
@@ -13,6 +13,7 @@ type AdminNavItem = {
   icon: ReactNode;
   badge?: number;
   disabled?: boolean;
+  children?: Array<{ label: string; href: string }>;
 };
 
 function CheckIcon() {
@@ -78,7 +79,19 @@ const ADMIN_NAV: AdminNavItem[] = [
   { label: 'Scheduling', href: '/admin/scheduling', icon: <CalendarIcon /> },
   { label: 'Meetings', href: '/admin/meetings', icon: <ClipboardIcon /> },
   { label: 'Career Interviews', href: '/admin/career-interviews', icon: <BriefcaseIcon /> },
-  { label: 'Statistics', href: '/admin/statistics', icon: <BarChartIcon /> },
+  {
+    label: 'Statistics',
+    href: '/admin/statistics',
+    icon: <BarChartIcon />,
+    children: [
+      { label: 'Overview', href: '/admin/statistics' },
+      { label: 'Operations', href: '/admin/statistics/operations' },
+      { label: 'Usage', href: '/admin/statistics/usage' },
+      { label: 'Matching', href: '/admin/statistics/matching' },
+      { label: 'Engagement', href: '/admin/statistics/engagement' },
+      { label: 'Reports', href: '/admin/statistics/reports' },
+    ],
+  },
   { label: 'Users', href: '/admin/users', icon: <UsersIcon />, disabled: true },
 ];
 
@@ -88,6 +101,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const currentUser = hydrated ? user ?? getStoredUser() : null;
   const router = useRouter();
   const pathname = usePathname();
+  const [statsNavOpen, setStatsNavOpen] = useState(false);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -133,7 +147,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
         {/* Nav */}
         <nav className="flex flex-col gap-1 flex-1">
-          {ADMIN_NAV.map(({ label, href, icon, badge, disabled }) => {
+          {ADMIN_NAV.map(({ label, href, icon, badge, disabled, children }) => {
             const active = pathname === href || pathname.startsWith(href + '/');
             if (disabled) {
               return (
@@ -147,26 +161,73 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </div>
               );
             }
+            if (!children?.length) {
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex items-center gap-[10px] px-[11px] py-[9px] rounded-xl text-sm no-underline transition-colors ${
+                    active
+                      ? 'bg-[#0d0d0d] text-white font-semibold'
+                      : 'text-[#3d3d3d] font-normal hover:bg-[#ececec]'
+                  }`}
+                >
+                  {icon}
+                  <span className="flex-1">{label}</span>
+                  {badge !== undefined && badge > 0 && (
+                    <span className={`min-w-5 h-5 px-[5px] rounded-[10px] text-[11px] font-bold flex items-center justify-center ${
+                      active ? 'bg-white text-[#0d0d0d]' : 'bg-[#ef4444] text-white'
+                    }`}>
+                      {badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            }
+
+            const showChildren = statsNavOpen || active;
             return (
-              <Link
+              <div
                 key={href}
-                href={href}
-                className={`flex items-center gap-[10px] px-[11px] py-[9px] rounded-xl text-sm no-underline transition-colors ${
-                  active
-                    ? 'bg-[#0d0d0d] text-white font-semibold'
-                    : 'text-[#3d3d3d] font-normal hover:bg-[#ececec]'
-                }`}
+                onMouseEnter={() => setStatsNavOpen(true)}
+                onMouseLeave={() => setStatsNavOpen(false)}
               >
-                {icon}
-                <span className="flex-1">{label}</span>
-                {badge !== undefined && badge > 0 && (
-                  <span className={`min-w-5 h-5 px-[5px] rounded-[10px] text-[11px] font-bold flex items-center justify-center ${
-                    active ? 'bg-white text-[#0d0d0d]' : 'bg-[#ef4444] text-white'
-                  }`}>
-                    {badge}
+                <Link
+                  href={href}
+                  className={`flex items-center gap-[10px] px-[11px] py-[9px] rounded-xl text-sm no-underline transition-colors ${
+                    active
+                      ? 'bg-[#0d0d0d] text-white font-semibold'
+                      : 'text-[#3d3d3d] font-normal hover:bg-[#ececec]'
+                  }`}
+                >
+                  {icon}
+                  <span className="flex-1">{label}</span>
+                  <span className={`text-[10px] transition-transform ${showChildren ? 'rotate-180' : ''}`}>
+                    ▾
                   </span>
+                </Link>
+                {showChildren && (
+                  <div className="mt-1 mb-1 ml-5 pl-2 border-l border-[#d7dbe0] space-y-1">
+                    {children.map((child) => {
+                      const childActive =
+                        pathname === child.href || pathname.startsWith(child.href + '/');
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          className={`block rounded-lg px-2 py-1.5 text-[12px] no-underline transition-colors ${
+                            childActive
+                              ? 'bg-[#111827] text-white font-medium'
+                              : 'text-[#4b5563] hover:bg-[#ececec]'
+                          }`}
+                        >
+                          {child.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 )}
-              </Link>
+              </div>
             );
           })}
         </nav>

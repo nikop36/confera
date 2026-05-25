@@ -15,30 +15,29 @@ interface SendNotificationEmailParams {
 export class EmailService {
   private readonly resend: Resend | null;
   private readonly from: string;
+  private readonly enabled: boolean;
   private readonly logger = new Logger(EmailService.name);
 
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>('RESEND_API_KEY') ?? '';
     this.from =
       this.configService.get<string>('EMAIL_FROM') ?? 'onboarding@resend.dev';
-    if (!apiKey) {
-      this.resend = null;
-      this.logger.warn(
-        'Email service disabled — RESEND_API_KEY is not configured.',
-      );
-      return;
-    }
+    this.enabled = Boolean(apiKey);
+    this.resend = this.enabled ? new Resend(apiKey) : null;
 
-    this.resend = new Resend(apiKey);
-    this.logger.log(`Email service ready — from: ${this.from}`);
+    if (this.enabled) {
+      this.logger.log(`Email service ready — from: ${this.from}`);
+    } else {
+      this.logger.warn(
+        'Email service disabled (RESEND_API_KEY missing). Notifications will continue without email delivery.',
+      );
+    }
   }
 
   async sendNotificationEmail(
     params: SendNotificationEmailParams,
   ): Promise<void> {
-    if (!this.resend) {
-      throw new Error('RESEND_API_KEY is not configured.');
-    }
+    if (!this.enabled || !this.resend) return;
 
     const template = getTemplate(params.type);
     const { subject, html } = template({

@@ -5,12 +5,27 @@ import type { TimeSlot } from '../common/interfaces/time-slot.interface';
 
 @Injectable()
 export class StatisticsService {
+  private readonly cache = new Map<
+    string,
+    { value: unknown; expiresAt: number }
+  >();
+  private readonly cacheTtlMs = 5_000;
+
   constructor(
     private readonly schedulingRepository: SchedulingRepository,
     private readonly careerInterviewsRepository: CareerInterviewsRepository,
   ) {}
 
   async getRoomOccupancyStats(from?: string, to?: string) {
+    const cacheKey = `room-occupancy:${from ?? ''}:${to ?? ''}`;
+    const cached = this.readCache<Awaited<ReturnType<StatisticsService['getRoomOccupancyStatsInternal']>>>(cacheKey);
+    if (cached) return cached;
+    const payload = await this.getRoomOccupancyStatsInternal(from, to);
+    this.writeCache(cacheKey, payload);
+    return payload;
+  }
+
+  private async getRoomOccupancyStatsInternal(from?: string, to?: string) {
     const { fromDate, toDate: endDate } = resolveRange(from, to);
     const slots = await this.schedulingRepository.listTimeSlotsInRange(
       fromDate,
@@ -102,15 +117,26 @@ export class StatisticsService {
   }
 
   async getConfirmedMeetingsStats(from?: string, to?: string) {
+    const cacheKey = `confirmed-meetings:${from ?? ''}:${to ?? ''}`;
+    const cached = this.readCache<Awaited<ReturnType<StatisticsService['getConfirmedMeetingsStatsInternal']>>>(cacheKey);
+    if (cached) return cached;
+    const payload = await this.getConfirmedMeetingsStatsInternal(from, to);
+    this.writeCache(cacheKey, payload);
+    return payload;
+  }
+
+  private async getConfirmedMeetingsStatsInternal(from?: string, to?: string) {
     const { fromDate, toDate: endDate } = resolveRange(from, to);
     const slots = await this.schedulingRepository.listTimeSlotsInRange(
       fromDate,
       endDate,
     );
-    const [confirmedMeetings, confirmedInterviews] = await Promise.all([
+    const [confirmedMeetings, confirmedInterviews, rooms] = await Promise.all([
       this.getConfirmedMeetings(),
       this.getConfirmedCareerInterviews(),
+      this.schedulingRepository.listAllRooms(),
     ]);
+    const roomNameById = new Map(rooms.map((room) => [room.id, room.name]));
 
     const slotMap = createSlotMap(slots);
     const meetingCountBySlotId = new Map<string, number>();
@@ -181,6 +207,7 @@ export class StatisticsService {
     const series = [...seriesByDay.values()].sort((a, b) =>
       a.date.localeCompare(b.date),
     );
+    const anomalies = detectAnomalies(series);
     const confirmedMeetingsCount = [...meetingCountBySlotId.values()].reduce(
       (sum, count) => sum + count,
       0,
@@ -211,6 +238,12 @@ export class StatisticsService {
       rangeMeetings,
       rangeInterviews,
     );
+    const drilldown = buildDrilldownRecords(
+      rangeMeetings,
+      rangeInterviews,
+      slotMap,
+      roomNameById,
+    );
     const currentTotal = confirmedMeetingsCount + confirmedInterviewsCount;
     const previous =
       from && to
@@ -240,6 +273,8 @@ export class StatisticsService {
       },
       series,
       heatmap: [...heatmapByHour.values()].sort((a, b) => a.hour - b.hour),
+      anomalies,
+      drilldown,
       funnel: [
         { stage: 'pending_invites', value: pendingInterviewInvitesCount },
         { stage: 'accepted_invites', value: acceptedInterviewInvitesCount },
@@ -249,6 +284,29 @@ export class StatisticsService {
           value: confirmedMeetingsCount + confirmedInterviewsCount,
         },
       ],
+    };
+  }
+
+  async getHealthSummary() {
+    const [rooms, slots] = await Promise.all([
+      this.schedulingRepository.listAllRooms(),
+      this.schedulingRepository.listTimeSlotsInRange(
+        new Date('1970-01-01T00:00:00.000Z'),
+        new Date('1970-01-02T00:00:00.000Z'),
+      ),
+    ]);
+
+    return {
+      ok: true,
+      checkedAt: new Date().toISOString(),
+      modules: {
+        schedulingRepository: true,
+        careerInterviewsRepository: true,
+      },
+      sampleCounts: {
+        rooms: rooms.length,
+        slotsInSampleWindow: slots.length,
+      },
     };
   }
 
@@ -313,6 +371,23 @@ export class StatisticsService {
       confirmedCareerInterviewsCount: prevInterviews.length,
       deltaTotalPercent,
     };
+  }
+
+  private readCache<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expiresAt) {
+      this.cache.delete(key);
+      return null;
+    }
+    return entry.value as T;
+  }
+
+  private writeCache(key: string, value: unknown) {
+    this.cache.set(key, {
+      value,
+      expiresAt: Date.now() + this.cacheTtlMs,
+    });
   }
 }
 
@@ -423,4 +498,133 @@ function countConflicts(source: Map<string, number>) {
     if (count > 1) conflicts += count - 1;
   }
   return conflicts;
+}
+
+function detectAnomalies(
+  series: Array<{
+    date: string;
+    total: number;
+    meetings: number;
+    interviews: number;
+  }>,
+) {
+  const flags: Array<{
+    date: string;
+    type: 'spike' | 'drop';
+    previousTotal: number;
+    currentTotal: number;
+    deltaPercent: number;
+  }> = [];
+
+  for (let index = 1; index < series.length; index += 1) {
+    const previous = series[index - 1];
+    const current = series[index];
+    if (previous.total === 0) continue;
+
+    const deltaPercent = round2(
+      ((current.total - previous.total) / previous.total) * 100,
+    );
+    const absoluteDelta = Math.abs(current.total - previous.total);
+    if (absoluteDelta < 3) continue;
+    if (deltaPercent >= 50) {
+      flags.push({
+        date: current.date,
+        type: 'spike',
+        previousTotal: previous.total,
+        currentTotal: current.total,
+        deltaPercent,
+      });
+    } else if (deltaPercent <= -50) {
+      flags.push({
+        date: current.date,
+        type: 'drop',
+        previousTotal: previous.total,
+        currentTotal: current.total,
+        deltaPercent,
+      });
+    }
+  }
+
+  return flags;
+}
+
+function buildDrilldownRecords(
+  meetings: Array<{
+    id: string;
+    roomId: string;
+    slotId: string;
+    status: string;
+    participantUids?: string[];
+    requestedByUids?: string[];
+    requestedToUids?: string[];
+  }>,
+  interviews: Array<{
+    id: string;
+    roomId?: string;
+    slotId?: string;
+    status: string;
+    candidateUid: string;
+    interviewerUid?: string;
+    invitationStatus?: string;
+  }>,
+  slotMap: Map<string, TimeSlot>,
+  roomNameById: Map<string, string>,
+) {
+  const meetingRecords = meetings
+    .map((meeting) => {
+      const slot = slotMap.get(meeting.slotId);
+      if (!slot) return null;
+      const startAt = normalizeDate(slot.startAt);
+      const endAt = normalizeDate(slot.endAt);
+      if (!startAt || !endAt) return null;
+      return {
+        type: 'meeting' as const,
+        id: meeting.id,
+        status: meeting.status,
+        date: startAt.toISOString().slice(0, 10),
+        hour: startAt.getHours(),
+        slotId: meeting.slotId,
+        roomId: meeting.roomId,
+        roomName: roomNameById.get(meeting.roomId) ?? meeting.roomId,
+        startAt: startAt.toISOString(),
+        endAt: endAt.toISOString(),
+        participantCount: meeting.participantUids?.length ?? 0,
+        requestedByCount: meeting.requestedByUids?.length ?? 0,
+        requestedToCount: meeting.requestedToUids?.length ?? 0,
+      };
+    })
+    .filter((value): value is NonNullable<typeof value> => Boolean(value));
+
+  const interviewRecords = interviews
+    .map((interview) => {
+      if (!interview.slotId) return null;
+      const slot = slotMap.get(interview.slotId);
+      if (!slot) return null;
+      const startAt = normalizeDate(slot.startAt);
+      const endAt = normalizeDate(slot.endAt);
+      if (!startAt || !endAt) return null;
+      return {
+        type: 'interview' as const,
+        id: interview.id,
+        status: interview.status,
+        invitationStatus: interview.invitationStatus ?? 'pending',
+        date: startAt.toISOString().slice(0, 10),
+        hour: startAt.getHours(),
+        slotId: interview.slotId,
+        roomId: interview.roomId ?? '',
+        roomName: interview.roomId
+          ? (roomNameById.get(interview.roomId) ?? interview.roomId)
+          : 'N/A',
+        startAt: startAt.toISOString(),
+        endAt: endAt.toISOString(),
+        participantCount: interview.interviewerUid ? 2 : 1,
+        candidateUid: interview.candidateUid,
+        interviewerUid: interview.interviewerUid ?? null,
+      };
+    })
+    .filter((value): value is NonNullable<typeof value> => Boolean(value));
+
+  return [...meetingRecords, ...interviewRecords].sort((a, b) =>
+    a.startAt.localeCompare(b.startAt),
+  );
 }

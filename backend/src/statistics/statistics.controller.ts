@@ -61,4 +61,14 @@ export class StatisticsController {
   ) {
     return this.statisticsService.getConfirmedMeetingsStats(from, to);
   }
+
+  @Get('health')
+  @ApiOperation({ summary: 'Statistics module health check' })
+  @ApiResponse({
+    status: 200,
+    description: 'Statistics module and repository wiring health',
+  })
+  async getHealth() {
+    return this.statisticsService.getHealthSummary();
+  }
 }
