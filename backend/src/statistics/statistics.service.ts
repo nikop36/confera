@@ -18,7 +18,10 @@ export class StatisticsService {
 
   async getRoomOccupancyStats(from?: string, to?: string) {
     const cacheKey = `room-occupancy:${from ?? ''}:${to ?? ''}`;
-    const cached = this.readCache<Awaited<ReturnType<StatisticsService['getRoomOccupancyStatsInternal']>>>(cacheKey);
+    const cached =
+      this.readCache<
+        Awaited<ReturnType<StatisticsService['getRoomOccupancyStatsInternal']>>
+      >(cacheKey);
     if (cached) return cached;
     const payload = await this.getRoomOccupancyStatsInternal(from, to);
     this.writeCache(cacheKey, payload);
@@ -118,7 +121,12 @@ export class StatisticsService {
 
   async getConfirmedMeetingsStats(from?: string, to?: string) {
     const cacheKey = `confirmed-meetings:${from ?? ''}:${to ?? ''}`;
-    const cached = this.readCache<Awaited<ReturnType<StatisticsService['getConfirmedMeetingsStatsInternal']>>>(cacheKey);
+    const cached =
+      this.readCache<
+        Awaited<
+          ReturnType<StatisticsService['getConfirmedMeetingsStatsInternal']>
+        >
+      >(cacheKey);
     if (cached) return cached;
     const payload = await this.getConfirmedMeetingsStatsInternal(from, to);
     this.writeCache(cacheKey, payload);
