@@ -14,6 +14,7 @@ import { ConnectionsModule } from './connections/connections.module';
 import { CareerInterviewsModule } from './career-interviews/career-interviews.module';
 import { InvitesModule } from './invites/invites.module';
 import { StatisticsModule } from './statistics/statistics.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { StatisticsModule } from './statistics/statistics.module';
     CareerInterviewsModule,
     InvitesModule,
     StatisticsModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [],
