@@ -160,7 +160,7 @@ describe('SessionsService', () => {
       mockRegisterAtomic.mockRejectedValue(new SessionFullError());
       await expect(
         service.registerForSession('event1', 's1', 'user1'),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(new ConflictException('Žal so se vsa mesta zapolnila.'));
     });
 
     it('registers successfully when capacity is available', async () => {
