@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { EventsService } from '../events.service';
-import { EventsRepository, EventFullError, EventNotFoundError } from '../events.repository';
+import {
+  EventsRepository,
+  EventFullError,
+  EventNotFoundError,
+} from '../events.repository';
 
 describe('EventsService', () => {
   let service: EventsService;
@@ -79,7 +83,9 @@ describe('EventsService', () => {
 
       await service.updateEvent('e1', { title: 'New Title' });
 
-      expect(mockUpdateEvent).toHaveBeenCalledWith('e1', { title: 'New Title' });
+      expect(mockUpdateEvent).toHaveBeenCalledWith('e1', {
+        title: 'New Title',
+      });
     });
 
     it('converts startAt and endAt strings to Date objects', async () => {
@@ -106,7 +112,11 @@ describe('EventsService', () => {
 
       await service.updateEvent('e1', { title: 'New Title' });
 
-      const calledWith = mockUpdateEvent.mock.calls[0][1] as Record<string, unknown>;
+      const firstCallArgs = mockUpdateEvent.mock.calls[0] as [
+        string,
+        Record<string, unknown>,
+      ];
+      const calledWith = firstCallArgs[1];
       expect(Object.keys(calledWith)).toEqual(['title']);
     });
   });

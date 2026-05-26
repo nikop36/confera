@@ -3,7 +3,11 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { EventsRepository, EventFullError, EventNotFoundError } from './events.repository';
+import {
+  EventsRepository,
+  EventFullError,
+  EventNotFoundError,
+} from './events.repository';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import {

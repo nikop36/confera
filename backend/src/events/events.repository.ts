@@ -65,7 +65,9 @@ export class EventsRepository {
 
   async updateEvent(
     id: string,
-    data: Partial<Omit<Event, 'id' | 'createdBy' | 'createdAt' | 'registeredCount'>>,
+    data: Partial<
+      Omit<Event, 'id' | 'createdBy' | 'createdAt' | 'registeredCount'>
+    >,
   ): Promise<void> {
     const db = this.firebaseService.getFirestore();
     await db.collection('events').doc(id).update(data);

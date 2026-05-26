@@ -33,7 +33,9 @@ export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List all events with registration status for caller' })
+  @ApiOperation({
+    summary: 'List all events with registration status for caller',
+  })
   @ApiResponse({ status: 200, description: 'Events returned' })
   async listEvents(@CurrentUser() user: FirebaseUser) {
     return this.eventsService.listEvents(user.uid);
