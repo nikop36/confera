@@ -1,0 +1,19 @@
+meta {
+  name: Cleanup - delete generated time slot
+  type: http
+  seq: 11
+}
+
+delete {
+  url: {{baseUrl}}/scheduling/time-slots/{{slotId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{organizerToken}}
+}
+
+assert {
+  res.status: eq 200
+}

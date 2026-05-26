@@ -1,0 +1,19 @@
+meta {
+  name: Cleanup - delete room
+  type: http
+  seq: 10
+}
+
+delete {
+  url: {{baseUrl}}/scheduling/rooms/{{roomId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{organizerToken}}
+}
+
+assert {
+  res.status: eq 200
+}

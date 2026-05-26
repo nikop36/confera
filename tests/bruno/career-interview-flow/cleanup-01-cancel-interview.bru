@@ -1,0 +1,25 @@
+meta {
+  name: Cleanup - cancel interview
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/career-interviews/{{interviewId}}/status
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "status": "cancelled"
+  }
+}
+
+assert {
+  res.status: eq 200
+}

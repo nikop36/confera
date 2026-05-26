@@ -1,10 +1,24 @@
 vars {
   baseUrl: http://localhost:3001
-  token: 
-  adminToken: 
-  roomId: 
-  slotId: 
-  meetingId: 
-  interviewId: 
-  interviewerUid: 
+
+  # Admin token — npm run get-token with admin credentials
+  adminToken: PASTE_ADMIN_TOKEN_HERE
+
+  # Organizer token — npm run get-token with organizer credentials
+  organizerToken: PASTE_ORGANIZER_TOKEN_HERE
+
+  # Participant token — npm run get-token with participant credentials
+  participantToken: PASTE_PARTICIPANT_TOKEN_HERE
+
+  # Organizer UID — Firebase Console → Authentication → Users
+  organizerUid: PASTE_ORGANIZER_UID_HERE
+
+  # Participant UID — Firebase Console → Authentication → Users
+  participantUid: PASTE_PARTICIPANT_UID_HERE
+
+  # These are set automatically by script:post-response — leave empty
+  connectionRequestId:
+  roomId:
+  slotId:
+  interviewId:
 }

@@ -1,0 +1,31 @@
+meta {
+  name: Organizer sends connection request to participant
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/connections/requests
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{organizerToken}}
+}
+
+body:json {
+  {
+    "recipientUid": "{{participantUid}}"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.status: eq pending
+}
+
+script:post-response {
+  bru.setVar("connectionRequestId", res.body.id);
+}

@@ -1,0 +1,33 @@
+meta {
+  name: Admin creates career interview for participant
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/career-interviews
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "candidateUid": "{{participantUid}}",
+    "notes": "Bruno test interview"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.status: eq draft
+  res.body.candidateUid: eq {{participantUid}}
+}
+
+script:post-response {
+  bru.setVar("interviewId", res.body.id);
+}

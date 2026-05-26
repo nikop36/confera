@@ -1,0 +1,26 @@
+meta {
+  name: Participant accepts the interview invite
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/invites/{{interviewId}}/respond
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{participantToken}}
+}
+
+body:json {
+  {
+    "action": "accepted"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.message: isDefined
+}

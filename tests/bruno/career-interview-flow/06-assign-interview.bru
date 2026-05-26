@@ -1,7 +1,7 @@
 meta {
-  name: Assign career interview
+  name: Admin assigns interview to organizer with room and slot
   type: http
-  seq: 1
+  seq: 6
 }
 
 patch {
@@ -16,7 +16,7 @@ auth:bearer {
 
 body:json {
   {
-    "interviewerUid": "{{interviewerUid}}",
+    "interviewerUid": "{{organizerUid}}",
     "roomId": "{{roomId}}",
     "slotId": "{{slotId}}"
   }

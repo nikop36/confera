@@ -5,8 +5,7 @@
     "test:e2e:report": "playwright show-report",
     "test:api": "cd tests/bruno && npx @usebruno/cli run . -r --env local --verbose",
     "test:api:auth": "cd tests/bruno && npx @usebruno/cli run auth -r --env local",
-    "test:api:scheduling": "cd tests/bruno && npx @usebruno/cli run scheduling -r --env local",
-    "test:api:interviews": "cd tests/bruno && npx @usebruno/cli run career-interviews -r --env local"
+    "test:api:flow": "cd tests/bruno && npx @usebruno/cli run career-interview-flow -r --env local"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
