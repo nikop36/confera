@@ -4,9 +4,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AppShell from '../../components/AppShell';
 import SessionCard, { type SessionItem } from '../../components/SessionCard';
-// Temporary stub until SessionFormModal is created in Task 7
-type SessionFormValues = { title: string; description: string; speakers: unknown[]; startAt: string; endAt: string; location: string; capacity: number | null };
-const SessionFormModal = ({ session: _s, onClose: _c, onSave: _v }: { session: SessionItem | null; onClose: () => void; onSave: (v: SessionFormValues) => Promise<void> }) => null;
+import SessionFormModal, {
+  type SessionFormValues,
+} from '../../components/SessionFormModal';
 import { type EventItem } from '../../components/EventCard';
 import { useStoredUser } from '../../lib/auth';
 
