@@ -19,7 +19,9 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('community')
-  @ApiOperation({ summary: 'List all non-admin users for the community directory' })
+  @ApiOperation({
+    summary: 'List all non-admin users for the community directory',
+  })
   @ApiResponse({ status: 200, description: 'Community users returned' })
   async listCommunityUsers() {
     return this.usersService.listCommunityUsers();

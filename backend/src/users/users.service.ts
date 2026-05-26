@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UsersRepository } from './users.repository';
-import { User, UserProfile, MeetingType } from '../common/interfaces/user.interface';
+import {
+  User,
+  UserProfile,
+  MeetingType,
+} from '../common/interfaces/user.interface';
 import { UserRoleEnum } from '../common/enums/roles.enum';
 
 @Injectable()
