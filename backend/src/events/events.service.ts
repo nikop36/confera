@@ -11,6 +11,7 @@ import {
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import {
+  Event,
   EventWithMeta,
   EventRegistration,
 } from '../common/interfaces/event.interface';
@@ -23,11 +24,15 @@ export class EventsService {
     return this.eventsRepository.listEvents(callerUid);
   }
 
+  async getEventById(id: string): Promise<Event> {
+    const event = await this.eventsRepository.findById(id);
+    if (!event) throw new NotFoundException('Event not found');
+    return event;
+  }
+
   async createEvent(dto: CreateEventDto, createdBy: string): Promise<void> {
     await this.eventsRepository.createEvent({
       title: dto.title,
-      speakerName: dto.speakerName,
-      speakerBio: dto.speakerBio,
       description: dto.description,
       startAt: new Date(dto.startAt),
       endAt: new Date(dto.endAt),
@@ -43,19 +48,10 @@ export class EventsService {
     const event = await this.eventsRepository.findById(id);
     if (!event) throw new NotFoundException('Event not found');
 
-    const updates: Partial<{
-      title: string;
-      speakerName: string;
-      speakerBio: string;
-      description: string;
-      startAt: Date;
-      endAt: Date;
-      location: string;
-      capacity: number;
-    }> = {};
+    const updates: Partial<
+      Omit<Event, 'id' | 'createdBy' | 'createdAt' | 'registeredCount'>
+    > = {};
     if (dto.title !== undefined) updates.title = dto.title;
-    if (dto.speakerName !== undefined) updates.speakerName = dto.speakerName;
-    if (dto.speakerBio !== undefined) updates.speakerBio = dto.speakerBio;
     if (dto.description !== undefined) updates.description = dto.description;
     if (dto.startAt !== undefined) updates.startAt = new Date(dto.startAt);
     if (dto.endAt !== undefined) updates.endAt = new Date(dto.endAt);

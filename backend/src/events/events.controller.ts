@@ -41,6 +41,14 @@ export class EventsController {
     return this.eventsService.listEvents(user.uid);
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a single conference by ID' })
+  @ApiResponse({ status: 200, description: 'Conference returned' })
+  @ApiResponse({ status: 404, description: 'Not found' })
+  async getEventById(@Param('id') id: string) {
+    return this.eventsService.getEventById(id);
+  }
+
   @Post()
   @Roles('admin', 'organizer')
   @HttpCode(HttpStatus.CREATED)

@@ -143,8 +143,6 @@ export class EventsRepository {
     return {
       id: doc.id,
       title: data['title'] as string,
-      speakerName: data['speakerName'] as string,
-      speakerBio: data['speakerBio'] as string | undefined,
       description: data['description'] as string,
       startAt: (data['startAt'] as FirebaseFirestore.Timestamp).toDate(),
       endAt: (data['endAt'] as FirebaseFirestore.Timestamp).toDate(),

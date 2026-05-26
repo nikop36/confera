@@ -192,4 +192,22 @@ describe('EventsService', () => {
       expect(result).toEqual(regs);
     });
   });
+
+  describe('getEventById', () => {
+    it('returns event when it exists', async () => {
+      const event = { id: 'e1', title: 'Test Conference' };
+      mockFindById.mockResolvedValue(event);
+
+      const result = await service.getEventById('e1');
+
+      expect(result).toEqual(event);
+    });
+
+    it('throws NotFoundException when event does not exist', async () => {
+      mockFindById.mockResolvedValue(null);
+      await expect(service.getEventById('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
 });
