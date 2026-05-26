@@ -47,7 +47,6 @@ describe('EventsService', () => {
       mockCreateEvent.mockResolvedValue(undefined);
       const dto = {
         title: 'AI in Industry',
-        speakerName: 'Dr. Jana Novak',
         description: 'Talk about AI applications',
         startAt: '2026-06-15T09:00:00.000Z',
         endAt: '2026-06-15T10:00:00.000Z',

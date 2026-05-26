@@ -58,6 +58,7 @@ export class EventsService {
     if (dto.location !== undefined) updates.location = dto.location;
     if (dto.capacity !== undefined) updates.capacity = dto.capacity;
 
+    if (Object.keys(updates).length === 0) return;
     await this.eventsRepository.updateEvent(id, updates);
   }
 
