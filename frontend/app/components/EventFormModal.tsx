@@ -5,8 +5,6 @@ import type { EventItem } from './EventCard';
 
 export type EventFormValues = {
   title: string;
-  speakerName: string;
-  speakerBio: string;
   description: string;
   startAt: string;
   endAt: string;
@@ -15,15 +13,13 @@ export type EventFormValues = {
 };
 
 type EventFormModalProps = {
-  event: EventItem | null; // null = create mode, EventItem = edit mode
+  event: EventItem | null;
   onClose: () => void;
   onSave: (values: EventFormValues) => Promise<void>;
 };
 
 const EMPTY: EventFormValues = {
   title: '',
-  speakerName: '',
-  speakerBio: '',
   description: '',
   startAt: '',
   endAt: '',
@@ -40,8 +36,6 @@ function toDatetimeLocal(iso: string): string {
 function eventToForm(event: EventItem): EventFormValues {
   return {
     title: event.title,
-    speakerName: event.speakerName,
-    speakerBio: event.speakerBio ?? '',
     description: event.description,
     startAt: toDatetimeLocal(event.startAt),
     endAt: toDatetimeLocal(event.endAt),
@@ -89,7 +83,9 @@ export default function EventFormModal({
       await onSave(form);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Napaka pri shranjevanju.');
+      setError(
+        err instanceof Error ? err.message : 'Napaka pri shranjevanju.',
+      );
     } finally {
       setSaving(false);
     }
@@ -102,7 +98,9 @@ export default function EventFormModal({
   return (
     <div
       className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         className="bg-white rounded-[18px] w-full max-w-[500px] max-h-[90vh] overflow-y-auto p-6"
@@ -113,7 +111,7 @@ export default function EventFormModal({
       >
         <div className="flex items-center justify-between mb-5">
           <h3 id="event-form-title" className="text-[17px] font-bold">
-            {event ? 'Uredi dogodek' : 'Dodaj dogodek'}
+            {event ? 'Uredi konferenco' : 'Dodaj konferenco'}
           </h3>
           <button
             type="button"
@@ -135,30 +133,6 @@ export default function EventFormModal({
               value={form.title}
               onChange={(e) => set('title', e.target.value)}
               className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-              Predavatelj *
-            </span>
-            <input
-              required
-              value={form.speakerName}
-              onChange={(e) => set('speakerName', e.target.value)}
-              className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-              Bio predavatelja
-            </span>
-            <textarea
-              rows={2}
-              value={form.speakerBio}
-              onChange={(e) => set('speakerBio', e.target.value)}
-              className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors resize-none"
             />
           </label>
 
@@ -211,7 +185,7 @@ export default function EventFormModal({
                 required
                 value={form.location}
                 onChange={(e) => set('location', e.target.value)}
-                placeholder="npr. Dvorana A"
+                placeholder="npr. Ljubljana"
                 className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
               />
             </label>
@@ -224,13 +198,22 @@ export default function EventFormModal({
                 type="number"
                 min={1}
                 value={form.capacity}
-                onChange={(e) => set('capacity', e.target.value === '' ? 0 : Number.parseInt(e.target.value, 10))}
+                onChange={(e) =>
+                  set(
+                    'capacity',
+                    e.target.value === ''
+                      ? 0
+                      : Number.parseInt(e.target.value, 10),
+                  )
+                }
                 className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
               />
             </label>
           </div>
 
-          {error && <p className="text-[12px] text-[#dc2626]">{error}</p>}
+          {error && (
+            <p className="text-[12px] text-[#dc2626]">{error}</p>
+          )}
 
           <div className="flex gap-2 justify-end mt-1">
             <button
