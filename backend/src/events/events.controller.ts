@@ -45,8 +45,11 @@ export class EventsController {
   @ApiOperation({ summary: 'Get a single conference by ID' })
   @ApiResponse({ status: 200, description: 'Conference returned' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  async getEventById(@Param('id') id: string) {
-    return this.eventsService.getEventById(id);
+  async getEventById(
+    @Param('id') id: string,
+    @CurrentUser() user: FirebaseUser,
+  ) {
+    return this.eventsService.getEventById(id, user.uid);
   }
 
   @Post()

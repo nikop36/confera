@@ -24,8 +24,8 @@ export class EventsService {
     return this.eventsRepository.listEvents(callerUid);
   }
 
-  async getEventById(id: string): Promise<Event> {
-    const event = await this.eventsRepository.findById(id);
+  async getEventById(id: string, callerUid: string): Promise<EventWithMeta> {
+    const event = await this.eventsRepository.findByIdWithMeta(id, callerUid);
     if (!event) throw new NotFoundException('Event not found');
     return event;
   }

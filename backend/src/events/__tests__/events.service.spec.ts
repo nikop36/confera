@@ -14,6 +14,7 @@ describe('EventsService', () => {
   const mockUpdateEvent = jest.fn();
   const mockDeleteEvent = jest.fn();
   const mockFindById = jest.fn();
+  const mockFindByIdWithMeta = jest.fn();
   const mockRegisterAtomic = jest.fn();
   const mockCancelRegistration = jest.fn();
   const mockListRegistrations = jest.fn();
@@ -30,6 +31,7 @@ describe('EventsService', () => {
             updateEvent: mockUpdateEvent,
             deleteEvent: mockDeleteEvent,
             findById: mockFindById,
+            findByIdWithMeta: mockFindByIdWithMeta,
             registerAtomic: mockRegisterAtomic,
             cancelRegistration: mockCancelRegistration,
             listRegistrations: mockListRegistrations,
@@ -193,20 +195,21 @@ describe('EventsService', () => {
   });
 
   describe('getEventById', () => {
-    it('returns event when it exists', async () => {
-      const event = { id: 'e1', title: 'Test Conference' };
-      mockFindById.mockResolvedValue(event);
+    it('returns event with isRegistered when it exists', async () => {
+      const event = { id: 'e1', title: 'Test Conference', isRegistered: true };
+      mockFindByIdWithMeta.mockResolvedValue(event);
 
-      const result = await service.getEventById('e1');
+      const result = await service.getEventById('e1', 'caller-uid');
 
       expect(result).toEqual(event);
+      expect(mockFindByIdWithMeta).toHaveBeenCalledWith('e1', 'caller-uid');
     });
 
     it('throws NotFoundException when event does not exist', async () => {
-      mockFindById.mockResolvedValue(null);
-      await expect(service.getEventById('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      mockFindByIdWithMeta.mockResolvedValue(null);
+      await expect(
+        service.getEventById('nonexistent', 'caller-uid'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });
