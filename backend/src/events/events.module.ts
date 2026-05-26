@@ -4,9 +4,10 @@ import { UsersModule } from '../users/users.module';
 import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
 import { EventsRepository } from './events.repository';
+import { SessionsModule } from './sessions/sessions.module';
 
 @Module({
-  imports: [FirebaseModule, UsersModule],
+  imports: [FirebaseModule, UsersModule, SessionsModule],
   controllers: [EventsController],
   providers: [EventsService, EventsRepository],
 })
