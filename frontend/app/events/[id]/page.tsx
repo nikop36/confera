@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AppShell from '../../components/AppShell';
 import SessionCard, { type SessionItem } from '../../components/SessionCard';
@@ -249,8 +249,26 @@ export default function ConferenceProgramPage() {
 
   const { timeSlots, tracks } = buildGrid(sessions);
 
-  // Track which sessions have been rendered (to avoid repeating spanned ones)
-  const renderedSessionIds = new Set<string>();
+  // Pre-compute which slot+track cells are claimed by spanning sessions
+  // so we can skip empty-cell rendering inside JSX without mutating state during render
+  const claimedCells = new Set<string>();
+  for (const slot of timeSlots) {
+    for (const track of tracks) {
+      if (claimedCells.has(`${slot}-${track}`)) continue;
+      const session = sessions.find(
+        (s) => s.startAt === slot && s.location === track,
+      );
+      if (session) {
+        const span = getRowSpan(session, timeSlots);
+        const slotIdx = timeSlots.indexOf(slot);
+        for (let i = slotIdx + 1; i < slotIdx + span; i++) {
+          if (timeSlots[i]) {
+            claimedCells.add(`${timeSlots[i]}-${track}`);
+          }
+        }
+      }
+    }
+  }
 
   return (
     <AppShell>
@@ -338,7 +356,7 @@ export default function ConferenceProgramPage() {
 
                 {/* Time rows */}
                 {timeSlots.map((slot) => (
-                  <>
+                  <React.Fragment key={slot}>
                     {/* Time label */}
                     <div
                       key={`time-${slot}`}
@@ -352,15 +370,16 @@ export default function ConferenceProgramPage() {
 
                     {/* Track cells */}
                     {tracks.map((track) => {
+                      // Skip this cell if it's claimed by a spanning session from an earlier row
+                      if (claimedCells.has(`${slot}-${track}`)) {
+                        return null;
+                      }
+
                       const session = sessions.find(
-                        (s) =>
-                          s.startAt === slot &&
-                          s.location === track &&
-                          !renderedSessionIds.has(s.id),
+                        (s) => s.startAt === slot && s.location === track,
                       );
 
                       if (session) {
-                        renderedSessionIds.add(session.id);
                         const span = getRowSpan(session, timeSlots);
                         return (
                           <div
@@ -392,7 +411,6 @@ export default function ConferenceProgramPage() {
                         );
                       }
 
-                      // Empty cell (skip if session above spans into this row)
                       return (
                         <div
                           key={`empty-${slot}-${track}`}
@@ -400,7 +418,7 @@ export default function ConferenceProgramPage() {
                         />
                       );
                     })}
-                  </>
+                  </React.Fragment>
                 ))}
               </div>
             </div>

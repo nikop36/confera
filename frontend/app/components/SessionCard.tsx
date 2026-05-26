@@ -76,12 +76,12 @@ export default function SessionCard({
 
       <div className="mt-auto pt-[6px] flex items-center justify-between gap-2 flex-wrap">
         {/* Capacity pill */}
-        {session.capacity === null ? (
-          <span className="text-[9px] text-[#8e8e93]">Brez omejitve</span>
-        ) : session.isRegistered ? (
+        {session.isRegistered ? (
           <span className="text-[9px] font-semibold bg-[#ecfdf3] text-[#166534] px-[5px] py-[1px] rounded-[4px]">
             ✓ Prijavljen/a
           </span>
+        ) : session.capacity === null ? (
+          <span className="text-[9px] text-[#8e8e93]">Brez omejitve</span>
         ) : isFull ? (
           <span className="text-[9px] font-semibold bg-[#fff1f2] text-[#dc2626] px-[5px] py-[1px] rounded-[4px]">
             Razprodano
