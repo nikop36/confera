@@ -1,25 +1,10 @@
-import {
-  IsString,
-  IsDateString,
-  IsInt,
-  IsOptional,
-  Min,
-} from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsDateString, IsInt, Min } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateEventDto {
   @ApiProperty()
   @IsString()
   title!: string;
-
-  @ApiProperty()
-  @IsString()
-  speakerName!: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  speakerBio?: string;
 
   @ApiProperty()
   @IsString()

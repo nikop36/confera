@@ -14,6 +14,7 @@ describe('EventsService', () => {
   const mockUpdateEvent = jest.fn();
   const mockDeleteEvent = jest.fn();
   const mockFindById = jest.fn();
+  const mockFindByIdWithMeta = jest.fn();
   const mockRegisterAtomic = jest.fn();
   const mockCancelRegistration = jest.fn();
   const mockListRegistrations = jest.fn();
@@ -30,6 +31,7 @@ describe('EventsService', () => {
             updateEvent: mockUpdateEvent,
             deleteEvent: mockDeleteEvent,
             findById: mockFindById,
+            findByIdWithMeta: mockFindByIdWithMeta,
             registerAtomic: mockRegisterAtomic,
             cancelRegistration: mockCancelRegistration,
             listRegistrations: mockListRegistrations,
@@ -47,7 +49,6 @@ describe('EventsService', () => {
       mockCreateEvent.mockResolvedValue(undefined);
       const dto = {
         title: 'AI in Industry',
-        speakerName: 'Dr. Jana Novak',
         description: 'Talk about AI applications',
         startAt: '2026-06-15T09:00:00.000Z',
         endAt: '2026-06-15T10:00:00.000Z',
@@ -190,6 +191,25 @@ describe('EventsService', () => {
       const result = await service.listRegistrations('e1');
 
       expect(result).toEqual(regs);
+    });
+  });
+
+  describe('getEventById', () => {
+    it('returns event with isRegistered when it exists', async () => {
+      const event = { id: 'e1', title: 'Test Conference', isRegistered: true };
+      mockFindByIdWithMeta.mockResolvedValue(event);
+
+      const result = await service.getEventById('e1', 'caller-uid');
+
+      expect(result).toEqual(event);
+      expect(mockFindByIdWithMeta).toHaveBeenCalledWith('e1', 'caller-uid');
+    });
+
+    it('throws NotFoundException when event does not exist', async () => {
+      mockFindByIdWithMeta.mockResolvedValue(null);
+      await expect(
+        service.getEventById('nonexistent', 'caller-uid'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

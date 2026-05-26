@@ -1,30 +1,41 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { EventItem } from './EventCard';
+import type { SessionItem, Speaker } from './SessionCard';
+import SpeakerInput from './SpeakerInput';
 
-export type EventFormValues = {
+export type SessionFormValues = {
   title: string;
   description: string;
+  speakers: Speaker[];
   startAt: string;
   endAt: string;
   location: string;
-  capacity: number;
+  capacity: number | null;
 };
 
-type EventFormModalProps = {
-  event: EventItem | null;
+type SessionFormModalProps = {
+  session: SessionItem | null;
   onClose: () => void;
-  onSave: (values: EventFormValues) => Promise<void>;
+  onSave: (values: SessionFormValues) => Promise<void>;
 };
 
-const EMPTY: EventFormValues = {
+type CommunityUser = {
+  uid: string;
+  displayName: string;
+  bio?: string;
+};
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+
+const EMPTY: SessionFormValues = {
   title: '',
   description: '',
+  speakers: [],
   startAt: '',
   endAt: '',
   location: '',
-  capacity: 50,
+  capacity: null,
 };
 
 function toDatetimeLocal(iso: string): string {
@@ -33,30 +44,52 @@ function toDatetimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function eventToForm(event: EventItem): EventFormValues {
+function sessionToForm(session: SessionItem): SessionFormValues {
   return {
-    title: event.title,
-    description: event.description,
-    startAt: toDatetimeLocal(event.startAt),
-    endAt: toDatetimeLocal(event.endAt),
-    location: event.location,
-    capacity: event.capacity,
+    title: session.title,
+    description: session.description,
+    speakers: session.speakers,
+    startAt: toDatetimeLocal(session.startAt),
+    endAt: toDatetimeLocal(session.endAt),
+    location: session.location,
+    capacity: session.capacity,
   };
 }
 
-export default function EventFormModal({
-  event,
+export default function SessionFormModal({
+  session,
   onClose,
   onSave,
-}: EventFormModalProps) {
-  const [form, setForm] = useState<EventFormValues>(() =>
-    event ? eventToForm(event) : EMPTY,
+}: SessionFormModalProps) {
+  const [form, setForm] = useState<SessionFormValues>(() =>
+    session ? sessionToForm(session) : EMPTY,
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [users, setUsers] = useState<CommunityUser[]>([]);
   const firstInputRef = useRef<HTMLInputElement>(null);
 
   const handleClose = useCallback(() => onClose(), [onClose]);
+
+  // Fetch community users for speaker autocomplete
+  useEffect(() => {
+    const token = JSON.parse(
+      localStorage.getItem('confera_user') ?? 'null',
+    ) as { idToken?: string } | null;
+    if (!token?.idToken) return;
+    void fetch(`${API}/users/community`, {
+      headers: { Authorization: `Bearer ${token.idToken}` },
+    })
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          setUsers(data as CommunityUser[]);
+        }
+      })
+      .catch(() => {
+        /* autocomplete unavailable — fail silently */
+      });
+  }, []);
 
   useEffect(() => {
     firstInputRef.current?.focus();
@@ -91,8 +124,29 @@ export default function EventFormModal({
     }
   }
 
-  function set(field: keyof EventFormValues, value: string | number) {
+  function set<K extends keyof SessionFormValues>(
+    field: K,
+    value: SessionFormValues[K],
+  ) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function addSpeaker() {
+    set('speakers', [...form.speakers, { name: '', bio: '' }]);
+  }
+
+  function updateSpeaker(index: number, updated: Speaker) {
+    set(
+      'speakers',
+      form.speakers.map((s, i) => (i === index ? updated : s)),
+    );
+  }
+
+  function removeSpeaker(index: number) {
+    set(
+      'speakers',
+      form.speakers.filter((_, i) => i !== index),
+    );
   }
 
   return (
@@ -103,15 +157,15 @@ export default function EventFormModal({
       }}
     >
       <div
-        className="bg-white rounded-[18px] w-full max-w-[500px] max-h-[90vh] overflow-y-auto p-6"
+        className="bg-white rounded-[18px] w-full max-w-[520px] max-h-[90vh] overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="event-form-title"
+        aria-labelledby="session-form-title"
       >
         <div className="flex items-center justify-between mb-5">
-          <h3 id="event-form-title" className="text-[17px] font-bold">
-            {event ? 'Uredi konferenco' : 'Dodaj konferenco'}
+          <h3 id="session-form-title" className="text-[17px] font-bold">
+            {session ? 'Uredi sejo' : 'Dodaj sejo'}
           </h3>
           <button
             type="button"
@@ -123,6 +177,7 @@ export default function EventFormModal({
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Title */}
           <label className="flex flex-col gap-1">
             <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
               Naslov *
@@ -136,6 +191,7 @@ export default function EventFormModal({
             />
           </label>
 
+          {/* Description */}
           <label className="flex flex-col gap-1">
             <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
               Opis *
@@ -149,6 +205,30 @@ export default function EventFormModal({
             />
           </label>
 
+          {/* Speakers */}
+          <div className="flex flex-col gap-2">
+            <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
+              Predavatelji
+            </span>
+            {form.speakers.map((speaker, index) => (
+              <SpeakerInput
+                key={index}
+                value={speaker}
+                onChange={(updated) => updateSpeaker(index, updated)}
+                onRemove={() => removeSpeaker(index)}
+                users={users}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={addSpeaker}
+              className="text-[11px] font-semibold text-[#6b7280] hover:text-[#0d0d0d] border border-dashed border-[#d1d5db] rounded-[8px] py-[6px] bg-transparent cursor-pointer transition-colors font-sans"
+            >
+              + Dodaj predavatelja
+            </button>
+          </div>
+
+          {/* Start / End */}
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
@@ -176,36 +256,37 @@ export default function EventFormModal({
             </label>
           </div>
 
+          {/* Location / Capacity */}
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-                Lokacija *
+                Lokacija / sled *
               </span>
               <input
                 required
                 value={form.location}
                 onChange={(e) => set('location', e.target.value)}
-                placeholder="npr. Ljubljana"
+                placeholder="npr. Dvorana A"
                 className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
               />
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-                Kapaciteta *
+                Kapaciteta
               </span>
               <input
-                required
                 type="number"
                 min={1}
-                value={form.capacity}
+                value={form.capacity ?? ''}
                 onChange={(e) =>
                   set(
                     'capacity',
                     e.target.value === ''
-                      ? 0
+                      ? null
                       : Number.parseInt(e.target.value, 10),
                   )
                 }
+                placeholder="Brez omejitve"
                 className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
               />
             </label>

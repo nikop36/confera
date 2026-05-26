@@ -63,6 +63,23 @@ export class EventsRepository {
     return this.mapDoc(doc);
   }
 
+  async findByIdWithMeta(
+    id: string,
+    callerUid: string,
+  ): Promise<EventWithMeta | null> {
+    const db = this.firebaseService.getFirestore();
+    const [doc, regDoc] = await db.getAll(
+      db.collection('events').doc(id),
+      db
+        .collection('events')
+        .doc(id)
+        .collection('registrations')
+        .doc(callerUid),
+    );
+    if (!doc.exists) return null;
+    return { ...this.mapDoc(doc), isRegistered: regDoc.exists };
+  }
+
   async updateEvent(
     id: string,
     data: Partial<
@@ -143,8 +160,6 @@ export class EventsRepository {
     return {
       id: doc.id,
       title: data['title'] as string,
-      speakerName: data['speakerName'] as string,
-      speakerBio: data['speakerBio'] as string | undefined,
       description: data['description'] as string,
       startAt: (data['startAt'] as FirebaseFirestore.Timestamp).toDate(),
       endAt: (data['endAt'] as FirebaseFirestore.Timestamp).toDate(),

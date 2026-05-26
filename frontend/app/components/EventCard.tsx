@@ -1,12 +1,11 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 export type EventItem = {
   id: string;
   title: string;
-  speakerName: string;
-  speakerBio?: string;
   description: string;
   startAt: string;
   endAt: string;
@@ -30,7 +29,10 @@ type EventCardProps = {
 };
 
 function formatTimeRange(startAt: string, endAt: string): string {
-  const opts: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+  const opts: Intl.DateTimeFormatOptions = {
+    hour: '2-digit',
+    minute: '2-digit',
+  };
   return `${new Date(startAt).toLocaleTimeString('sl-SI', opts)} – ${new Date(endAt).toLocaleTimeString('sl-SI', opts)}`;
 }
 
@@ -46,6 +48,7 @@ export default function EventCard({
   onEdit,
   onDelete,
 }: EventCardProps) {
+  const router = useRouter();
   const isFull = event.registeredCount >= event.capacity;
   const spotsLeft = event.capacity - event.registeredCount;
 
@@ -77,7 +80,9 @@ export default function EventCard({
           <p className="text-[13px] font-semibold text-[#0d0d0d] truncate">
             {event.title}
           </p>
-          <p className="text-[11px] text-[#8e8e93] truncate">{event.speakerName}</p>
+          <p className="text-[11px] text-[#8e8e93] truncate">
+            {formatTimeRange(event.startAt, event.endAt)}
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {event.isRegistered ? (
@@ -89,7 +94,9 @@ export default function EventCard({
               Razprodano
             </span>
           ) : (
-            <span className="text-[11px] text-[#6e6e73]">{spotsLeft} mest</span>
+            <span className="text-[11px] text-[#6e6e73]">
+              {spotsLeft} mest
+            </span>
           )}
           <span className="bg-[#eff6ff] text-[#1d4ed8] text-[10px] font-medium px-[7px] py-[2px] rounded-[5px]">
             {event.location}
@@ -125,16 +132,11 @@ export default function EventCard({
                 {event.description}
               </p>
 
-              {/* Speaker bio */}
-              {event.speakerBio && (
-                <p className="text-[11px] text-[#8e8e93] italic leading-[1.5] mb-[10px]">
-                  {event.speakerBio}
-                </p>
-              )}
-
               {/* Register error */}
               {registerError && (
-                <p className="text-[11px] text-[#dc2626] mb-[8px]">{registerError}</p>
+                <p className="text-[11px] text-[#dc2626] mb-[8px]">
+                  {registerError}
+                </p>
               )}
 
               {/* Action row */}
@@ -161,9 +163,24 @@ export default function EventCard({
                     }}
                     className="flex-1 py-[7px] rounded-[8px] text-[11px] font-semibold bg-[#0d0d0d] text-white hover:bg-[#1f1f1f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-0 cursor-pointer font-sans"
                   >
-                    {isRegistering ? 'Prijavljujem...' : isFull ? 'Razprodano' : 'Prijavi se'}
+                    {isRegistering
+                      ? 'Prijavljujem...'
+                      : isFull
+                        ? 'Razprodano'
+                        : 'Prijavi se'}
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/events/${event.id}`);
+                  }}
+                  className="px-3 py-[7px] rounded-[8px] text-[11px] font-semibold bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#dbeafe] transition-colors border-0 cursor-pointer font-sans"
+                >
+                  Program →
+                </button>
 
                 {isAdminOrOrganizer && (
                   <>
