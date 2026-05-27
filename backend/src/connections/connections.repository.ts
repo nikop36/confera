@@ -138,4 +138,24 @@ export class ConnectionsRepository {
       (doc) => ({ id: doc.id, ...doc.data() }) as ConnectionRequest,
     );
   }
+
+  async listAcceptedConnectionUids(uid: string): Promise<string[]> {
+    const db = this.firebaseService.getFirestore();
+    const [asRequester, asRecipient] = await Promise.all([
+      db
+        .collection('connectionRequests')
+        .where('requesterUid', '==', uid)
+        .where('status', '==', 'accepted')
+        .get(),
+      db
+        .collection('connectionRequests')
+        .where('recipientUid', '==', uid)
+        .where('status', '==', 'accepted')
+        .get(),
+    ]);
+    const uids = new Set<string>();
+    asRequester.docs.forEach((doc) => uids.add(doc.data()['recipientUid'] as string));
+    asRecipient.docs.forEach((doc) => uids.add(doc.data()['requesterUid'] as string));
+    return [...uids];
+  }
 }

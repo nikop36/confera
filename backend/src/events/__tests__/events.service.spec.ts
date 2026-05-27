@@ -6,6 +6,7 @@ import {
   EventFullError,
   EventNotFoundError,
 } from '../events.repository';
+import { ConnectionsRepository } from '../../connections/connections.repository';
 
 describe('EventsService', () => {
   let service: EventsService;
@@ -18,6 +19,7 @@ describe('EventsService', () => {
   const mockRegisterAtomic = jest.fn();
   const mockCancelRegistration = jest.fn();
   const mockListRegistrations = jest.fn();
+  const mockListAcceptedConnectionUids = jest.fn().mockResolvedValue([]);
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -37,11 +39,18 @@ describe('EventsService', () => {
             listRegistrations: mockListRegistrations,
           },
         },
+        {
+          provide: ConnectionsRepository,
+          useValue: {
+            listAcceptedConnectionUids: mockListAcceptedConnectionUids,
+          },
+        },
       ],
     }).compile();
 
     service = module.get<EventsService>(EventsService);
     jest.clearAllMocks();
+    mockListAcceptedConnectionUids.mockResolvedValue([]);
   });
 
   describe('createEvent', () => {
@@ -202,7 +211,7 @@ describe('EventsService', () => {
       const result = await service.getEventById('e1', 'caller-uid');
 
       expect(result).toEqual(event);
-      expect(mockFindByIdWithMeta).toHaveBeenCalledWith('e1', 'caller-uid');
+      expect(mockFindByIdWithMeta).toHaveBeenCalledWith('e1', 'caller-uid', []);
     });
 
     it('throws NotFoundException when event does not exist', async () => {

@@ -4,6 +4,23 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { TagPills } from './TagPicker';
 
+const AVATAR_COLOURS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
+
+function avatarColour(uid: string): string {
+  let hash = 0;
+  for (const ch of uid) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffff;
+  return AVATAR_COLOURS[hash % AVATAR_COLOURS.length];
+}
+
+function initials(displayName: string): string {
+  return displayName
+    .split(' ')
+    .map((w) => w[0] ?? '')
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 export type EventItem = {
   id: string;
   title: string;
@@ -116,6 +133,31 @@ export default function EventCard({
               label: tagMap[slug] ?? slug,
             }))}
           />
+        </div>
+      )}
+      {(event.friendsGoing ?? []).length > 0 && (
+        <div className="flex items-center gap-[5px] mt-[6px]">
+          <div className="flex">
+            {(event.friendsGoing ?? []).slice(0, 3).map((friend, idx) => (
+              <div
+                key={friend.uid}
+                title={friend.displayName}
+                style={{
+                  background: avatarColour(friend.uid),
+                  zIndex: 3 - idx,
+                  marginRight: idx < 2 ? '-5px' : 0,
+                }}
+                className="w-[18px] h-[18px] rounded-full border-2 border-white text-white text-[8px] font-bold flex items-center justify-center flex-shrink-0"
+              >
+                {initials(friend.displayName)}
+              </div>
+            ))}
+          </div>
+          <span className="text-[11px] text-[#6366f1] font-semibold">
+            {(event.friendsGoing ?? []).length === 1
+              ? '1 prijatelj gre'
+              : `${(event.friendsGoing ?? []).length} prijatelji gredo`}
+          </span>
         </div>
       )}
 
