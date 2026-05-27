@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { EventItem } from './EventCard';
+import TagPicker from './TagPicker';
 
 export type EventFormValues = {
   title: string;
@@ -10,10 +11,12 @@ export type EventFormValues = {
   endAt: string;
   location: string;
   capacity: number;
+  tags: string[];
 };
 
 type EventFormModalProps = {
   event: EventItem | null;
+  token: string;
   onClose: () => void;
   onSave: (values: EventFormValues) => Promise<void>;
 };
@@ -25,6 +28,7 @@ const EMPTY: EventFormValues = {
   endAt: '',
   location: '',
   capacity: 50,
+  tags: [],
 };
 
 function toDatetimeLocal(iso: string): string {
@@ -41,11 +45,13 @@ function eventToForm(event: EventItem): EventFormValues {
     endAt: toDatetimeLocal(event.endAt),
     location: event.location,
     capacity: event.capacity,
+    tags: event.tags ?? [],
   };
 }
 
 export default function EventFormModal({
   event,
+  token,
   onClose,
   onSave,
 }: EventFormModalProps) {
@@ -209,6 +215,17 @@ export default function EventFormModal({
                 className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
               />
             </label>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">
+              Oznake
+            </label>
+            <TagPicker
+              token={token}
+              value={form.tags}
+              onChange={(slugs) => setForm((prev) => ({ ...prev, tags: slugs }))}
+            />
           </div>
 
           {error && (

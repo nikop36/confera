@@ -9,6 +9,7 @@ import SessionFormModal, {
 } from '../../components/SessionFormModal';
 import { type EventItem } from '../../components/EventCard';
 import { useStoredUser } from '../../lib/auth';
+import { type Tag } from '../../components/TagPicker';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -61,6 +62,7 @@ export default function ConferenceProgramPage() {
 
   const [conference, setConference] = useState<EventItem | null>(null);
   const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -104,7 +106,22 @@ export default function ConferenceProgramPage() {
 
   useEffect(() => {
     void loadData();
-  }, [loadData]);
+    if (user?.idToken) void loadTags(user.idToken);
+  }, [loadData, user?.idToken]);
+
+  async function loadTags(token: string) {
+    try {
+      const res = await fetch(`${API}/tags`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as Tag[];
+        setTags(data);
+      }
+    } catch {
+      // non-fatal
+    }
+  }
 
   async function handleSessionRegister(sessionId: string) {
     if (!user?.idToken) return;
@@ -246,6 +263,8 @@ export default function ConferenceProgramPage() {
       );
     }
   }
+
+  const tagMap = Object.fromEntries(tags.map((t) => [t.slug, t.label]));
 
   const { timeSlots, tracks } = buildGrid(sessions);
 
@@ -389,6 +408,7 @@ export default function ConferenceProgramPage() {
                           >
                             <SessionCard
                               session={session}
+                              tagMap={tagMap}
                               isRegistering={
                                 Boolean(registeringIds[session.id])
                               }
@@ -442,6 +462,7 @@ export default function ConferenceProgramPage() {
         <SessionFormModal
           key={modalSession?.id ?? 'create'}
           session={modalSession}
+          token={user?.idToken ?? ''}
           onClose={() => setModalSession(undefined)}
           onSave={handleSessionSave}
         />

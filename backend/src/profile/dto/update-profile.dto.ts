@@ -48,6 +48,12 @@ export class UpdateProfileDto {
   @IsOptional()
   researchKeywords?: string[];
 
+  @ApiPropertyOptional({ type: [String], example: ['ai', 'startup'] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  tags?: string[];
+
   @ApiPropertyOptional({ description: 'Role-specific flexible fields' })
   @IsObject()
   @IsOptional()

@@ -1,5 +1,5 @@
-import { IsString, IsDateString, IsInt, Min } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsDateString, IsInt, IsOptional, IsArray, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateEventDto {
   @ApiProperty()
@@ -26,4 +26,10 @@ export class CreateEventDto {
   @IsInt()
   @Min(1)
   capacity!: number;
+
+  @ApiPropertyOptional({ type: [String], example: ['ai', 'startup'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }

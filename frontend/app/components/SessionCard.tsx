@@ -1,5 +1,7 @@
 'use client';
 
+import { TagPills } from './TagPicker';
+
 export type Speaker = {
   name: string;
   bio?: string;
@@ -17,10 +19,12 @@ export type SessionItem = {
   capacity: number | null;
   registeredCount: number;
   isRegistered: boolean;
+  tags?: string[];
 };
 
 type SessionCardProps = {
   session: SessionItem;
+  tagMap: Record<string, string>;
   isRegistering: boolean;
   registerError?: string;
   onRegister: () => void;
@@ -40,6 +44,7 @@ function formatTimeRange(startAt: string, endAt: string): string {
 
 export default function SessionCard({
   session,
+  tagMap,
   isRegistering,
   registerError,
   onRegister,
@@ -73,6 +78,17 @@ export default function SessionCard({
       <p className="text-[10px] text-[#8e8e93]">
         {formatTimeRange(session.startAt, session.endAt)}
       </p>
+
+      {(session.tags ?? []).length > 0 && (
+        <div className="mt-1">
+          <TagPills
+            tags={(session.tags ?? []).map((slug) => ({
+              slug,
+              label: tagMap[slug] ?? slug,
+            }))}
+          />
+        </div>
+      )}
 
       <div className="mt-auto pt-[6px] flex items-center justify-between gap-2 flex-wrap">
         {/* Capacity pill */}

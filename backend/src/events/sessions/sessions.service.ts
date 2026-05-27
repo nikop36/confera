@@ -41,6 +41,7 @@ export class SessionsService {
       location: dto.location,
       capacity: dto.capacity ?? null,
       registeredCount: 0,
+      tags: dto.tags ?? [],
       createdBy,
       createdAt: new Date(),
     });
@@ -64,6 +65,7 @@ export class SessionsService {
     if (dto.endAt !== undefined) updates.endAt = new Date(dto.endAt);
     if (dto.location !== undefined) updates.location = dto.location;
     if (dto.capacity !== undefined) updates.capacity = dto.capacity ?? null;
+    if (dto.tags !== undefined) updates.tags = dto.tags;
 
     if (Object.keys(updates).length === 0) return;
     await this.sessionsRepository.updateSession(eventId, sessionId, updates);

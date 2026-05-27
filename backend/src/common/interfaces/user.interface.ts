@@ -20,5 +20,6 @@ export interface UserProfile {
   meetingType?: MeetingType;
   competencies?: string[];
   researchKeywords?: string[];
+  tags?: string[];
   roleProfile?: Record<string, unknown>;
 }

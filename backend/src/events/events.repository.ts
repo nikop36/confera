@@ -27,7 +27,10 @@ export class EventNotFoundError extends Error {
 export class EventsRepository {
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  async listEvents(callerUid: string): Promise<EventWithMeta[]> {
+  async listEvents(
+    callerUid: string,
+    friendUids: string[] = [],
+  ): Promise<EventWithMeta[]> {
     const db = this.firebaseService.getFirestore();
 
     // Single collectionGroup query for all this user's registrations
@@ -44,9 +47,55 @@ export class EventsRepository {
       .orderBy('startAt', 'asc')
       .get();
 
+    if (friendUids.length === 0) {
+      return snapshot.docs.map((doc) => ({
+        ...this.mapDoc(doc),
+        isRegistered: registeredEventIds.has(doc.id),
+        friendsGoing: [],
+      }));
+    }
+
+    // Batch-fetch friend registration docs for all (event × friend) combos
+    const refs = snapshot.docs.flatMap((eventDoc) =>
+      friendUids.map((fUid) =>
+        eventDoc.ref.collection('registrations').doc(fUid),
+      ),
+    );
+    const regDocs = await db.getAll(...refs);
+
+    // Map uid → displayName via users collection (batch)
+    const presentFriendUids = new Set(
+      regDocs
+        .filter((d) => d.exists)
+        .map((d) => d.ref.id),
+    );
+    const displayNames = new Map<string, string>();
+    if (presentFriendUids.size > 0) {
+      const userDocs = await db.getAll(
+        ...[...presentFriendUids].map((uid) => db.collection('users').doc(uid)),
+      );
+      userDocs.forEach((ud) => {
+        if (ud.exists) {
+          displayNames.set(ud.id, (ud.data()?.['displayName'] as string) ?? ud.id);
+        }
+      });
+    }
+
+    // Build eventId → friends who are registered
+    const friendsByEvent = new Map<string, { uid: string; displayName: string }[]>();
+    regDocs.forEach((d) => {
+      if (!d.exists) return;
+      const eventId = d.ref.parent.parent!.id;
+      const friendUid = d.ref.id;
+      const existing = friendsByEvent.get(eventId) ?? [];
+      existing.push({ uid: friendUid, displayName: displayNames.get(friendUid) ?? friendUid });
+      friendsByEvent.set(eventId, existing);
+    });
+
     return snapshot.docs.map((doc) => ({
       ...this.mapDoc(doc),
       isRegistered: registeredEventIds.has(doc.id),
+      friendsGoing: friendsByEvent.get(doc.id) ?? [],
     }));
   }
 
@@ -66,18 +115,49 @@ export class EventsRepository {
   async findByIdWithMeta(
     id: string,
     callerUid: string,
+    friendUids: string[] = [],
   ): Promise<EventWithMeta | null> {
     const db = this.firebaseService.getFirestore();
-    const [doc, regDoc] = await db.getAll(
-      db.collection('events').doc(id),
-      db
-        .collection('events')
-        .doc(id)
-        .collection('registrations')
-        .doc(callerUid),
+
+    const eventRef = db.collection('events').doc(id);
+    const callerRegRef = eventRef.collection('registrations').doc(callerUid);
+
+    const friendRegRefs = friendUids.map((fUid) =>
+      eventRef.collection('registrations').doc(fUid),
     );
+
+    const [doc, regDoc, ...friendRegDocs] = await db.getAll(
+      eventRef,
+      callerRegRef,
+      ...friendRegRefs,
+    );
+
     if (!doc.exists) return null;
-    return { ...this.mapDoc(doc), isRegistered: regDoc.exists };
+
+    const presentFriendUids = friendRegDocs
+      .filter((d) => d.exists)
+      .map((d) => d.ref.id);
+
+    const displayNames = new Map<string, string>();
+    if (presentFriendUids.length > 0) {
+      const userDocs = await db.getAll(
+        ...presentFriendUids.map((uid) => db.collection('users').doc(uid)),
+      );
+      userDocs.forEach((ud) => {
+        if (ud.exists) {
+          displayNames.set(ud.id, (ud.data()?.['displayName'] as string) ?? ud.id);
+        }
+      });
+    }
+
+    return {
+      ...this.mapDoc(doc),
+      isRegistered: regDoc.exists,
+      friendsGoing: presentFriendUids.map((uid) => ({
+        uid,
+        displayName: displayNames.get(uid) ?? uid,
+      })),
+    };
   }
 
   async updateEvent(
@@ -166,6 +246,7 @@ export class EventsRepository {
       location: data['location'] as string,
       capacity: data['capacity'] as number,
       registeredCount: (data['registeredCount'] as number) ?? 0,
+      tags: (data['tags'] as string[] | undefined) ?? [],
       createdBy: data['createdBy'] as string,
       createdAt: (data['createdAt'] as FirebaseFirestore.Timestamp).toDate(),
     };

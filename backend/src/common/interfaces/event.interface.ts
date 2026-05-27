@@ -13,6 +13,7 @@ export interface Event {
   location: string;
   capacity: number;
   registeredCount: number;
+  tags?: string[];
   createdBy: string;
   createdAt: Date;
 }
@@ -24,6 +25,7 @@ export interface EventRegistration {
 
 export interface EventWithMeta extends Event {
   isRegistered: boolean;
+  friendsGoing: { uid: string; displayName: string }[];
 }
 
 export interface Session {
@@ -36,6 +38,7 @@ export interface Session {
   location: string;
   capacity: number | null;
   registeredCount: number;
+  tags?: string[];
   createdBy: string;
   createdAt: Date;
 }

@@ -206,6 +206,7 @@ export class SessionsRepository {
       location: data['location'] as string,
       capacity: (data['capacity'] as number | null) ?? null,
       registeredCount: (data['registeredCount'] as number) ?? 0,
+      tags: (data['tags'] as string[] | undefined) ?? [],
       createdBy: data['createdBy'] as string,
       createdAt: (data['createdAt'] as FirebaseFirestore.Timestamp).toDate(),
     };

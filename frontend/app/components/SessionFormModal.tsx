@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { SessionItem, Speaker } from './SessionCard';
 import SpeakerInput from './SpeakerInput';
+import TagPicker from './TagPicker';
 
 export type SessionFormValues = {
   title: string;
@@ -12,10 +13,12 @@ export type SessionFormValues = {
   endAt: string;
   location: string;
   capacity: number | null;
+  tags: string[];
 };
 
 type SessionFormModalProps = {
   session: SessionItem | null;
+  token: string;
   onClose: () => void;
   onSave: (values: SessionFormValues) => Promise<void>;
 };
@@ -36,6 +39,7 @@ const EMPTY: SessionFormValues = {
   endAt: '',
   location: '',
   capacity: null,
+  tags: [],
 };
 
 function toDatetimeLocal(iso: string): string {
@@ -53,11 +57,13 @@ function sessionToForm(session: SessionItem): SessionFormValues {
     endAt: toDatetimeLocal(session.endAt),
     location: session.location,
     capacity: session.capacity,
+    tags: session.tags ?? [],
   };
 }
 
 export default function SessionFormModal({
   session,
+  token,
   onClose,
   onSave,
 }: SessionFormModalProps) {
@@ -290,6 +296,18 @@ export default function SessionFormModal({
                 className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
               />
             </label>
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">
+              Oznake
+            </label>
+            <TagPicker
+              token={token}
+              value={form.tags}
+              onChange={(slugs) => setForm((prev) => ({ ...prev, tags: slugs }))}
+            />
           </div>
 
           {error && (

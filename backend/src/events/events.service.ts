@@ -15,17 +15,23 @@ import {
   EventWithMeta,
   EventRegistration,
 } from '../common/interfaces/event.interface';
+import { ConnectionsRepository } from '../connections/connections.repository';
 
 @Injectable()
 export class EventsService {
-  constructor(private readonly eventsRepository: EventsRepository) {}
+  constructor(
+    private readonly eventsRepository: EventsRepository,
+    private readonly connectionsRepository: ConnectionsRepository,
+  ) {}
 
   async listEvents(callerUid: string): Promise<EventWithMeta[]> {
-    return this.eventsRepository.listEvents(callerUid);
+    const friendUids = await this.connectionsRepository.listAcceptedConnectionUids(callerUid);
+    return this.eventsRepository.listEvents(callerUid, friendUids);
   }
 
   async getEventById(id: string, callerUid: string): Promise<EventWithMeta> {
-    const event = await this.eventsRepository.findByIdWithMeta(id, callerUid);
+    const friendUids = await this.connectionsRepository.listAcceptedConnectionUids(callerUid);
+    const event = await this.eventsRepository.findByIdWithMeta(id, callerUid, friendUids);
     if (!event) throw new NotFoundException('Event not found');
     return event;
   }
@@ -39,6 +45,7 @@ export class EventsService {
       location: dto.location,
       capacity: dto.capacity,
       registeredCount: 0,
+      tags: dto.tags ?? [],
       createdBy,
       createdAt: new Date(),
     });
@@ -57,6 +64,7 @@ export class EventsService {
     if (dto.endAt !== undefined) updates.endAt = new Date(dto.endAt);
     if (dto.location !== undefined) updates.location = dto.location;
     if (dto.capacity !== undefined) updates.capacity = dto.capacity;
+    if (dto.tags !== undefined) updates.tags = dto.tags;
 
     if (Object.keys(updates).length === 0) return;
     await this.eventsRepository.updateEvent(id, updates);

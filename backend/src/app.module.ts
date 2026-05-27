@@ -16,6 +16,7 @@ import { InvitesModule } from './invites/invites.module';
 import { StatisticsModule } from './statistics/statistics.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { EventsModule } from './events/events.module';
+import { TagsModule } from './tags/tags.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { EventsModule } from './events/events.module';
     StatisticsModule,
     AnalyticsModule,
     EventsModule,
+    TagsModule,
   ],
   controllers: [AppController],
   providers: [],

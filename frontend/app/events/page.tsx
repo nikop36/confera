@@ -5,6 +5,7 @@ import AppShell from '../components/AppShell';
 import EventCard, { type EventItem } from '../components/EventCard';
 import EventFormModal, { type EventFormValues } from '../components/EventFormModal';
 import { useStoredUser } from '../lib/auth';
+import TagPicker, { type Tag } from '../components/TagPicker';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -38,6 +39,8 @@ export default function EventsPage() {
     user?.role === 'admin' || user?.role === 'organizer';
 
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -55,7 +58,22 @@ export default function EventsPage() {
   useEffect(() => {
     if (!user?.idToken) return;
     void loadEvents(user.idToken);
+    void loadTags(user.idToken);
   }, [user?.idToken]);
+
+  async function loadTags(token: string) {
+    try {
+      const res = await fetch(`${API}/tags`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as Tag[];
+        setTags(data);
+      }
+    } catch {
+      // non-fatal
+    }
+  }
 
   async function loadEvents(token: string) {
     setLoading(true);
@@ -189,7 +207,16 @@ export default function EventsPage() {
     }
   }
 
-  const groups = groupByTime(events);
+  const tagMap = Object.fromEntries(tags.map((t) => [t.slug, t.label]));
+
+  const filteredEvents =
+    selectedTags.length === 0
+      ? events
+      : events.filter((e) =>
+          selectedTags.some((slug) => e.tags?.includes(slug)),
+        );
+
+  const groups = groupByTime(filteredEvents);
 
   return (
     <AppShell>
@@ -218,11 +245,35 @@ export default function EventsPage() {
         </div>
       )}
 
+      {tags.length > 0 && (
+        <div className="mb-4">
+          <div className="flex flex-wrap gap-2">
+            <TagPicker
+              token={user?.idToken ?? ''}
+              value={selectedTags}
+              onChange={setSelectedTags}
+              tags={tags}
+            />
+            {selectedTags.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedTags([])}
+                className="text-[11px] font-semibold px-[9px] py-[3px] rounded-full border border-transparent text-[#8e8e93] hover:text-[#0d0d0d] bg-transparent cursor-pointer font-sans"
+              >
+                Počisti filter
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <SkeletonTimeline />
-      ) : events.length === 0 ? (
+      ) : filteredEvents.length === 0 ? (
         <div className="rounded-[14px] border border-[#f0f0f0] px-5 py-6 text-sm text-[#8e8e93]">
-          Ni razpisanih dogodkov.
+          {selectedTags.length > 0
+            ? 'Ni dogodkov za izbrane oznake.'
+            : 'Ni razpisanih dogodkov.'}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -239,6 +290,7 @@ export default function EventsPage() {
                   <EventCard
                     key={event.id}
                     event={event}
+                    tagMap={tagMap}
                     isExpanded={expandedId === event.id}
                     onToggle={() =>
                       setExpandedId((prev) =>
@@ -246,7 +298,7 @@ export default function EventsPage() {
                       )
                     }
                     isRegistering={Boolean(registeringIds[event.id])}
-                    registerError={registerErrors[event.id] ?? ''}
+                    registerError={registerErrors[event.id]}
                     onRegister={() => void handleRegister(event.id)}
                     onCancel={() => void handleCancel(event.id)}
                     isAdminOrOrganizer={isAdminOrOrganizer}
@@ -264,6 +316,7 @@ export default function EventsPage() {
         <EventFormModal
           key={modalEvent?.id ?? 'create'}
           event={modalEvent}
+          token={user?.idToken ?? ''}
           onClose={() => setModalEvent(undefined)}
           onSave={handleSave}
         />

@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { TagPills } from './TagPicker';
 
 export type EventItem = {
   id: string;
@@ -13,10 +14,13 @@ export type EventItem = {
   capacity: number;
   registeredCount: number;
   isRegistered: boolean;
+  tags?: string[];
+  friendsGoing?: { uid: string; displayName: string }[]; // placeholder for Task 7
 };
 
 type EventCardProps = {
   event: EventItem;
+  tagMap: Record<string, string>;
   isExpanded: boolean;
   onToggle: () => void;
   isRegistering: boolean;
@@ -38,6 +42,7 @@ function formatTimeRange(startAt: string, endAt: string): string {
 
 export default function EventCard({
   event,
+  tagMap,
   isExpanded,
   onToggle,
   isRegistering,
@@ -103,6 +108,16 @@ export default function EventCard({
           </span>
         </div>
       </div>
+      {(event.tags ?? []).length > 0 && (
+        <div className="mt-2">
+          <TagPills
+            tags={(event.tags ?? []).map((slug) => ({
+              slug,
+              label: tagMap[slug] ?? slug,
+            }))}
+          />
+        </div>
+      )}
 
       {/* Animated expanded panel */}
       <AnimatePresence initial={false}>

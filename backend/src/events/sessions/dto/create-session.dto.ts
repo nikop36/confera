@@ -58,4 +58,10 @@ export class CreateSessionDto {
   @IsInt()
   @Min(1)
   capacity?: number | null;
+
+  @ApiPropertyOptional({ type: [String], example: ['ai', 'research'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }
