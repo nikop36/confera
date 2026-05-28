@@ -71,11 +71,18 @@ describe('CareerSlotsService', () => {
 
     it('throws ConflictException when user already has a request', async () => {
       mockFindSlotById.mockResolvedValue({
-        id: 'slot-1', capacity: 3, createdByUid: 'industry-1',
-        title: 'Test', description: '', scheduledAt: new Date(), createdAt: new Date(),
+        id: 'slot-1',
+        capacity: 3,
+        createdByUid: 'industry-1',
+        title: 'Test',
+        description: '',
+        scheduledAt: new Date(),
+        createdAt: new Date(),
       });
       mockFindRequestByRequester.mockResolvedValue({
-        id: 'req-1', requesterUid: 'user-1', status: 'pending',
+        id: 'req-1',
+        requesterUid: 'user-1',
+        status: 'pending',
         requestedAt: new Date(),
       });
       await expect(
@@ -85,8 +92,13 @@ describe('CareerSlotsService', () => {
 
     it('throws ConflictException when slot is at capacity', async () => {
       mockFindSlotById.mockResolvedValue({
-        id: 'slot-1', capacity: 1, createdByUid: 'industry-1',
-        title: 'Test', description: '', scheduledAt: new Date(), createdAt: new Date(),
+        id: 'slot-1',
+        capacity: 1,
+        createdByUid: 'industry-1',
+        title: 'Test',
+        description: '',
+        scheduledAt: new Date(),
+        createdAt: new Date(),
       });
       mockFindRequestByRequester.mockResolvedValue(null);
       mockCountApproved.mockResolvedValue(1);
@@ -97,8 +109,13 @@ describe('CareerSlotsService', () => {
 
     it('creates request when slot is available', async () => {
       mockFindSlotById.mockResolvedValue({
-        id: 'slot-1', capacity: 3, createdByUid: 'industry-1',
-        title: 'Test', description: '', scheduledAt: new Date(), createdAt: new Date(),
+        id: 'slot-1',
+        capacity: 3,
+        createdByUid: 'industry-1',
+        title: 'Test',
+        description: '',
+        scheduledAt: new Date(),
+        createdAt: new Date(),
       });
       mockFindRequestByRequester.mockResolvedValue(null);
       mockCountApproved.mockResolvedValue(0);
@@ -114,18 +131,31 @@ describe('CareerSlotsService', () => {
 
   describe('respondToRequest', () => {
     const slot = {
-      id: 'slot-1', capacity: 3, createdByUid: 'industry-1',
-      title: 'Test', description: '', scheduledAt: new Date(), createdAt: new Date(),
+      id: 'slot-1',
+      capacity: 3,
+      createdByUid: 'industry-1',
+      title: 'Test',
+      description: '',
+      scheduledAt: new Date(),
+      createdAt: new Date(),
     };
     const request = {
-      id: 'req-1', requesterUid: 'user-2', status: 'pending' as const,
+      id: 'req-1',
+      requesterUid: 'user-2',
+      status: 'pending' as const,
       requestedAt: new Date(),
     };
 
     it('throws NotFoundException when slot does not exist', async () => {
       mockFindSlotById.mockResolvedValue(null);
       await expect(
-        service.respondToRequest('event-1', 'slot-1', 'req-1', 'industry-1', 'approved'),
+        service.respondToRequest(
+          'event-1',
+          'slot-1',
+          'req-1',
+          'industry-1',
+          'approved',
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -134,7 +164,13 @@ describe('CareerSlotsService', () => {
       mockFindRequestById.mockResolvedValue(request);
       mockFindByUid.mockResolvedValue({ uid: 'other-user', role: 'industry' });
       await expect(
-        service.respondToRequest('event-1', 'slot-1', 'req-1', 'other-user', 'approved'),
+        service.respondToRequest(
+          'event-1',
+          'slot-1',
+          'req-1',
+          'other-user',
+          'approved',
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -143,13 +179,26 @@ describe('CareerSlotsService', () => {
       mockFindRequestById.mockResolvedValue(request);
       mockCountApproved.mockResolvedValue(0);
       mockUpdateRequest.mockResolvedValue(undefined);
-      mockFindByUid.mockResolvedValue({ email: 'user@test.com', displayName: 'Test User', uid: 'user-2', role: 'participant' });
+      mockFindByUid.mockResolvedValue({
+        email: 'user@test.com',
+        displayName: 'Test User',
+        uid: 'user-2',
+        role: 'participant',
+      });
       mockCreateNotification.mockResolvedValue(undefined);
 
-      await service.respondToRequest('event-1', 'slot-1', 'req-1', 'industry-1', 'approved');
+      await service.respondToRequest(
+        'event-1',
+        'slot-1',
+        'req-1',
+        'industry-1',
+        'approved',
+      );
 
       expect(mockUpdateRequest).toHaveBeenCalledWith(
-        'event-1', 'slot-1', 'req-1',
+        'event-1',
+        'slot-1',
+        'req-1',
         expect.objectContaining({ status: 'approved' }),
       );
       expect(mockCreateNotification).toHaveBeenCalledWith(

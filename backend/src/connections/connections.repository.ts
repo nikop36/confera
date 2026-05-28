@@ -154,8 +154,12 @@ export class ConnectionsRepository {
         .get(),
     ]);
     const uids = new Set<string>();
-    asRequester.docs.forEach((doc) => uids.add(doc.data()['recipientUid'] as string));
-    asRecipient.docs.forEach((doc) => uids.add(doc.data()['requesterUid'] as string));
+    asRequester.docs.forEach((doc) =>
+      uids.add(doc.data()['recipientUid'] as string),
+    );
+    asRecipient.docs.forEach((doc) =>
+      uids.add(doc.data()['requesterUid'] as string),
+    );
     return [...uids];
   }
 }

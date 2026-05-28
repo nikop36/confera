@@ -32,7 +32,9 @@ describe('TagsService', () => {
 
   describe('listTags', () => {
     it('returns all tags from the repository', async () => {
-      const tags = [{ id: '1', label: 'AI', slug: 'ai', createdAt: new Date() }];
+      const tags = [
+        { id: '1', label: 'AI', slug: 'ai', createdAt: new Date() },
+      ];
       mockListAll.mockResolvedValue(tags);
       const result = await service.listTags();
       expect(result).toEqual(tags);
@@ -41,8 +43,15 @@ describe('TagsService', () => {
 
   describe('createTag', () => {
     it('throws ConflictException when slug already exists', async () => {
-      mockFindBySlug.mockResolvedValue({ id: '1', label: 'AI', slug: 'ai', createdAt: new Date() });
-      await expect(service.createTag({ label: 'AI', slug: 'ai' })).rejects.toThrow(ConflictException);
+      mockFindBySlug.mockResolvedValue({
+        id: '1',
+        label: 'AI',
+        slug: 'ai',
+        createdAt: new Date(),
+      });
+      await expect(
+        service.createTag({ label: 'AI', slug: 'ai' }),
+      ).rejects.toThrow(ConflictException);
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
@@ -51,7 +60,10 @@ describe('TagsService', () => {
       mockCreate.mockResolvedValue(undefined);
       await service.createTag({ label: 'Artificial Intelligence', slug: 'ai' });
       expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ label: 'Artificial Intelligence', slug: 'ai' }),
+        expect.objectContaining({
+          label: 'Artificial Intelligence',
+          slug: 'ai',
+        }),
       );
     });
   });

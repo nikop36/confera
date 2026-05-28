@@ -9,7 +9,13 @@ import { ConnectionsModule } from '../connections/connections.module';
 import { CareerSlotsModule } from './career-slots/career-slots.module';
 
 @Module({
-  imports: [FirebaseModule, UsersModule, SessionsModule, ConnectionsModule, CareerSlotsModule],
+  imports: [
+    FirebaseModule,
+    UsersModule,
+    SessionsModule,
+    ConnectionsModule,
+    CareerSlotsModule,
+  ],
   controllers: [EventsController],
   providers: [EventsService, EventsRepository],
 })

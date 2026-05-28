@@ -1,4 +1,10 @@
-import { IsString, IsDateString, IsInt, Min, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsDateString,
+  IsInt,
+  Min,
+  IsNotEmpty,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateCareerSlotDto {

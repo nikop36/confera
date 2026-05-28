@@ -25,13 +25,19 @@ export class EventsService {
   ) {}
 
   async listEvents(callerUid: string): Promise<EventWithMeta[]> {
-    const friendUids = await this.connectionsRepository.listAcceptedConnectionUids(callerUid);
+    const friendUids =
+      await this.connectionsRepository.listAcceptedConnectionUids(callerUid);
     return this.eventsRepository.listEvents(callerUid, friendUids);
   }
 
   async getEventById(id: string, callerUid: string): Promise<EventWithMeta> {
-    const friendUids = await this.connectionsRepository.listAcceptedConnectionUids(callerUid);
-    const event = await this.eventsRepository.findByIdWithMeta(id, callerUid, friendUids);
+    const friendUids =
+      await this.connectionsRepository.listAcceptedConnectionUids(callerUid);
+    const event = await this.eventsRepository.findByIdWithMeta(
+      id,
+      callerUid,
+      friendUids,
+    );
     if (!event) throw new NotFoundException('Event not found');
     return event;
   }
