@@ -42,19 +42,6 @@ const CHIP_COLORS = [
   'bg-[#fff7ed] text-[#c2410c]',
 ];
 
-const ROLE_LABELS: Record<string, string> = {
-  participant: 'Udeleženec',
-  organizer: 'Organizator',
-  industry: 'Industrija',
-  admin: 'Admin',
-};
-
-const MEETING_LABELS: Record<string, string> = {
-  'in-person': '📍 V živo',
-  online: '🌐 Spletno',
-  both: '🌐 Oboje',
-};
-
 function avatarGradient(uid: string) {
   return AVATAR_GRADIENTS[uid.charCodeAt(0) % AVATAR_GRADIENTS.length];
 }
@@ -90,7 +77,6 @@ export default function PublicProfilePage() {
   const [isPending, setIsPending] = useState(false);
   const [connecting, setConnecting] = useState(false);
 
-  // Fetch tags list for resolving slugs → labels
   const [tagMap, setTagMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -111,7 +97,6 @@ export default function PublicProfilePage() {
     void load();
   }, [uid]);
 
-  // Load tags for label resolution
   useEffect(() => {
     if (!viewer?.idToken) return;
     fetch(`${API}/tags`, { headers: { Authorization: `Bearer ${viewer.idToken}` } })
@@ -126,7 +111,6 @@ export default function PublicProfilePage() {
       .catch(() => {});
   }, [viewer?.idToken]);
 
-  // Load connection state
   useEffect(() => {
     if (!viewer?.idToken || !uid) return;
     fetch(`${API}/connections/me`, { headers: { Authorization: `Bearer ${viewer.idToken}` } })
@@ -159,10 +143,8 @@ export default function PublicProfilePage() {
   if (loading) {
     return (
       <AppShell>
-        <div className="max-w-[560px] mx-auto">
-          <div className="h-[120px] bg-[#f3f4f6] rounded-[20px] animate-pulse mb-4" />
-          <div className="h-[200px] bg-[#f3f4f6] rounded-[20px] animate-pulse" />
-        </div>
+        <div className="rounded-2xl rounded-b-none h-[164px] bg-[#f3f4f6] animate-pulse" />
+        <div className="h-[200px] bg-[#f3f4f6] rounded-b-2xl animate-pulse mt-px" />
       </AppShell>
     );
   }
@@ -201,8 +183,6 @@ export default function PublicProfilePage() {
 
   return (
     <AppShell>
-      <div className="max-w-[560px] mx-auto">
-
         {/* Back */}
         <button
           type="button"
@@ -215,53 +195,65 @@ export default function PublicProfilePage() {
           Nazaj
         </button>
 
-        {/* Header card */}
-        <div className="bg-white border border-[#e5e7eb] rounded-[20px] overflow-hidden mb-3">
-          {/* Background banner */}
+        {/* Cover */}
+        <div className="rounded-2xl rounded-b-none overflow-hidden h-[164px] relative">
+          {backgroundImg ? (
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${backgroundImg})`,
+                backgroundPosition: `${bgPosX}% ${bgPosY}%`,
+                backgroundSize: `${bgZoom}%`,
+              }}
+            />
+          ) : (
+            <>
+              <div className="absolute inset-0 bg-[#a8d8f0]" />
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 600 164" preserveAspectRatio="none" fill="none">
+                <path d="M-60 220 Q80 80 260 120 T660 90" stroke="#ffd166" strokeWidth="38" fill="none" />
+                <path d="M-60 220 Q80 80 260 120 T660 90" stroke="#1d1d1f" strokeWidth="1.5" fill="none" opacity="0.25" />
+                <path d="M-60 245 Q100 95 280 135 T660 108" stroke="#ef476f" strokeWidth="32" fill="none" />
+                <path d="M-60 245 Q100 95 280 135 T660 108" stroke="#1d1d1f" strokeWidth="1.5" fill="none" opacity="0.25" />
+                <path d="M-60 262 Q120 108 300 148 T660 122" stroke="#06d6a0" strokeWidth="28" fill="none" />
+                <path d="M-60 262 Q120 108 300 148 T660 122" stroke="#1d1d1f" strokeWidth="1.5" fill="none" opacity="0.2" />
+                <path d="M-60 276 Q140 120 320 158 T660 134" stroke="#118ab2" strokeWidth="24" fill="none" />
+                <path d="M-60 276 Q140 120 320 158 T660 134" stroke="#1d1d1f" strokeWidth="1.5" fill="none" opacity="0.2" />
+                <path d="M-60 288 Q160 132 340 168 T660 145" stroke="#ffc8dd" strokeWidth="20" fill="none" />
+                <path d="M-60 288 Q160 132 340 168 T660 145" stroke="#1d1d1f" strokeWidth="1" fill="none" opacity="0.15" />
+              </svg>
+            </>
+          )}
+        </div>
+
+        {/* Avatar overlapping cover */}
+        <div className="-mt-9 pl-1 mb-3 relative z-30 flex w-full items-end">
           <div
-            className="h-[100px] relative"
-            style={
-              backgroundImg
-                ? {
-                    backgroundImage: `url(${backgroundImg})`,
-                    backgroundSize: `${bgZoom}%`,
-                    backgroundPosition: `${bgPosX}% ${bgPosY}%`,
-                  }
-                : { background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})` }
-            }
-          />
-
-          {/* Avatar + name row */}
-          <div className="px-5 pb-5">
-            <div className="flex items-end justify-between -mt-[28px] mb-3">
-              {/* Avatar */}
+            className="w-[72px] h-[72px] shrink-0 overflow-hidden rounded-full flex items-center justify-center text-[22px] font-bold border-4 border-white shadow-md"
+            style={profileImg ? undefined : { background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})`, color: gradient.text }}
+          >
+            {profileImg ? (
               <div
-                className="w-[56px] h-[56px] rounded-full border-[3px] border-white flex items-center justify-center text-[16px] font-bold flex-shrink-0 overflow-hidden"
-                style={
-                  profileImg
-                    ? undefined
-                    : { background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})`, color: gradient.text }
-                }
-              >
-                {profileImg ? (
-                  <img
-                    src={profileImg}
-                    alt={profile.displayName}
-                    className="w-full h-full object-cover"
-                    style={{ objectPosition: `${pfPosX}% ${pfPosY}%`, transform: `scale(${pfZoom / 100})` }}
-                  />
-                ) : (
-                  initials(profile.displayName)
-                )}
-              </div>
+                className="h-full w-full bg-cover bg-center"
+                style={{
+                  backgroundImage: `url(${profileImg})`,
+                  backgroundPosition: `${pfPosX}% ${pfPosY}%`,
+                  backgroundSize: `${pfZoom}%`,
+                }}
+              />
+            ) : (
+              initials(profile.displayName) || '??'
+            )}
+          </div>
 
-              {/* Action button */}
+          <div className="flex items-center w-full pl-3">
+            <div className="flex-1" />
+            <div className="flex justify-end">
               {!isOwnProfile && viewer && (
                 <button
                   type="button"
                   disabled={isConnected || isPending || connecting}
                   onClick={() => void handleConnect()}
-                  className={`px-4 py-[7px] rounded-full text-[12px] font-semibold border-0 cursor-pointer font-sans transition-colors ${
+                  className={`px-[18px] py-[6px] rounded-full text-[13px] font-semibold border-0 cursor-pointer font-sans transition-colors ${
                     isConnected
                       ? 'bg-[#ecfdf3] text-[#166534] cursor-default'
                       : isPending
@@ -275,37 +267,31 @@ export default function PublicProfilePage() {
               {isOwnProfile && (
                 <a
                   href="/profile"
-                  className="px-4 py-[7px] rounded-full text-[12px] font-semibold border border-[#e5e7eb] text-[#3d3d3d] hover:border-[#0d0d0d] no-underline transition-colors"
+                  className="px-[18px] py-[6px] rounded-full text-[13px] font-semibold border border-[#e5e7eb] text-[#3d3d3d] hover:border-[#0d0d0d] no-underline transition-colors"
+                  style={{ background: '#7fa8c8', color: '#fff', borderColor: 'transparent' }}
                 >
                   Uredi profil
                 </a>
               )}
             </div>
-
-            <p className="text-[17px] font-bold text-[#0d0d0d] leading-[1.2]">{profile.displayName}</p>
-            {profile.affiliation && (
-              <p className="text-[12px] text-[#6e6e73] mt-[2px]">{profile.affiliation}</p>
-            )}
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-[10px] font-semibold bg-[#f3f4f6] text-[#3d3d3d] px-[8px] py-[3px] rounded-full">
-                {ROLE_LABELS[profile.role] ?? profile.role}
-              </span>
-              {profile.meetingType && (
-                <span className="text-[11px] text-[#8e8e93]">
-                  {MEETING_LABELS[profile.meetingType]}
-                </span>
-              )}
-            </div>
           </div>
         </div>
 
-        {/* Bio */}
-        {profile.bio && (
-          <div className="bg-white border border-[#e5e7eb] rounded-[20px] px-5 py-4 mb-3">
-            <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">O meni</p>
-            <p className="text-[13px] text-[#1d1d1f] leading-[1.6]">{profile.bio}</p>
+        {/* Name + checkmark + email + bio */}
+        <div className="mb-[18px]">
+          <div className="flex items-center gap-[7px] mb-[5px]">
+            <h2 className="text-xl font-bold">{profile.displayName}</h2>
+            <span className="w-[18px] h-[18px] rounded-full bg-[#0071e3] flex items-center justify-center shrink-0">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
           </div>
-        )}
+          <p className="text-xs text-[#8e8e93] mb-2">{profile.email}</p>
+          {profile.bio && (
+            <p className="text-sm text-[#6e6e73] leading-relaxed">{profile.bio}</p>
+          )}
+        </div>
 
         {/* Tags */}
         {profileTags.length > 0 && (
@@ -367,7 +353,6 @@ export default function PublicProfilePage() {
           </div>
         )}
 
-      </div>
     </AppShell>
   );
 }

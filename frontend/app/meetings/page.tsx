@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import AppShell from '../components/AppShell';
 import { useStoredUser } from '../lib/auth';
 
@@ -107,6 +108,7 @@ export default function MeetingsPage() {
                 personLabel="Intervjuvalec"
                 personName={item.interviewer.displayName ?? 'Neznan'}
                 personEmail={item.interviewer.email ?? ''}
+                personUid={item.interviewer.uid}
                 slot={item.slot}
                 roomName={item.room?.name ?? 'N/A'}
                 notes={item.notes}
@@ -132,6 +134,7 @@ export default function MeetingsPage() {
                 personLabel="Kandidat"
                 personName={item.candidate.displayName ?? 'Neznan'}
                 personEmail={item.candidate.email ?? ''}
+                personUid={item.candidate.uid}
                 slot={item.slot}
                 roomName={item.room?.name ?? 'N/A'}
                 notes={item.notes}
@@ -157,6 +160,7 @@ function MeetingCard({
   personLabel,
   personName,
   personEmail,
+  personUid,
   slot,
   roomName,
   notes,
@@ -165,6 +169,7 @@ function MeetingCard({
   personLabel: string;
   personName: string;
   personEmail: string;
+  personUid?: string;
   slot: InviteItem['slot'];
   roomName: string;
   notes?: string;
@@ -175,9 +180,13 @@ function MeetingCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[12px] text-[#8e8e93]">{personLabel}</p>
-          <p className="text-[14px] font-semibold text-[#0d0d0d] truncate">
-            {personName}
-          </p>
+          {personUid ? (
+            <Link href={`/profile/${personUid}`} className="text-[14px] font-semibold text-[#0d0d0d] truncate block no-underline hover:underline">
+              {personName}
+            </Link>
+          ) : (
+            <p className="text-[14px] font-semibold text-[#0d0d0d] truncate">{personName}</p>
+          )}
           <p className="text-[12px] text-[#8e8e93] truncate">{personEmail}</p>
         </div>
         {status && <StatusPill status={status} />}
