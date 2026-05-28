@@ -10,6 +10,7 @@ import SessionFormModal, {
 import { type EventItem } from '../../components/EventCard';
 import { useStoredUser } from '../../lib/auth';
 import { type Tag } from '../../components/TagPicker';
+import CareerSlotsSection from '../../components/CareerSlotsSection';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -453,6 +454,16 @@ export default function ConferenceProgramPage() {
             >
               + Dodaj sejo
             </button>
+          )}
+
+          {/* Career slots */}
+          {user && (
+            <CareerSlotsSection
+              eventId={eventId}
+              token={user.idToken ?? ''}
+              userUid={user.uid ?? ''}
+              userRole={user.role ?? 'participant'}
+            />
           )}
         </>
       ) : null}
