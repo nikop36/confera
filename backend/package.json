@@ -78,6 +78,9 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "moduleNameMapper": {
+      "^resend$": "<rootDir>/__mocks__/resend.js"
+    },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
