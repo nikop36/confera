@@ -474,7 +474,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     {sug.name.split(' ').map(w => w[0]).join('')}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold truncate">{sug.name}</p>
+                    {sug.uid ? (
+                      <Link href={`/profile/${sug.uid}`} className="text-[13px] font-semibold truncate block no-underline text-[#0d0d0d] hover:underline">
+                        {sug.name}
+                      </Link>
+                    ) : (
+                      <p className="text-[13px] font-semibold truncate">{sug.name}</p>
+                    )}
                     <p className="text-[11px] text-[#8e8e93] truncate">{sug.org}</p>
                   </div>
                   <button
