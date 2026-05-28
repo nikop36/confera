@@ -21,6 +21,13 @@ export function buildCsv(data: Record<string, unknown>): Buffer {
   return Buffer.from(csv, 'utf-8');
 }
 
+export function buildCsvMany(rows: Record<string, unknown>[]): Buffer {
+  if (rows.length === 0) return Buffer.from('', 'utf-8');
+  const flattened = rows.map(flattenForExport);
+  const csv = stringify(flattened, { header: true });
+  return Buffer.from(csv, 'utf-8');
+}
+
 // Converts arrays to pipe-separated strings for CSV export
 function flattenForExport(
   data: Record<string, unknown>,
