@@ -94,3 +94,32 @@ export async function buildExcel(
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
 }
+
+export async function buildExcelMany(
+  rows: Record<string, unknown>[],
+): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Registrations');
+
+  if (rows.length === 0) {
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  const headers = Object.keys(rows[0]);
+  worksheet.addRow(headers);
+  worksheet.columns.forEach((col) => {
+    col.width = 20;
+  });
+
+  for (const row of rows) {
+    const values = headers.map((key) => {
+      const v = row[key];
+      return Array.isArray(v) ? v.join('|') : v;
+    });
+    worksheet.addRow(values);
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}

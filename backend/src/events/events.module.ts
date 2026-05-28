@@ -18,5 +18,6 @@ import { CareerSlotsModule } from './career-slots/career-slots.module';
   ],
   controllers: [EventsController],
   providers: [EventsService, EventsRepository],
+  exports: [EventsRepository]
 })
 export class EventsModule {}

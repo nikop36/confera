@@ -57,4 +57,17 @@ export class UsersRepository {
       (doc) => ({ uid: doc.id, ...doc.data() }) as User & UserProfile,
     );
   }
+
+  async findByEmail(email: string): Promise<(User & UserProfile) | null> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db
+      .collection('users')
+      .where('email', '==', email)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) return null;
+    const doc = snapshot.docs[0];
+    return { uid: doc.id, ...doc.data() } as User & UserProfile;
+  }
 }
