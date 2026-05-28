@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import AppShell from '../components/AppShell';
 import { useStoredUser } from '../lib/auth';
 
@@ -174,9 +175,9 @@ export default function ConnectionsPage() {
                     .toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-semibold text-[#0d0d0d] truncate">
+                  <Link href={`/profile/${request.counterpart.uid}`} className="text-[14px] font-semibold text-[#0d0d0d] truncate block hover:underline no-underline">
                     {request.counterpart.displayName}
-                  </p>
+                  </Link>
                   <p className="text-[12px] text-[#8e8e93] truncate">
                     {request.counterpart.email}
                   </p>
@@ -224,9 +225,9 @@ export default function ConnectionsPage() {
               >
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-semibold text-[#0d0d0d] truncate">
+                    <Link href={`/profile/${connection.counterpart.uid}`} className="text-[14px] font-semibold text-[#0d0d0d] truncate block hover:underline no-underline">
                       {connection.counterpart.displayName}
-                    </p>
+                    </Link>
                     <p className="text-[12px] text-[#8e8e93] truncate">
                       {connection.counterpart.email}
                     </p>

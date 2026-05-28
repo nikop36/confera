@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export type CommunityUser = {
@@ -197,30 +198,39 @@ export default function PersonCard({
                 <p className="text-[10px] text-[#8e8e93] mb-[9px]">{meeting}</p>
               )}
 
-              {/* Connect button */}
-              <button
-                type="button"
-                disabled={isConnected || isPending || isConnecting}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onConnect();
-                }}
-                className={`w-full py-[7px] rounded-[8px] text-[10px] font-semibold border-0 cursor-pointer font-sans transition-colors ${
-                  isConnected
-                    ? 'bg-[#ecfdf3] text-[#166534] cursor-default'
+              {/* Actions row */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={isConnected || isPending || isConnecting}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onConnect();
+                  }}
+                  className={`flex-1 py-[7px] rounded-[8px] text-[10px] font-semibold border-0 cursor-pointer font-sans transition-colors ${
+                    isConnected
+                      ? 'bg-[#ecfdf3] text-[#166534] cursor-default'
+                      : isPending
+                        ? 'bg-[#f3f4f6] text-[#6b7280] cursor-default'
+                        : 'bg-[#0d0d0d] text-white hover:bg-[#1f1f1f] disabled:opacity-50'
+                  }`}
+                >
+                  {isConnected
+                    ? 'Povezan/a ✓'
                     : isPending
-                      ? 'bg-[#f3f4f6] text-[#6b7280] cursor-default'
-                      : 'bg-[#0d0d0d] text-white hover:bg-[#1f1f1f] disabled:opacity-50'
-                }`}
-              >
-                {isConnected
-                  ? 'Povezan/a ✓'
-                  : isPending
-                    ? 'Čaka odgovor'
-                    : isConnecting
-                      ? 'Pošiljanje...'
-                      : 'Poveži se'}
-              </button>
+                      ? 'Čaka odgovor'
+                      : isConnecting
+                        ? 'Pošiljanje...'
+                        : 'Poveži se'}
+                </button>
+                <Link
+                  href={`/profile/${person.uid}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="px-3 py-[7px] rounded-[8px] text-[10px] font-semibold border border-[#e5e7eb] text-[#3d3d3d] hover:border-[#0d0d0d] no-underline transition-colors"
+                >
+                  Profil →
+                </Link>
+              </div>
             </div>
           </motion.div>
         )}
