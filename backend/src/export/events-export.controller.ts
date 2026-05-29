@@ -38,7 +38,7 @@ type UploadedFilePayload = {
   originalname: string;
 };
 
-@ApiTags('events')
+@ApiTags('export')
 @Controller('events')
 @UseGuards(FirebaseAuthGuard, RolesGuard)
 @ApiBearerAuth()

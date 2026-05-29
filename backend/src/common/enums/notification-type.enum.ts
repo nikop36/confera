@@ -12,4 +12,10 @@ export enum NotificationTypeEnum {
   CAREER_INTERVIEW_CANCELLED = 'career_interview_cancelled',
   CAREER_SLOT_APPROVED = 'career_slot_approved',
   CAREER_SLOT_DECLINED = 'career_slot_declined',
+  EVENT_AUTO_REGISTERED = 'event_auto_registered',
+  EVENT_INVITE = 'event_invite',
+  EVENT_REGISTERED = 'event_registered',        // user notified
+  EVENT_CANCELLED = 'event_cancelled',           // user notified
+  EVENT_PARTICIPANT_JOINED = 'event_participant_joined',  // organizer notified
+  EVENT_PARTICIPANT_CANCELLED = 'event_participant_cancelled', // organizer notified
 }
