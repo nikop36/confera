@@ -162,4 +162,28 @@ export class ConnectionsRepository {
     );
     return [...uids];
   }
+
+  async areConnected(uidA: string, uidB: string): Promise<boolean> {
+    const db = this.firebaseService.getFirestore();
+
+    // Check both directions since connections can be stored either way
+    const [snapshotA, snapshotB] = await Promise.all([
+      db
+        .collection('connections')
+        .where('fromUid', '==', uidA)
+        .where('toUid', '==', uidB)
+        .where('status', '==', 'accepted')
+        .limit(1)
+        .get(),
+      db
+        .collection('connections')
+        .where('fromUid', '==', uidB)
+        .where('toUid', '==', uidA)
+        .where('status', '==', 'accepted')
+        .limit(1)
+        .get(),
+    ]);
+
+    return !snapshotA.empty || !snapshotB.empty;
+  }
 }

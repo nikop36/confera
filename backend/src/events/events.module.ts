@@ -7,6 +7,7 @@ import { EventsRepository } from './events.repository';
 import { SessionsModule } from './sessions/sessions.module';
 import { ConnectionsModule } from '../connections/connections.module';
 import { CareerSlotsModule } from './career-slots/career-slots.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { CareerSlotsModule } from './career-slots/career-slots.module';
     SessionsModule,
     ConnectionsModule,
     CareerSlotsModule,
+    NotificationsModule
   ],
   controllers: [EventsController],
   providers: [EventsService, EventsRepository],

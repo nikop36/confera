@@ -32,10 +32,10 @@ export const NOTIFICATION_CONFIG: Record<
   [NotificationTypeEnum.CONNECTION_REJECTED]: { sendEmail: false },
 
   [NotificationTypeEnum.EVENT_AUTO_REGISTERED]: { sendEmail: true },
-  [NotificationTypeEnum.EVENT_INVITE]: { sendEmail: true }, 
+  [NotificationTypeEnum.EVENT_INVITE]: { sendEmail: true },
   [NotificationTypeEnum.EVENT_REGISTERED]: { sendEmail: true },
-  [NotificationTypeEnum.EVENT_CANCELLED]: { sendEmail: false },      // system only
-  [NotificationTypeEnum.EVENT_PARTICIPANT_JOINED]: { sendEmail: false },    // system only
+  [NotificationTypeEnum.EVENT_CANCELLED]: { sendEmail: false }, // system only
+  [NotificationTypeEnum.EVENT_PARTICIPANT_JOINED]: { sendEmail: false }, // system only
   [NotificationTypeEnum.EVENT_PARTICIPANT_CANCELLED]: { sendEmail: false }, // system only
 };
 

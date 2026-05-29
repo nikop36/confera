@@ -18,7 +18,7 @@ interface CreateNotificationParams {
   type: NotificationTypeEnum;
   message: string;
   sendEmail?: boolean;
-  eventId?: string; 
+  eventId?: string;
 }
 
 @Injectable()

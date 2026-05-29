@@ -18,6 +18,7 @@ import {
 import { ConnectionsRepository } from '../connections/connections.repository';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersRepository } from '../users/users.repository';
+import { NotificationTypeEnum } from '../common/enums/notification-type.enum';
 
 @Injectable()
 export class EventsService {
@@ -98,10 +99,80 @@ export class EventsService {
       }
       throw err;
     }
+
+    void this.sendRegistrationNotifications(eventId, uid);
+  }
+
+  private async sendRegistrationNotifications(
+    eventId: string,
+    uid: string,
+  ): Promise<void> {
+    const [event, user] = await Promise.all([
+      this.eventsRepository.findById(eventId),
+      this.usersRepository.findByUid(uid),
+    ]);
+
+    if (!event || !user) return;
+
+    const organizerUser = await this.usersRepository.findByUid(event.createdBy);
+
+    // Notify participant — email + system
+    await this.notificationsService.createNotification({
+      uid: user.uid,
+      type: NotificationTypeEnum.EVENT_REGISTERED,
+      message: `You have successfully registered for "${event.title}".`,
+      email: user.email,
+      displayName: user.displayName,
+      eventId,
+    });
+
+    // Notify organizer — system only
+    if (organizerUser) {
+      await this.notificationsService.createNotification({
+        uid: organizerUser.uid,
+        type: NotificationTypeEnum.EVENT_PARTICIPANT_JOINED,
+        message: `${user.displayName ?? 'A participant'} has registered for "${event.title}".`,
+        eventId,
+      });
+    }
   }
 
   async cancelRegistration(eventId: string, uid: string): Promise<void> {
     await this.eventsRepository.cancelRegistration(eventId, uid);
+
+    // Fire notifications after successful cancellation — non-blocking
+    void this.sendCancellationNotifications(eventId, uid);
+  }
+
+  private async sendCancellationNotifications(
+    eventId: string,
+    uid: string,
+  ): Promise<void> {
+    const [event, user] = await Promise.all([
+      this.eventsRepository.findById(eventId),
+      this.usersRepository.findByUid(uid),
+    ]);
+
+    if (!event || !user) return;
+
+    // Notify participant — system only, no email
+    await this.notificationsService.createNotification({
+      uid: user.uid,
+      type: NotificationTypeEnum.EVENT_CANCELLED,
+      message: `You have cancelled your registration for "${event.title}".`,
+      eventId,
+    });
+
+    // Notify organizer — system only
+    const organizerUser = await this.usersRepository.findByUid(event.createdBy);
+    if (organizerUser) {
+      await this.notificationsService.createNotification({
+        uid: organizerUser.uid,
+        type: NotificationTypeEnum.EVENT_PARTICIPANT_CANCELLED,
+        message: `${user.displayName ?? 'A participant'} has cancelled their registration for "${event.title}".`,
+        eventId,
+      });
+    }
   }
 
   async listRegistrations(eventId: string): Promise<EventRegistration[]> {

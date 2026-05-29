@@ -4,13 +4,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EventsRepository } from '../events/events.repository';
+import { EventFullError, EventsRepository } from '../events/events.repository';
 import { UsersRepository } from '../users/users.repository';
 import { buildCsvMany } from './helpers/csv.helper';
 import { buildExcelMany } from './helpers/excel.helper';
 import { parseCsv } from './helpers/csv.helper';
 import { parseExcel } from './helpers/excel.helper';
 import { UserRoleEnum } from '../common/enums/roles.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationTypeEnum } from '../common/enums/notification-type.enum';
+import { ConnectionsRepository } from '../connections/connections.repository';
 
 type ExportFormat = 'csv' | 'excel';
 
@@ -31,6 +34,8 @@ export class EventsExportService {
   constructor(
     private readonly eventsRepository: EventsRepository,
     private readonly usersRepository: UsersRepository,
+    private readonly notificationsService: NotificationsService,
+    private readonly connectionsRepository: ConnectionsRepository,
   ) {}
 
   async exportRegistrations(
@@ -78,6 +83,7 @@ export class EventsExportService {
   ): Promise<{
     message: string;
     registeredCount: number;
+    invitedCount: number;
     skippedCount: number;
   }> {
     await this.assertCallerCanManageEvent(eventId, callerUid);
@@ -86,11 +92,18 @@ export class EventsExportService {
     const rows = await this.parseFile(file);
     if (rows.length === 0) throw new BadRequestException('The file is empty');
 
+    const [event, organizer] = await Promise.all([
+      this.eventsRepository.findById(eventId),
+      this.usersRepository.findByUid(callerUid),
+    ]);
+
+    if (!event) throw new NotFoundException('Event not found');
+
     let registeredCount = 0;
+    let invitedCount = 0;
     let skippedCount = 0;
 
     for (const raw of rows) {
-      // Strip and validate — only email and displayName accepted
       const email =
         typeof raw['email'] === 'string' ? raw['email'].trim() : null;
       const displayName =
@@ -103,22 +116,56 @@ export class EventsExportService {
         continue;
       }
 
-      // Check user exists in our system
       const user = await this.usersRepository.findByEmail(email);
       if (!user) {
         skippedCount++;
         continue;
       }
 
-      // Register user under events/{eventId}/registrations/{uid}
-      await this.eventsRepository.registerAtomic(eventId, user.uid);
+      const isConnected = await this.connectionsRepository.areConnected(
+        callerUid,
+        user.uid,
+      );
 
-      registeredCount++;
+      if (isConnected) {
+        try {
+          await this.eventsRepository.registerAtomic(eventId, user.uid);
+          registeredCount++;
+        } catch (err) {
+          if (err instanceof EventFullError) {
+            skippedCount +=
+              rows.length - registeredCount - invitedCount - skippedCount;
+            break;
+          }
+          throw err;
+        }
+
+        await this.notificationsService.createNotification({
+          uid: user.uid,
+          type: NotificationTypeEnum.EVENT_AUTO_REGISTERED,
+          message: `${organizer?.displayName ?? 'An organizer'} has registered you for "${event.title}". You can cancel if this was a mistake.`,
+          email: user.email,
+          displayName: user.displayName,
+          eventId,
+        });
+      } else {
+        invitedCount++;
+
+        await this.notificationsService.createNotification({
+          uid: user.uid,
+          type: NotificationTypeEnum.EVENT_INVITE,
+          message: `${organizer?.displayName ?? 'An organizer'} has invited you to "${event.title}".`,
+          email: user.email,
+          displayName: user.displayName,
+          eventId,
+        });
+      }
     }
 
     return {
       message: 'Import completed',
       registeredCount,
+      invitedCount,
       skippedCount,
     };
   }
