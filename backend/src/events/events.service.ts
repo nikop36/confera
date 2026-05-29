@@ -16,12 +16,16 @@ import {
   EventRegistration,
 } from '../common/interfaces/event.interface';
 import { ConnectionsRepository } from '../connections/connections.repository';
+import { NotificationsService } from '../notifications/notifications.service';
+import { UsersRepository } from '../users/users.repository';
 
 @Injectable()
 export class EventsService {
   constructor(
     private readonly eventsRepository: EventsRepository,
     private readonly connectionsRepository: ConnectionsRepository,
+    private readonly notificationsService: NotificationsService,
+    private readonly usersRepository: UsersRepository,
   ) {}
 
   async listEvents(callerUid: string): Promise<EventWithMeta[]> {

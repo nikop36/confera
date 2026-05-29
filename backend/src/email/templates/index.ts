@@ -4,6 +4,9 @@ import { careerInterviewCancelledTemplate } from './career-interview-cancelled.t
 import { defaultTemplate } from './default.template';
 import { roleApprovedTemplate } from './role-approved.template';
 import { roleRejectedTemplate } from './role-rejected.template';
+import { eventAutoRegisteredTemplate } from './event-auto-registered.template';
+import { eventInviteTemplate } from './event-invite.template';
+import { eventRegisteredTemplate } from './event-registered.template';
 
 export interface EmailTemplate {
   subject: string;
@@ -13,6 +16,7 @@ export interface EmailTemplate {
 export type TemplateBuilder = (data: {
   message: string;
   displayName?: string;
+  eventId?: number;
 }) => EmailTemplate;
 
 export const EMAIL_TEMPLATES: Partial<
@@ -26,8 +30,10 @@ export const EMAIL_TEMPLATES: Partial<
     careerInterviewAssignedTemplate,
   [NotificationTypeEnum.CAREER_INTERVIEW_CANCELLED]:
     careerInterviewCancelledTemplate,
+  [NotificationTypeEnum.EVENT_INVITE]: eventInviteTemplate,
+  [NotificationTypeEnum.EVENT_REGISTERED]: eventRegisteredTemplate,
+  [NotificationTypeEnum.EVENT_AUTO_REGISTERED]: eventAutoRegisteredTemplate,
   // MEETING_REQUEST, MEETING_ACCEPTED, MEETING_REJECTED fall back to defaultTemplate
-  // TODO: ADD templates for research fairs etc.
 };
 
 export function getTemplate(type: NotificationTypeEnum): TemplateBuilder {
