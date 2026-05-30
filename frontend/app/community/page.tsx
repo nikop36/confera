@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import AppShell from '../components/AppShell';
 import FilterBar, { type CommunityFilter } from '../components/FilterBar';
 import PersonCard, { type CommunityUser } from '../components/PersonCard';
@@ -288,9 +289,9 @@ function EmptyState({
         <p className="font-semibold text-[#0d0d0d] mb-1">Ni ujemanj</p>
         <p>
           Vaš profil še nima dovolj podatkov za AI ujemanja.{' '}
-          <a href="/profile" className="text-[#0071e3] hover:underline">
+          <Link href="/profile" className="text-[#0071e3] hover:underline">
             Dopolnite profil →
-          </a>
+          </Link>
         </p>
       </div>
     );

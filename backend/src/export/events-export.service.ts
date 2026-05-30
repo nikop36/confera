@@ -1,0 +1,217 @@
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { EventFullError, EventsRepository } from '../events/events.repository';
+import { UsersRepository } from '../users/users.repository';
+import { buildCsvMany } from './helpers/csv.helper';
+import { buildExcelMany } from './helpers/excel.helper';
+import { parseCsv } from './helpers/csv.helper';
+import { parseExcel } from './helpers/excel.helper';
+import { UserRoleEnum } from '../common/enums/roles.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationTypeEnum } from '../common/enums/notification-type.enum';
+import { ConnectionsRepository } from '../connections/connections.repository';
+
+type ExportFormat = 'csv' | 'excel';
+
+type UploadedFilePayload = {
+  buffer: Buffer;
+  size: number;
+  mimetype: string;
+  originalname: string;
+};
+
+type RegistrationRow = {
+  displayName: string;
+  email: string;
+};
+
+@Injectable()
+export class EventsExportService {
+  constructor(
+    private readonly eventsRepository: EventsRepository,
+    private readonly usersRepository: UsersRepository,
+    private readonly notificationsService: NotificationsService,
+    private readonly connectionsRepository: ConnectionsRepository,
+  ) {}
+
+  async exportRegistrations(
+    eventId: string,
+    callerUid: string,
+    format: ExportFormat,
+  ): Promise<{ buffer: Buffer; filename: string; mimetype: string }> {
+    await this.assertCallerCanManageEvent(eventId, callerUid);
+
+    // Fetch UIDs from events/{eventId}/registrations collection
+    const registrations =
+      await this.eventsRepository.listRegistrations(eventId);
+
+    const EMPTY_HEADERS = [{ displayName: '', email: '' }];
+    const rows: RegistrationRow[] =
+      registrations.length === 0
+        ? EMPTY_HEADERS
+        : (
+            await Promise.all(
+              registrations.map((r) => this.usersRepository.findByUid(r.uid)),
+            )
+          )
+            .filter((u): u is NonNullable<typeof u> => u !== null)
+            .map((u) => ({
+              displayName: u.displayName ?? '',
+              email: u.email ?? '',
+            }));
+
+    const filename = `event-${eventId}-registrations.${format === 'csv' ? 'csv' : 'xlsx'}`;
+    const mimetype =
+      format === 'csv'
+        ? 'text/csv'
+        : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+    const buffer =
+      format === 'csv' ? buildCsvMany(rows) : await buildExcelMany(rows);
+
+    return { buffer, filename, mimetype };
+  }
+
+  async importRegistrations(
+    eventId: string,
+    callerUid: string,
+    file: UploadedFilePayload,
+  ): Promise<{
+    message: string;
+    registeredCount: number;
+    invitedCount: number;
+    skippedCount: number;
+  }> {
+    await this.assertCallerCanManageEvent(eventId, callerUid);
+    this.validateFile(file);
+
+    const rows = await this.parseFile(file);
+    if (rows.length === 0) throw new BadRequestException('The file is empty');
+
+    const [event, organizer] = await Promise.all([
+      this.eventsRepository.findById(eventId),
+      this.usersRepository.findByUid(callerUid),
+    ]);
+
+    if (!event) throw new NotFoundException('Event not found');
+
+    let registeredCount = 0;
+    let invitedCount = 0;
+    let skippedCount = 0;
+
+    for (const raw of rows) {
+      const email =
+        typeof raw['email'] === 'string' ? raw['email'].trim() : null;
+      const displayName =
+        typeof raw['displayName'] === 'string'
+          ? raw['displayName'].trim()
+          : null;
+
+      if (!email || !displayName) {
+        skippedCount++;
+        continue;
+      }
+
+      const user = await this.usersRepository.findByEmail(email);
+      if (!user) {
+        skippedCount++;
+        continue;
+      }
+
+      const isConnected = await this.connectionsRepository.areConnected(
+        callerUid,
+        user.uid,
+      );
+
+      if (isConnected) {
+        try {
+          await this.eventsRepository.registerAtomic(eventId, user.uid);
+          registeredCount++;
+        } catch (err) {
+          if (err instanceof EventFullError) {
+            skippedCount +=
+              rows.length - registeredCount - invitedCount - skippedCount;
+            break;
+          }
+          throw err;
+        }
+
+        await this.notificationsService.createNotification({
+          uid: user.uid,
+          type: NotificationTypeEnum.EVENT_AUTO_REGISTERED,
+          message: `${organizer?.displayName ?? 'An organizer'} has registered you for "${event.title}". You can cancel if this was a mistake.`,
+          email: user.email,
+          displayName: user.displayName,
+          eventId,
+        });
+      } else {
+        invitedCount++;
+
+        await this.notificationsService.createNotification({
+          uid: user.uid,
+          type: NotificationTypeEnum.EVENT_INVITE,
+          message: `${organizer?.displayName ?? 'An organizer'} has invited you to "${event.title}".`,
+          email: user.email,
+          displayName: user.displayName,
+          eventId,
+        });
+      }
+    }
+
+    return {
+      message: 'Import completed',
+      registeredCount,
+      invitedCount,
+      skippedCount,
+    };
+  }
+
+  private async assertCallerCanManageEvent(
+    eventId: string,
+    callerUid: string,
+  ): Promise<void> {
+    const event = await this.eventsRepository.findById(eventId);
+    if (!event) throw new NotFoundException('Event not found');
+
+    const caller = await this.usersRepository.findByUid(callerUid);
+    if (!caller) throw new NotFoundException('User not found');
+
+    if (caller.role === UserRoleEnum.ADMIN) return;
+
+    if (event.createdBy !== callerUid) {
+      throw new ForbiddenException('You do not own this event');
+    }
+  }
+
+  private validateFile(file: UploadedFilePayload): void {
+    const ALLOWED_MIMETYPES = [
+      'text/csv',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+    ];
+    const ALLOWED_EXTENSIONS = ['.csv', '.xlsx'];
+    const extension = '.' + (file.originalname.split('.').pop() ?? '');
+
+    if (
+      !ALLOWED_MIMETYPES.includes(file.mimetype) &&
+      !ALLOWED_EXTENSIONS.includes(extension)
+    ) {
+      throw new BadRequestException(
+        'Wrong file type — allowed formats: CSV, Excel',
+      );
+    }
+  }
+
+  private async parseFile(
+    file: UploadedFilePayload,
+  ): Promise<Record<string, unknown>[]> {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      return parseCsv(file.buffer);
+    }
+    return parseExcel(file.buffer);
+  }
+}

@@ -128,18 +128,14 @@ export class CareerSlotsService {
     slotId: string,
     requesterUid: string,
   ): Promise<void> {
-    const slot = await this.careerSlotsRepository.findSlotById(
-      eventId,
-      slotId,
-    );
+    const slot = await this.careerSlotsRepository.findSlotById(eventId, slotId);
     if (!slot) throw new NotFoundException('Career slot not found');
 
-    const existing =
-      await this.careerSlotsRepository.findRequestByRequester(
-        eventId,
-        slotId,
-        requesterUid,
-      );
+    const existing = await this.careerSlotsRepository.findRequestByRequester(
+      eventId,
+      slotId,
+      requesterUid,
+    );
     if (existing) {
       throw new ConflictException('You already have a request for this slot');
     }
@@ -173,9 +169,7 @@ export class CareerSlotsService {
       caller?.role === UserRoleEnum.ADMIN ||
       caller?.role === UserRoleEnum.ORGANIZER;
     if (!isAdminOrOrganizer && slot.createdByUid !== callerUid) {
-      throw new ForbiddenException(
-        'Only the slot creator can view requests',
-      );
+      throw new ForbiddenException('Only the slot creator can view requests');
     }
 
     const requests = await this.careerSlotsRepository.listRequests(
@@ -198,10 +192,7 @@ export class CareerSlotsService {
     callerUid: string,
     status: 'approved' | 'declined',
   ): Promise<void> {
-    const slot = await this.careerSlotsRepository.findSlotById(
-      eventId,
-      slotId,
-    );
+    const slot = await this.careerSlotsRepository.findSlotById(eventId, slotId);
     if (!slot) throw new NotFoundException('Career slot not found');
 
     const [request, caller] = await Promise.all([
@@ -229,15 +220,10 @@ export class CareerSlotsService {
       }
     }
 
-    await this.careerSlotsRepository.updateRequest(
-      eventId,
-      slotId,
-      requestId,
-      {
-        status,
-        respondedAt: new Date(),
-      },
-    );
+    await this.careerSlotsRepository.updateRequest(eventId, slotId, requestId, {
+      status,
+      respondedAt: new Date(),
+    });
 
     const requester = await this.usersRepository.findByUid(
       request.requesterUid,

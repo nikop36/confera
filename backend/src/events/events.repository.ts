@@ -65,9 +65,7 @@ export class EventsRepository {
 
     // Map uid → displayName via users collection (batch)
     const presentFriendUids = new Set(
-      regDocs
-        .filter((d) => d.exists)
-        .map((d) => d.ref.id),
+      regDocs.filter((d) => d.exists).map((d) => d.ref.id),
     );
     const displayNames = new Map<string, string>();
     if (presentFriendUids.size > 0) {
@@ -76,19 +74,28 @@ export class EventsRepository {
       );
       userDocs.forEach((ud) => {
         if (ud.exists) {
-          displayNames.set(ud.id, (ud.data()?.['displayName'] as string) ?? ud.id);
+          displayNames.set(
+            ud.id,
+            (ud.data()?.['displayName'] as string) ?? ud.id,
+          );
         }
       });
     }
 
     // Build eventId → friends who are registered
-    const friendsByEvent = new Map<string, { uid: string; displayName: string }[]>();
+    const friendsByEvent = new Map<
+      string,
+      { uid: string; displayName: string }[]
+    >();
     regDocs.forEach((d) => {
       if (!d.exists) return;
       const eventId = d.ref.parent.parent!.id;
       const friendUid = d.ref.id;
       const existing = friendsByEvent.get(eventId) ?? [];
-      existing.push({ uid: friendUid, displayName: displayNames.get(friendUid) ?? friendUid });
+      existing.push({
+        uid: friendUid,
+        displayName: displayNames.get(friendUid) ?? friendUid,
+      });
       friendsByEvent.set(eventId, existing);
     });
 
@@ -145,7 +152,10 @@ export class EventsRepository {
       );
       userDocs.forEach((ud) => {
         if (ud.exists) {
-          displayNames.set(ud.id, (ud.data()?.['displayName'] as string) ?? ud.id);
+          displayNames.set(
+            ud.id,
+            (ud.data()?.['displayName'] as string) ?? ud.id,
+          );
         }
       });
     }

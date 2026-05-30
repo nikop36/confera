@@ -9,6 +9,7 @@ interface SendNotificationEmailParams {
   type: NotificationTypeEnum;
   message: string;
   displayName?: string;
+  eventId?: string;
 }
 
 @Injectable()

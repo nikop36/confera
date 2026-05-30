@@ -7,10 +7,19 @@ import { EventsRepository } from './events.repository';
 import { SessionsModule } from './sessions/sessions.module';
 import { ConnectionsModule } from '../connections/connections.module';
 import { CareerSlotsModule } from './career-slots/career-slots.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [FirebaseModule, UsersModule, SessionsModule, ConnectionsModule, CareerSlotsModule],
+  imports: [
+    FirebaseModule,
+    UsersModule,
+    SessionsModule,
+    ConnectionsModule,
+    CareerSlotsModule,
+    NotificationsModule
+  ],
   controllers: [EventsController],
   providers: [EventsService, EventsRepository],
+  exports: [EventsRepository],
 })
 export class EventsModule {}

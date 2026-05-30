@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import AppShell from '../../components/AppShell';
 import { TagPills } from '../../components/TagPicker';
@@ -265,13 +266,13 @@ export default function PublicProfilePage() {
                 </button>
               )}
               {isOwnProfile && (
-                <a
+                <Link
                   href="/profile"
                   className="px-[18px] py-[6px] rounded-full text-[13px] font-semibold border border-[#e5e7eb] text-[#3d3d3d] hover:border-[#0d0d0d] no-underline transition-colors"
                   style={{ background: '#7fa8c8', color: '#fff', borderColor: 'transparent' }}
                 >
                   Uredi profil
-                </a>
+                </Link>
               )}
             </div>
           </div>
