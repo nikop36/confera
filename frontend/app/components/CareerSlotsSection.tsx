@@ -4,8 +4,11 @@ import { useEffect, useState, useCallback } from 'react';
 import CareerSlotFormModal, {
   type CareerSlotFormValues,
 } from './CareerSlotFormModal';
+import { TagPills } from './TagPicker';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+
+type Tag = { slug: string; label: string };
 
 type CareerSlot = {
   id: string;
@@ -13,6 +16,7 @@ type CareerSlot = {
   description: string;
   scheduledAt: string;
   capacity: number;
+  requirements?: string[];
   createdByUid: string;
   creatorDisplayName: string;
   approvedCount: number;
@@ -55,6 +59,7 @@ export default function CareerSlotsSection({
   const [slots, setSlots] = useState<CareerSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [tagMap, setTagMap] = useState<Record<string, string>>({});
   const [expandedSlotId, setExpandedSlotId] = useState<string | null>(null);
   const [requests, setRequests] = useState<Record<string, SlotRequest[]>>({});
   const [requestingIds, setRequestingIds] = useState<Record<string, boolean>>({});
@@ -85,6 +90,19 @@ export default function CareerSlotsSection({
   useEffect(() => {
     void loadSlots();
   }, [loadSlots]);
+
+  useEffect(() => {
+    fetch(`${API}/tags`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          const map: Record<string, string> = {};
+          for (const t of data as Tag[]) map[t.slug] = t.label;
+          setTagMap(map);
+        }
+      })
+      .catch(() => {});
+  }, [token]);
 
   async function loadRequests(slotId: string) {
     try {
@@ -291,6 +309,13 @@ export default function CareerSlotsSection({
                     <p className="text-[11px] text-[#6e6e73] mt-1 line-clamp-2">
                       {slot.description}
                     </p>
+                    {(slot.requirements ?? []).length > 0 && (
+                      <div className="mt-[6px]">
+                        <TagPills
+                          tags={(slot.requirements ?? []).map((slug) => ({ slug, label: tagMap[slug] ?? slug }))}
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
                     <span className="text-[10px] text-[#8e8e93]">
@@ -415,6 +440,7 @@ export default function CareerSlotsSection({
         <CareerSlotFormModal
           key={modalSlot?.id ?? 'create'}
           slot={modalSlot}
+          token={token}
           onClose={() => setModalSlot(undefined)}
           onSave={handleSave}
         />
