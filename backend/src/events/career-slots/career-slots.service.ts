@@ -69,6 +69,7 @@ export class CareerSlotsService {
       description: dto.description,
       scheduledAt: new Date(dto.scheduledAt),
       capacity: dto.capacity,
+      requirements: dto.requirements,
       createdByUid,
       createdAt: new Date(),
     });
@@ -92,13 +93,14 @@ export class CareerSlotsService {
       throw new ForbiddenException('Only the slot creator can edit this slot');
     }
     const updates: Partial<
-      Pick<CareerSlot, 'title' | 'description' | 'scheduledAt' | 'capacity'>
+      Pick<CareerSlot, 'title' | 'description' | 'scheduledAt' | 'capacity' | 'requirements'>
     > = {};
     if (dto.title !== undefined) updates.title = dto.title;
     if (dto.description !== undefined) updates.description = dto.description;
     if (dto.scheduledAt !== undefined)
       updates.scheduledAt = new Date(dto.scheduledAt);
     if (dto.capacity !== undefined) updates.capacity = dto.capacity;
+    if (dto.requirements !== undefined) updates.requirements = dto.requirements;
     await this.careerSlotsRepository.updateSlot(eventId, slotId, updates);
   }
 

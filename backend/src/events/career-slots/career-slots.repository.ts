@@ -126,6 +126,9 @@ export class CareerSlotsRepository {
         data['scheduledAt'] as FirebaseFirestore.Timestamp
       ).toDate(),
       capacity: data['capacity'] as number,
+      requirements: Array.isArray(data['requirements'])
+        ? (data['requirements'] as string[])
+        : undefined,
       createdByUid: data['createdByUid'] as string,
       createdAt: (data['createdAt'] as FirebaseFirestore.Timestamp).toDate(),
     };

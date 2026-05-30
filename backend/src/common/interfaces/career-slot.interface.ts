@@ -6,6 +6,7 @@ export interface CareerSlot {
   description: string;
   scheduledAt: Date;
   capacity: number;
+  requirements?: string[];
   createdByUid: string;
   createdAt: Date;
 }

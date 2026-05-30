@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AppShell from '../components/AppShell';
+import TagPicker from '../components/TagPicker';
 import { saveStoredUser, useStoredUser } from '../lib/auth';
 import {
   COMPETENCY_GROUPS,
@@ -28,6 +29,7 @@ type UserProfile = {
   meetingType?: MeetingType;
   competencies?: string[];
   researchKeywords?: string[];
+  tags?: string[];
   roleProfile?: Record<string, unknown>;
 };
 
@@ -55,6 +57,7 @@ type ProfileForm = {
   meetingType: MeetingType;
   competencies: string[];
   researchKeywords: string[];
+  tags: string[];
   profileImageUrl: string;
   backgroundImageUrl: string;
   profileImagePositionX: number;
@@ -93,6 +96,7 @@ const DEFAULT_FORM: ProfileForm = {
   meetingType: 'both',
   competencies: [],
   researchKeywords: [],
+  tags: [],
   profileImageUrl: '',
   backgroundImageUrl: '',
   profileImagePositionX: 50,
@@ -140,6 +144,7 @@ function profileToForm(profile?: UserProfile): ProfileForm {
     meetingType: profile?.meetingType ?? 'both',
     competencies: profile?.competencies ?? [],
     researchKeywords: profile?.researchKeywords ?? [],
+    tags: profile?.tags ?? [],
     profileImageUrl: profileImageValue(profile, 'profileImageUrl'),
     backgroundImageUrl: profileImageValue(profile, 'backgroundImageUrl'),
     profileImagePositionX: profilePositionValue(profile, 'profileImagePositionX'),
@@ -423,6 +428,7 @@ export default function ProfilePage() {
         meetingType: form.meetingType,
         competencies: form.competencies,
         researchKeywords: form.researchKeywords,
+        tags: form.tags,
         roleProfile: {
           ...(profile?.roleProfile ?? {}),
           profileImageUrl: form.profileImageUrl,
@@ -454,6 +460,7 @@ export default function ProfilePage() {
       setProfile((prev) => ({
         ...prev,
         ...payload,
+        tags: form.tags,
         displayName,
         email,
       }));
@@ -789,6 +796,17 @@ export default function ProfilePage() {
               value={form.researchKeywords}
               onToggle={(value) => toggleListField('researchKeywords', value)}
             />
+
+            <FormField label="Oznake">
+              <TagPicker
+                token={token ?? ''}
+                value={form.tags}
+                onChange={(slugs) => {
+                  setForm((prev) => ({ ...prev, tags: slugs }));
+                  setSuccess('');
+                }}
+              />
+            </FormField>
 
             <FormField label="Način srečanja">
               <select value={form.meetingType} onChange={field('meetingType')} className="profile-input">

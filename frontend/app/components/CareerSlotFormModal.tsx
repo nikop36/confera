@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import TagPicker from './TagPicker';
 
 export type CareerSlotFormValues = {
   title: string;
   description: string;
   scheduledAt: string;
   capacity: number;
+  requirements: string[];
 };
 
 type CareerSlot = {
@@ -15,10 +17,12 @@ type CareerSlot = {
   description: string;
   scheduledAt: string;
   capacity: number;
+  requirements?: string[];
 };
 
 type Props = {
   slot: CareerSlot | null;
+  token: string;
   onClose: () => void;
   onSave: (values: CareerSlotFormValues) => Promise<void>;
 };
@@ -28,6 +32,7 @@ const EMPTY: CareerSlotFormValues = {
   description: '',
   scheduledAt: '',
   capacity: 1,
+  requirements: [],
 };
 
 function toDatetimeLocal(iso: string): string {
@@ -36,7 +41,7 @@ function toDatetimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export default function CareerSlotFormModal({ slot, onClose, onSave }: Props) {
+export default function CareerSlotFormModal({ slot, token, onClose, onSave }: Props) {
   const [form, setForm] = useState<CareerSlotFormValues>(
     slot
       ? {
@@ -44,6 +49,7 @@ export default function CareerSlotFormModal({ slot, onClose, onSave }: Props) {
           description: slot.description,
           scheduledAt: toDatetimeLocal(slot.scheduledAt),
           capacity: slot.capacity,
+          requirements: slot.requirements ?? [],
         }
       : EMPTY,
   );
@@ -166,6 +172,17 @@ export default function CareerSlotFormModal({ slot, onClose, onSave }: Props) {
               value={form.capacity}
               onChange={(e) => set('capacity', parseInt(e.target.value, 10) || 1)}
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-[#6e6e73] mb-2 uppercase tracking-[0.06em]">
+              Zahteve (oznake)
+            </label>
+            <TagPicker
+              token={token}
+              value={form.requirements}
+              onChange={(slugs) => setForm((prev) => ({ ...prev, requirements: slugs }))}
             />
           </div>
 

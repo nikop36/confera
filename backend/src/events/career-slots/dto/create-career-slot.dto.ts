@@ -4,8 +4,10 @@ import {
   IsInt,
   Min,
   IsNotEmpty,
+  IsOptional,
+  IsArray,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCareerSlotDto {
   @ApiProperty({ example: '1:1 with CTO' })
@@ -26,4 +28,10 @@ export class CreateCareerSlotDto {
   @IsInt()
   @Min(1)
   capacity!: number;
+
+  @ApiPropertyOptional({ example: ['machine-learning', 'python'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  requirements?: string[];
 }
