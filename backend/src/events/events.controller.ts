@@ -41,6 +41,15 @@ export class EventsController {
     return this.eventsService.listEvents(user.uid);
   }
 
+  @Get('recommendations/me')
+  @ApiOperation({
+    summary: 'List AI-ranked event recommendations for current user',
+  })
+  @ApiResponse({ status: 200, description: 'Recommended events returned' })
+  async listRecommendedEvents(@CurrentUser() user: FirebaseUser) {
+    return this.eventsService.listRecommendedEvents(user.uid);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a single conference by ID' })
   @ApiResponse({ status: 200, description: 'Conference returned' })
