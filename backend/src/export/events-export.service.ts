@@ -14,6 +14,8 @@ import { UserRoleEnum } from '../common/enums/roles.enum';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationTypeEnum } from '../common/enums/notification-type.enum';
 import { ConnectionsRepository } from '../connections/connections.repository';
+import { GuestInvitationsRepository } from '../guest/guest.repository';
+import { randomBytes } from 'crypto';
 
 type ExportFormat = 'csv' | 'excel';
 
@@ -36,6 +38,7 @@ export class EventsExportService {
     private readonly usersRepository: UsersRepository,
     private readonly notificationsService: NotificationsService,
     private readonly connectionsRepository: ConnectionsRepository,
+    private readonly guestInvitationsRepository: GuestInvitationsRepository,
   ) {}
 
   async exportRegistrations(
@@ -119,6 +122,51 @@ export class EventsExportService {
       const user = await this.usersRepository.findByEmail(email);
       if (!user) {
         skippedCount++;
+        continue;
+      }
+
+      if (user.role === UserRoleEnum.GUEST && user.guestStatus === 'pending') {
+        skippedCount++;
+        continue;
+      }
+
+      if (
+        user.role === UserRoleEnum.GUEST &&
+        user.guestStatus === 'confirmed'
+      ) {
+        // Confirmed guest — create a new invitation and send invite email
+        const existingInvitation =
+          await this.guestInvitationsRepository.findByGuestAndEvent(
+            user.uid,
+            eventId,
+          );
+
+        if (!existingInvitation) {
+          const token = randomBytes(32).toString('hex');
+          await this.guestInvitationsRepository.create({
+            guestUid: user.uid,
+            eventId,
+            invitedBy: callerUid,
+            status: 'pending',
+            confirmationToken: token,
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            createdAt: new Date(),
+          });
+
+          await this.notificationsService.createNotification({
+            uid: user.uid,
+            type: NotificationTypeEnum.GUEST_EVENT_INVITE,
+            message: `${organizer?.displayName ?? 'An organizer'} has invited you to "${event.title}".`,
+            email: user.email,
+            displayName: user.displayName,
+            eventId,
+            confirmationToken: token,
+          });
+
+          invitedCount++;
+        } else {
+          skippedCount++;
+        }
         continue;
       }
 

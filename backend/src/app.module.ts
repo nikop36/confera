@@ -17,6 +17,7 @@ import { StatisticsModule } from './statistics/statistics.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { EventsModule } from './events/events.module';
 import { TagsModule } from './tags/tags.module';
+import { GuestsModule } from './guest/guest.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { TagsModule } from './tags/tags.module';
     AnalyticsModule,
     EventsModule,
     TagsModule,
+    GuestsModule,
   ],
   controllers: [AppController],
   providers: [],

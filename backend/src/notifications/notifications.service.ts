@@ -19,6 +19,7 @@ interface CreateNotificationParams {
   message: string;
   sendEmail?: boolean;
   eventId?: string;
+  confirmationToken?: string;
 }
 
 @Injectable()

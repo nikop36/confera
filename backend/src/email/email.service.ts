@@ -10,6 +10,7 @@ interface SendNotificationEmailParams {
   message: string;
   displayName?: string;
   eventId?: string;
+  confirmationToken?: string;
 }
 
 @Injectable()

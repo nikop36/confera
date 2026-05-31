@@ -39,6 +39,17 @@ export class UsersService {
     });
   }
 
+  async findByEmailOrNull(email: string): Promise<(User & UserProfile) | null> {
+    return this.usersRepository.findByEmail(email);
+  }
+
+  async upgradeGuestToParticipant(
+    email: string,
+    realUid: string,
+  ): Promise<void> {
+    return this.usersRepository.upgradeGuestToParticipant(email, realUid);
+  }
+
   async listCommunityUsers(): Promise<
     Array<{
       uid: string;
