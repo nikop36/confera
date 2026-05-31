@@ -53,6 +53,29 @@ function formatTimeRange(startAt: string, endAt: string): string {
   return `${new Date(startAt).toLocaleTimeString('sl-SI', opts)} – ${new Date(endAt).toLocaleTimeString('sl-SI', opts)}`;
 }
 
+function groupByDay(sessions: SessionItem[]): { date: string; daySessions: SessionItem[] }[] {
+  const map = new Map<string, SessionItem[]>();
+  for (const s of sessions) {
+    const d = new Date(s.startAt);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(s);
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, daySessions]) => ({ date, daySessions }));
+}
+
+function formatDayHeading(dateStr: string): string {
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString('sl-SI', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 export default function ConferenceProgramPage() {
   const params = useParams();
   const eventId = params['id'] as string;
@@ -266,29 +289,7 @@ export default function ConferenceProgramPage() {
   }
 
   const tagMap = Object.fromEntries(tags.map((t) => [t.slug, t.label]));
-
-  const { timeSlots, tracks } = buildGrid(sessions);
-
-  // Pre-compute which slot+track cells are claimed by spanning sessions
-  // so we can skip empty-cell rendering inside JSX without mutating state during render
-  const claimedCells = new Set<string>();
-  for (const slot of timeSlots) {
-    for (const track of tracks) {
-      if (claimedCells.has(`${slot}-${track}`)) continue;
-      const session = sessions.find(
-        (s) => s.startAt === slot && s.location === track,
-      );
-      if (session) {
-        const span = getRowSpan(session, timeSlots);
-        const slotIdx = timeSlots.indexOf(slot);
-        for (let i = slotIdx + 1; i < slotIdx + span; i++) {
-          if (timeSlots[i]) {
-            claimedCells.add(`${timeSlots[i]}-${track}`);
-          }
-        }
-      }
-    }
-  }
+  const sessionsByDay = groupByDay(sessions);
 
   return (
     <AppShell>
@@ -355,93 +356,101 @@ export default function ConferenceProgramPage() {
               {isAdminOrOrganizer && 'Dodajte prvo sejo spodaj.'}
             </div>
           ) : (
-            <div className="bg-white border border-[#e5e7eb] rounded-[16px] overflow-hidden">
-              {/* Grid: time col + one col per track */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: `56px repeat(${tracks.length}, 1fr)`,
-                }}
-              >
-                {/* Header row */}
-                <div className="border-b border-[#e5e7eb] bg-[#fafafa]" />
-                {tracks.map((track) => (
-                  <div
-                    key={track}
-                    className="border-b border-l border-[#e5e7eb] bg-[#fafafa] px-3 py-2 text-[11px] font-bold text-center"
-                  >
-                    {track}
-                  </div>
-                ))}
-
-                {/* Time rows */}
-                {timeSlots.map((slot) => (
-                  <React.Fragment key={slot}>
-                    {/* Time label */}
-                    <div
-                      key={`time-${slot}`}
-                      className="border-b border-[#f0f0f0] px-2 py-3 text-[10px] font-bold text-[#8e8e93] text-center flex items-start justify-center pt-3"
-                    >
-                      {new Date(slot).toLocaleTimeString('sl-SI', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </div>
-
-                    {/* Track cells */}
-                    {tracks.map((track) => {
-                      // Skip this cell if it's claimed by a spanning session from an earlier row
-                      if (claimedCells.has(`${slot}-${track}`)) {
-                        return null;
+            <div className="flex flex-col gap-5">
+              {sessionsByDay.map(({ date, daySessions }) => {
+                const { timeSlots, tracks } = buildGrid(daySessions);
+                const claimedCells = new Set<string>();
+                for (const slot of timeSlots) {
+                  for (const track of tracks) {
+                    if (claimedCells.has(`${slot}-${track}`)) continue;
+                    const s = daySessions.find(
+                      (s) => s.startAt === slot && s.location === track,
+                    );
+                    if (s) {
+                      const span = getRowSpan(s, timeSlots);
+                      const slotIdx = timeSlots.indexOf(slot);
+                      for (let i = slotIdx + 1; i < slotIdx + span; i++) {
+                        if (timeSlots[i]) claimedCells.add(`${timeSlots[i]}-${track}`);
                       }
+                    }
+                  }
+                }
 
-                      const session = sessions.find(
-                        (s) => s.startAt === slot && s.location === track,
-                      );
-
-                      if (session) {
-                        const span = getRowSpan(session, timeSlots);
-                        return (
+                return (
+                  <div key={date}>
+                    {sessionsByDay.length > 1 && (
+                      <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">
+                        {formatDayHeading(date)}
+                      </p>
+                    )}
+                    <div className="bg-white border border-[#e5e7eb] rounded-[16px] overflow-hidden">
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: `56px repeat(${tracks.length}, 1fr)`,
+                        }}
+                      >
+                        {/* Header row */}
+                        <div className="border-b border-[#e5e7eb] bg-[#fafafa]" />
+                        {tracks.map((track) => (
                           <div
-                            key={`cell-${slot}-${track}`}
-                            className="border-b border-l border-[#f0f0f0] p-[6px]"
-                            style={{ gridRow: `span ${span}` }}
+                            key={track}
+                            className="border-b border-l border-[#e5e7eb] bg-[#fafafa] px-3 py-2 text-[11px] font-bold text-center"
                           >
-                            <SessionCard
-                              session={session}
-                              tagMap={tagMap}
-                              isRegistering={
-                                Boolean(registeringIds[session.id])
-                              }
-                              registerError={
-                                registerErrors[session.id] ?? ''
-                              }
-                              onRegister={() =>
-                                void handleSessionRegister(session.id)
-                              }
-                              onCancel={() =>
-                                void handleSessionCancel(session.id)
-                              }
-                              isAdminOrOrganizer={isAdminOrOrganizer}
-                              onEdit={() => setModalSession(session)}
-                              onDelete={() =>
-                                void handleSessionDelete(session.id)
-                              }
-                            />
+                            {track}
                           </div>
-                        );
-                      }
+                        ))}
 
-                      return (
-                        <div
-                          key={`empty-${slot}-${track}`}
-                          className="border-b border-l border-[#f0f0f0] bg-[#fafafa]"
-                        />
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
-              </div>
+                        {/* Time rows */}
+                        {timeSlots.map((slot) => (
+                          <React.Fragment key={slot}>
+                            <div className="border-b border-[#f0f0f0] px-2 py-3 text-[10px] font-bold text-[#8e8e93] text-center flex items-start justify-center pt-3">
+                              {new Date(slot).toLocaleTimeString('sl-SI', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </div>
+                            {tracks.map((track) => {
+                              if (claimedCells.has(`${slot}-${track}`)) return null;
+                              const session = daySessions.find(
+                                (s) => s.startAt === slot && s.location === track,
+                              );
+                              if (session) {
+                                const span = getRowSpan(session, timeSlots);
+                                return (
+                                  <div
+                                    key={`cell-${slot}-${track}`}
+                                    className="border-b border-l border-[#f0f0f0] p-[6px]"
+                                    style={{ gridRow: `span ${span}` }}
+                                  >
+                                    <SessionCard
+                                      session={session}
+                                      tagMap={tagMap}
+                                      isRegistering={Boolean(registeringIds[session.id])}
+                                      registerError={registerErrors[session.id] ?? ''}
+                                      onRegister={() => void handleSessionRegister(session.id)}
+                                      onCancel={() => void handleSessionCancel(session.id)}
+                                      isAdminOrOrganizer={isAdminOrOrganizer}
+                                      onEdit={() => setModalSession(session)}
+                                      onDelete={() => void handleSessionDelete(session.id)}
+                                    />
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div
+                                  key={`empty-${slot}-${track}`}
+                                  className="border-b border-l border-[#f0f0f0] bg-[#fafafa]"
+                                />
+                              );
+                            })}
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 

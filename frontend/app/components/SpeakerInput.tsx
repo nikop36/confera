@@ -64,14 +64,18 @@ export default function SpeakerInput({
             value={value.name}
             onChange={(e) => handleNameChange(e.target.value)}
             onFocus={() => setShowDropdown(true)}
-            placeholder="Ime predavatelja"
+            placeholder="Ime predavatelja (lahko zunanji)"
             className="w-full border border-[#e5e7eb] rounded-[6px] px-3 py-[6px] text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
           />
-          {value.userId && (
+          {value.userId ? (
             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#059669] font-semibold">
-              ✓ Linked
+              ✓ V sistemu
             </span>
-          )}
+          ) : value.name.trim() ? (
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#8e8e93] font-semibold">
+              Zunanji
+            </span>
+          ) : null}
           {showDropdown && filtered.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e5e7eb] rounded-[8px] shadow-md z-10 max-h-[160px] overflow-y-auto">
               {filtered.slice(0, 6).map((u) => (
