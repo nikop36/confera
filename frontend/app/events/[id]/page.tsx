@@ -10,29 +10,33 @@ import SessionFormModal, {
 import { type EventItem } from '../../components/EventCard';
 import { useStoredUser } from '../../lib/auth';
 import { type Tag } from '../../components/TagPicker';
-import CareerSlotsSection from '../../components/CareerSlotsSection';
+import CareerSlotCard, { type CareerSlotItem } from '../../components/CareerSlotCard';
+import CareerSlotFormModal, { type CareerSlotFormValues } from '../../components/CareerSlotFormModal';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
-// Derive sorted unique time-slot labels and track columns from sessions
-function buildGrid(sessions: SessionItem[]): {
-  timeSlots: string[];
-  tracks: string[];
-} {
-  const timeSet = new Set(sessions.map((s) => s.startAt));
-  const trackSet = new Set(sessions.map((s) => s.location));
-  return {
-    timeSlots: [...timeSet].sort(),
-    tracks: [...trackSet].sort(),
-  };
+type GridItem =
+  | { itemType: 'session'; data: SessionItem }
+  | { itemType: 'career'; data: CareerSlotItem };
+
+function toGridItems(sessions: SessionItem[], careerSlots: CareerSlotItem[]): GridItem[] {
+  return [
+    ...sessions.map((s): GridItem => ({ itemType: 'session', data: s })),
+    ...careerSlots.map((s): GridItem => ({ itemType: 'career', data: s })),
+  ];
 }
 
-// How many time-slot rows does this session span?
-function getRowSpan(session: SessionItem, timeSlots: string[]): number {
-  const endMs = new Date(session.endAt).getTime();
+function buildGrid(items: GridItem[]): { timeSlots: string[]; tracks: string[] } {
+  const timeSet = new Set(items.map((i) => i.data.startAt));
+  const trackSet = new Set(items.map((i) => i.data.location));
+  return { timeSlots: [...timeSet].sort(), tracks: [...trackSet].sort() };
+}
+
+function getRowSpan(item: GridItem, timeSlots: string[]): number {
+  const endMs = new Date(item.data.endAt).getTime();
   const span = timeSlots.filter((t) => {
     const tMs = new Date(t).getTime();
-    return tMs >= new Date(session.startAt).getTime() && tMs < endMs;
+    return tMs >= new Date(item.data.startAt).getTime() && tMs < endMs;
   }).length;
   return Math.max(1, span);
 }
@@ -53,14 +57,14 @@ function formatTimeRange(startAt: string, endAt: string): string {
   return `${new Date(startAt).toLocaleTimeString('sl-SI', opts)} – ${new Date(endAt).toLocaleTimeString('sl-SI', opts)}`;
 }
 
-function groupByDay(sessions: SessionItem[]): { date: string; daySessions: SessionItem[] }[] {
-  const map = new Map<string, SessionItem[]>();
-  for (const s of sessions) {
-    const d = new Date(s.startAt);
+function groupByDay(items: GridItem[]): { date: string; daySessions: GridItem[] }[] {
+  const map = new Map<string, GridItem[]>();
+  for (const item of items) {
+    const d = new Date(item.data.startAt);
     const pad = (n: number) => String(n).padStart(2, '0');
     const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(s);
+    map.get(key)!.push(item);
   }
   return [...map.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
@@ -86,6 +90,9 @@ export default function ConferenceProgramPage() {
 
   const [conference, setConference] = useState<EventItem | null>(null);
   const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [careerSlots, setCareerSlots] = useState<CareerSlotItem[]>([]);
+  // undefined = closed, null = create, CareerSlotItem = edit
+  const [modalCareerSlot, setModalCareerSlot] = useState<CareerSlotItem | null | undefined>(undefined);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -107,11 +114,14 @@ export default function ConferenceProgramPage() {
     setLoading(true);
     setError('');
     try {
-      const [confRes, sessRes] = await Promise.all([
+      const [confRes, sessRes, careerRes] = await Promise.all([
         fetch(`${API}/events/${eventId}`, {
           headers: { Authorization: `Bearer ${user.idToken}` },
         }),
         fetch(`${API}/events/${eventId}/sessions`, {
+          headers: { Authorization: `Bearer ${user.idToken}` },
+        }),
+        fetch(`${API}/events/${eventId}/career-slots`, {
           headers: { Authorization: `Bearer ${user.idToken}` },
         }),
       ]);
@@ -119,8 +129,10 @@ export default function ConferenceProgramPage() {
       if (!sessRes.ok) throw new Error('Napaka pri nalaganju programa.');
       const confData = (await confRes.json()) as EventItem;
       const sessData = (await sessRes.json()) as SessionItem[];
+      const careerData = careerRes.ok ? ((await careerRes.json()) as CareerSlotItem[]) : [];
       setConference(confData);
       setSessions(sessData);
+      setCareerSlots(careerData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Prišlo je do napake.');
     } finally {
@@ -288,8 +300,46 @@ export default function ConferenceProgramPage() {
     }
   }
 
+  async function handleCareerSlotSave(values: CareerSlotFormValues) {
+    if (!user?.idToken) return;
+    const isEdit = modalCareerSlot != null;
+    const url = isEdit
+      ? `${API}/events/${eventId}/career-slots/${modalCareerSlot.id}`
+      : `${API}/events/${eventId}/career-slots`;
+    const res = await fetch(url, {
+      method: isEdit ? 'PATCH' : 'POST',
+      headers: { Authorization: `Bearer ${user.idToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...values,
+        startAt: new Date(values.startAt).toISOString(),
+        endAt: new Date(values.endAt).toISOString(),
+      }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { message?: string | string[] };
+      const msg = Array.isArray(body.message) ? body.message[0] : body.message;
+      throw new Error(msg ?? 'Napaka pri shranjevanju.');
+    }
+    await loadData();
+  }
+
+  async function handleCareerSlotDelete(slotId: string) {
+    if (!user?.idToken || !confirm('Ste prepričani, da želite izbrisati ta razgovor?')) return;
+    try {
+      const res = await fetch(`${API}/events/${eventId}/career-slots/${slotId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${user.idToken}` },
+      });
+      if (!res.ok) throw new Error('Napaka pri brisanju.');
+      setCareerSlots((prev) => prev.filter((s) => s.id !== slotId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Napaka pri brisanju.');
+    }
+  }
+
   const tagMap = Object.fromEntries(tags.map((t) => [t.slug, t.label]));
-  const sessionsByDay = groupByDay(sessions);
+  const allItems = toGridItems(sessions, careerSlots);
+  const itemsByDay = groupByDay(allItems);
 
   return (
     <AppShell>
@@ -350,24 +400,24 @@ export default function ConferenceProgramPage() {
             Program
           </p>
 
-          {sessions.length === 0 ? (
+          {allItems.length === 0 ? (
             <div className="rounded-[14px] border border-[#f0f0f0] px-5 py-6 text-sm text-[#8e8e93]">
               Ni dodanih sej.{' '}
               {isAdminOrOrganizer && 'Dodajte prvo sejo spodaj.'}
             </div>
           ) : (
             <div className="flex flex-col gap-5">
-              {sessionsByDay.map(({ date, daySessions }) => {
+              {itemsByDay.map(({ date, daySessions }) => {
                 const { timeSlots, tracks } = buildGrid(daySessions);
                 const claimedCells = new Set<string>();
                 for (const slot of timeSlots) {
                   for (const track of tracks) {
                     if (claimedCells.has(`${slot}-${track}`)) continue;
-                    const s = daySessions.find(
-                      (s) => s.startAt === slot && s.location === track,
+                    const item = daySessions.find(
+                      (i) => i.data.startAt === slot && i.data.location === track,
                     );
-                    if (s) {
-                      const span = getRowSpan(s, timeSlots);
+                    if (item) {
+                      const span = getRowSpan(item, timeSlots);
                       const slotIdx = timeSlots.indexOf(slot);
                       for (let i = slotIdx + 1; i < slotIdx + span; i++) {
                         if (timeSlots[i]) claimedCells.add(`${timeSlots[i]}-${track}`);
@@ -378,7 +428,7 @@ export default function ConferenceProgramPage() {
 
                 return (
                   <div key={date}>
-                    {sessionsByDay.length > 1 && (
+                    {itemsByDay.length > 1 && (
                       <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">
                         {formatDayHeading(date)}
                       </p>
@@ -390,7 +440,6 @@ export default function ConferenceProgramPage() {
                           gridTemplateColumns: `56px repeat(${tracks.length}, 1fr)`,
                         }}
                       >
-                        {/* Header row */}
                         <div className="border-b border-[#e5e7eb] bg-[#fafafa]" />
                         {tracks.map((track) => (
                           <div
@@ -400,40 +449,48 @@ export default function ConferenceProgramPage() {
                             {track}
                           </div>
                         ))}
-
-                        {/* Time rows */}
                         {timeSlots.map((slot) => (
                           <React.Fragment key={slot}>
                             <div className="border-b border-[#f0f0f0] px-2 py-3 text-[10px] font-bold text-[#8e8e93] text-center flex items-start justify-center pt-3">
-                              {new Date(slot).toLocaleTimeString('sl-SI', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              {new Date(slot).toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}
                             </div>
                             {tracks.map((track) => {
                               if (claimedCells.has(`${slot}-${track}`)) return null;
-                              const session = daySessions.find(
-                                (s) => s.startAt === slot && s.location === track,
+                              const item = daySessions.find(
+                                (i) => i.data.startAt === slot && i.data.location === track,
                               );
-                              if (session) {
-                                const span = getRowSpan(session, timeSlots);
+                              if (item) {
+                                const span = getRowSpan(item, timeSlots);
                                 return (
                                   <div
                                     key={`cell-${slot}-${track}`}
                                     className="border-b border-l border-[#f0f0f0] p-[6px]"
                                     style={{ gridRow: `span ${span}` }}
                                   >
-                                    <SessionCard
-                                      session={session}
-                                      tagMap={tagMap}
-                                      isRegistering={Boolean(registeringIds[session.id])}
-                                      registerError={registerErrors[session.id] ?? ''}
-                                      onRegister={() => void handleSessionRegister(session.id)}
-                                      onCancel={() => void handleSessionCancel(session.id)}
-                                      isAdminOrOrganizer={isAdminOrOrganizer}
-                                      onEdit={() => setModalSession(session)}
-                                      onDelete={() => void handleSessionDelete(session.id)}
-                                    />
+                                    {item.itemType === 'career' ? (
+                                      <CareerSlotCard
+                                        slot={item.data}
+                                        currentUserUid={user?.uid ?? ''}
+                                        isAdminOrOrganizer={isAdminOrOrganizer}
+                                        eventId={eventId}
+                                        token={user?.idToken ?? ''}
+                                        onEdit={() => setModalCareerSlot(item.data)}
+                                        onDelete={() => void handleCareerSlotDelete(item.data.id)}
+                                        onRefresh={() => void loadData()}
+                                      />
+                                    ) : (
+                                      <SessionCard
+                                        session={item.data}
+                                        tagMap={tagMap}
+                                        isRegistering={Boolean(registeringIds[item.data.id])}
+                                        registerError={registerErrors[item.data.id] ?? ''}
+                                        onRegister={() => void handleSessionRegister(item.data.id)}
+                                        onCancel={() => void handleSessionCancel(item.data.id)}
+                                        isAdminOrOrganizer={isAdminOrOrganizer}
+                                        onEdit={() => setModalSession(item.data)}
+                                        onDelete={() => void handleSessionDelete(item.data.id)}
+                                      />
+                                    )}
                                   </div>
                                 );
                               }
@@ -454,25 +511,26 @@ export default function ConferenceProgramPage() {
             </div>
           )}
 
-          {/* Admin add button */}
-          {isAdminOrOrganizer && (
-            <button
-              type="button"
-              onClick={() => setModalSession(null)}
-              className="mt-4 w-full py-[10px] border-[1.5px] border-dashed border-[#d1d5db] rounded-[12px] text-[12px] font-semibold text-[#8e8e93] hover:border-[#0d0d0d] hover:text-[#0d0d0d] hover:bg-[#fafafa] transition-colors bg-transparent cursor-pointer font-sans"
-            >
-              + Dodaj sejo
-            </button>
-          )}
-
-          {/* Career slots */}
-          {user && (
-            <CareerSlotsSection
-              eventId={eventId}
-              token={user.idToken ?? ''}
-              userUid={user.uid ?? ''}
-              userRole={user.role ?? 'participant'}
-            />
+          {/* Add buttons */}
+          {(isAdminOrOrganizer || user?.role === 'industry') && (
+            <div className="flex gap-2 mt-4">
+              {isAdminOrOrganizer && (
+                <button
+                  type="button"
+                  onClick={() => setModalSession(null)}
+                  className="flex-1 py-[10px] border-[1.5px] border-dashed border-[#d1d5db] rounded-[12px] text-[12px] font-semibold text-[#8e8e93] hover:border-[#0d0d0d] hover:text-[#0d0d0d] hover:bg-[#fafafa] transition-colors bg-transparent cursor-pointer font-sans"
+                >
+                  + Dodaj sejo
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setModalCareerSlot(null)}
+                className="flex-1 py-[10px] border-[1.5px] border-dashed border-[#fcd34d] rounded-[12px] text-[12px] font-semibold text-[#92400e] hover:border-[#f59e0b] hover:bg-[#fffbeb] transition-colors bg-transparent cursor-pointer font-sans"
+              >
+                + Dodaj karierni razgovor
+              </button>
+            </div>
           )}
         </>
       ) : null}
@@ -487,6 +545,19 @@ export default function ConferenceProgramPage() {
           eventEndAt={conference.endAt}
           onClose={() => setModalSession(undefined)}
           onSave={handleSessionSave}
+        />
+      )}
+
+      {/* Career slot modal */}
+      {modalCareerSlot !== undefined && conference && (
+        <CareerSlotFormModal
+          key={modalCareerSlot?.id ?? 'create-career'}
+          slot={modalCareerSlot}
+          token={user?.idToken ?? ''}
+          eventStartAt={conference.startAt}
+          eventEndAt={conference.endAt}
+          onClose={() => setModalCareerSlot(undefined)}
+          onSave={handleCareerSlotSave}
         />
       )}
     </AppShell>
