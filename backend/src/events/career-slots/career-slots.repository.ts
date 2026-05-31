@@ -23,25 +23,17 @@ export class CareerSlotsRepository {
   }
 
   async listSlots(eventId: string): Promise<CareerSlot[]> {
-    const snap = await this.slotsCol(eventId)
-      .orderBy('scheduledAt', 'asc')
-      .get();
+    const snap = await this.slotsCol(eventId).orderBy('startAt', 'asc').get();
     return snap.docs.map((doc) => this.mapSlotDoc(doc));
   }
 
-  async findSlotById(
-    eventId: string,
-    slotId: string,
-  ): Promise<CareerSlot | null> {
+  async findSlotById(eventId: string, slotId: string): Promise<CareerSlot | null> {
     const doc = await this.slotsCol(eventId).doc(slotId).get();
     if (!doc.exists) return null;
     return this.mapSlotDoc(doc);
   }
 
-  async createSlot(
-    eventId: string,
-    data: Omit<CareerSlot, 'id'>,
-  ): Promise<CareerSlot> {
+  async createSlot(eventId: string, data: Omit<CareerSlot, 'id'>): Promise<CareerSlot> {
     const ref = await this.slotsCol(eventId).add(data);
     return { id: ref.id, ...data };
   }
@@ -58,10 +50,7 @@ export class CareerSlotsRepository {
     await this.slotsCol(eventId).doc(slotId).delete();
   }
 
-  async listRequests(
-    eventId: string,
-    slotId: string,
-  ): Promise<CareerSlotRequest[]> {
+  async listRequests(eventId: string, slotId: string): Promise<CareerSlotRequest[]> {
     const snap = await this.requestsCol(eventId, slotId)
       .orderBy('requestedAt', 'asc')
       .get();
@@ -89,6 +78,20 @@ export class CareerSlotsRepository {
     const doc = await this.requestsCol(eventId, slotId).doc(requestId).get();
     if (!doc.exists) return null;
     return this.mapRequestDoc(doc);
+  }
+
+  async findApprovedBySubSlotIndex(
+    eventId: string,
+    slotId: string,
+    subSlotIndex: number,
+  ): Promise<CareerSlotRequest | null> {
+    const snap = await this.requestsCol(eventId, slotId)
+      .where('subSlotIndex', '==', subSlotIndex)
+      .where('status', '==', 'approved')
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    return this.mapRequestDoc(snap.docs[0]);
   }
 
   async createRequest(
@@ -122,9 +125,9 @@ export class CareerSlotsRepository {
       id: doc.id,
       title: data['title'] as string,
       description: data['description'] as string,
-      scheduledAt: (
-        data['scheduledAt'] as FirebaseFirestore.Timestamp
-      ).toDate(),
+      startAt: (data['startAt'] as FirebaseFirestore.Timestamp).toDate(),
+      endAt: (data['endAt'] as FirebaseFirestore.Timestamp).toDate(),
+      location: data['location'] as string,
       capacity: data['capacity'] as number,
       requirements: Array.isArray(data['requirements'])
         ? (data['requirements'] as string[])
@@ -134,17 +137,14 @@ export class CareerSlotsRepository {
     };
   }
 
-  private mapRequestDoc(
-    doc: FirebaseFirestore.DocumentSnapshot,
-  ): CareerSlotRequest {
+  private mapRequestDoc(doc: FirebaseFirestore.DocumentSnapshot): CareerSlotRequest {
     const data = doc.data()!;
     return {
       id: doc.id,
       requesterUid: data['requesterUid'] as string,
+      subSlotIndex: data['subSlotIndex'] as number,
       status: data['status'] as CareerSlotRequestStatus,
-      requestedAt: (
-        data['requestedAt'] as FirebaseFirestore.Timestamp
-      ).toDate(),
+      requestedAt: (data['requestedAt'] as FirebaseFirestore.Timestamp).toDate(),
       respondedAt: data['respondedAt']
         ? (data['respondedAt'] as FirebaseFirestore.Timestamp).toDate()
         : undefined,

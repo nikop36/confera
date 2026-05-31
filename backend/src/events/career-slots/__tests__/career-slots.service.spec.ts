@@ -65,7 +65,7 @@ describe('CareerSlotsService', () => {
     it('throws NotFoundException when slot does not exist', async () => {
       mockFindSlotById.mockResolvedValue(null);
       await expect(
-        service.requestSlot('event-1', 'slot-1', 'user-1'),
+        service.requestSlot('event-1', 'slot-1', 'user-1', 0),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -86,7 +86,7 @@ describe('CareerSlotsService', () => {
         requestedAt: new Date(),
       });
       await expect(
-        service.requestSlot('event-1', 'slot-1', 'user-1'),
+        service.requestSlot('event-1', 'slot-1', 'user-1', 0),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -103,7 +103,7 @@ describe('CareerSlotsService', () => {
       mockFindRequestByRequester.mockResolvedValue(null);
       mockCountApproved.mockResolvedValue(1);
       await expect(
-        service.requestSlot('event-1', 'slot-1', 'user-1'),
+        service.requestSlot('event-1', 'slot-1', 'user-1', 0),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -120,7 +120,7 @@ describe('CareerSlotsService', () => {
       mockFindRequestByRequester.mockResolvedValue(null);
       mockCountApproved.mockResolvedValue(0);
       mockCreateRequest.mockResolvedValue({ id: 'req-new' });
-      await service.requestSlot('event-1', 'slot-1', 'user-1');
+      await service.requestSlot('event-1', 'slot-1', 'user-1', 0);
       expect(mockCreateRequest).toHaveBeenCalledWith(
         'event-1',
         'slot-1',
