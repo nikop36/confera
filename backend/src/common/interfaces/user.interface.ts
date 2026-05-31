@@ -1,6 +1,7 @@
 import { UserRoleEnum } from '../enums/roles.enum';
 export type ProfileStatus = 'incomplete' | 'complete';
 export type MeetingType = 'online' | 'in-person' | 'both';
+export type GuestStatus = 'pending' | 'confirmed';
 
 export interface User {
   uid: string;
@@ -9,6 +10,7 @@ export interface User {
   role: UserRoleEnum;
   profileStatus: ProfileStatus;
   createdAt: Date;
+  guestStatus?: GuestStatus;
 }
 
 export interface UserProfile {

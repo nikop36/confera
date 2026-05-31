@@ -37,6 +37,10 @@ export const NOTIFICATION_CONFIG: Record<
   [NotificationTypeEnum.EVENT_CANCELLED]: { sendEmail: false }, // system only
   [NotificationTypeEnum.EVENT_PARTICIPANT_JOINED]: { sendEmail: false }, // system only
   [NotificationTypeEnum.EVENT_PARTICIPANT_CANCELLED]: { sendEmail: false }, // system only
+
+  [NotificationTypeEnum.GUEST_CONFIRMATION]: { sendEmail: true },
+  [NotificationTypeEnum.GUEST_CONFIRMED]: { sendEmail: false },
+  [NotificationTypeEnum.GUEST_EVENT_INVITE]: { sendEmail: true },
 };
 
 export function shouldSendEmail(type: NotificationTypeEnum): boolean {

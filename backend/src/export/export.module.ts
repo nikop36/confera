@@ -8,6 +8,7 @@ import { EventsExportService } from './events-export.service';
 import { EventsModule } from '../events/events.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ConnectionsModule } from '../connections/connections.module';
+import { GuestInvitationsRepository } from '../guest/guest.repository';
 
 @Module({
   imports: [
@@ -18,6 +19,6 @@ import { ConnectionsModule } from '../connections/connections.module';
     NotificationsModule,
   ],
   controllers: [ExportController, EventsExportController],
-  providers: [ExportService, EventsExportService],
+  providers: [ExportService, EventsExportService, GuestInvitationsRepository],
 })
 export class ExportModule {}

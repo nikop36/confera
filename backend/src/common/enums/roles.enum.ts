@@ -3,6 +3,7 @@ export enum UserRoleEnum {
   ORGANIZER = 'organizer',
   INDUSTRY = 'industry',
   ADMIN = 'admin',
+  GUEST = 'guest',
 }
 
 export type RequestableRole = UserRoleEnum.ORGANIZER | UserRoleEnum.INDUSTRY;

@@ -29,8 +29,43 @@ export class AuthService {
   async register(
     dto: RegisterDto,
   ): Promise<{ uid: string; email: string; role: string }> {
-    let userRecord: admin.auth.UserRecord;
+    // Check for existing guest record before touching Firebase Auth
+    const existingGuest = await this.usersService.findByEmailOrNull(dto.email);
 
+    if (existingGuest && existingGuest.role === UserRoleEnum.GUEST) {
+      if (existingGuest.guestStatus !== 'confirmed') {
+        throw new ConflictException(
+          'An invitation has been sent to this email. Please confirm it before registering.',
+        );
+      }
+      // Guest is confirmed — create the Firebase Auth account and upgrade
+      let userRecord: admin.auth.UserRecord;
+      try {
+        userRecord = await this.firebaseService.getAuth().createUser({
+          email: dto.email,
+          password: dto.password,
+          displayName: dto.displayName,
+        });
+      } catch (err) {
+        if (isFirebaseError(err) && err.code === 'auth/email-already-exists') {
+          throw new ConflictException('Email already registered');
+        }
+        throw new InternalServerErrorException('Registration failed');
+      }
+
+      await this.usersService.upgradeGuestToParticipant(
+        dto.email,
+        userRecord.uid,
+      );
+      return {
+        uid: userRecord.uid,
+        email: dto.email,
+        role: UserRoleEnum.PARTICIPANT,
+      };
+    }
+
+    //normal registration flow
+    let userRecord: admin.auth.UserRecord;
     try {
       userRecord = await this.firebaseService.getAuth().createUser({
         email: dto.email,

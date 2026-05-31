@@ -18,4 +18,7 @@ export enum NotificationTypeEnum {
   EVENT_CANCELLED = 'event_cancelled', // user notified
   EVENT_PARTICIPANT_JOINED = 'event_participant_joined', // organizer notified
   EVENT_PARTICIPANT_CANCELLED = 'event_participant_cancelled', // organizer notified
+  GUEST_CONFIRMATION = 'guest_confirmation', // first time — email + system
+  GUEST_CONFIRMED = 'guest_confirmed',
+  GUEST_EVENT_INVITE = 'guest_event_invite', // confirmed guest, new event — email + system
 }

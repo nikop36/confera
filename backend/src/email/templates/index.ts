@@ -17,6 +17,7 @@ export type TemplateBuilder = (data: {
   message: string;
   displayName?: string;
   eventId?: number;
+  confirmationToken?: string;
 }) => EmailTemplate;
 
 export const EMAIL_TEMPLATES: Partial<

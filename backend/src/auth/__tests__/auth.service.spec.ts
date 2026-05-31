@@ -13,6 +13,8 @@ describe('AuthService', () => {
 
   const mockCreateUser = jest.fn();
   const mockUsersServiceCreate = jest.fn();
+  const mockFindByEmailOrNull = jest.fn().mockResolvedValue(null); // default — no guest exists
+  const mockUpgradeGuestToParticipant = jest.fn().mockResolvedValue(undefined);
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -28,6 +30,8 @@ describe('AuthService', () => {
           provide: UsersService,
           useValue: {
             createUser: mockUsersServiceCreate,
+            findByEmailOrNull: mockFindByEmailOrNull,
+            upgradeGuestToParticipant: mockUpgradeGuestToParticipant,
           },
         },
         {
@@ -42,7 +46,10 @@ describe('AuthService', () => {
     authService = module.get<AuthService>(AuthService);
   });
 
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => {
+    jest.clearAllMocks();
+    mockFindByEmailOrNull.mockResolvedValue(null); // reset to default after each test
+  });
 
   // ─── Registration ────────────────────────────────────────────────────────────
 
