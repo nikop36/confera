@@ -332,7 +332,8 @@ export default function SessionFormModal({
                 type="time"
                 value={form.startTime}
                 onChange={(e) => set('startTime', e.target.value)}
-                className="text-[13px] font-semibold outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-transparent text-[#0d0d0d]"
+                onKeyDown={(e) => e.preventDefault()}
+                className="text-[13px] font-semibold outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-transparent text-[#0d0d0d] cursor-pointer"
               />
               <span className="text-[11px] text-[#9ca3af]">→</span>
               <input
@@ -340,7 +341,8 @@ export default function SessionFormModal({
                 type="time"
                 value={form.endTime}
                 onChange={(e) => set('endTime', e.target.value)}
-                className="text-[13px] font-semibold outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-transparent text-[#0d0d0d]"
+                onKeyDown={(e) => e.preventDefault()}
+                className="text-[13px] font-semibold outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-transparent text-[#0d0d0d] cursor-pointer"
               />
               {formatDuration(form.startTime, form.endTime) && (
                 <span className="ml-auto text-[10px] font-semibold text-[#16a34a] bg-[#f0fdf4] rounded-[5px] px-2 py-[3px] whitespace-nowrap">
