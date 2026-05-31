@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { SessionItem, Speaker } from './SessionCard';
 import SpeakerInput from './SpeakerInput';
 import TagPicker from './TagPicker';
+import ClockTimePicker from './ClockTimePicker';
 
 export type SessionFormValues = {
   title: string;
@@ -132,6 +133,7 @@ export default function SessionFormModal({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [users, setUsers] = useState<CommunityUser[]>([]);
   const firstInputRef = useRef<HTMLInputElement>(null);
 
@@ -176,6 +178,10 @@ export default function SessionFormModal({
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!form.startTime || !form.endTime) {
+      setError('Izberite čas seje.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -228,6 +234,7 @@ export default function SessionFormModal({
   const isMultiDay = days.length > 1;
 
   return (
+    <>
     <div
       className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
       onClick={(e) => {
@@ -306,46 +313,38 @@ export default function SessionFormModal({
             </button>
           </div>
 
-          {/* Day + time range */}
+          {/* Day + time */}
           <div className="flex flex-col gap-1">
             <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
               Čas seje *
             </span>
-            <div className="flex items-center gap-2 border border-[#e5e7eb] rounded-[8px] px-3 py-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               {isMultiDay && (
-                <>
-                  <select
-                    required
-                    value={form.selectedDay}
-                    onChange={(e) => set('selectedDay', e.target.value)}
-                    className="text-[13px] outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-white text-[#374151] cursor-pointer"
-                  >
-                    {days.map((d) => (
-                      <option key={d} value={d}>{formatDayLabel(d)}</option>
-                    ))}
-                  </select>
-                  <span className="text-[11px] text-[#d1d5db]">|</span>
-                </>
+                <select
+                  required
+                  value={form.selectedDay}
+                  onChange={(e) => set('selectedDay', e.target.value)}
+                  className="text-[13px] outline-none border border-[#e5e7eb] rounded-[8px] px-3 py-2 bg-white text-[#374151] cursor-pointer"
+                >
+                  {days.map((d) => (
+                    <option key={d} value={d}>{formatDayLabel(d)}</option>
+                  ))}
+                </select>
               )}
-              <input
-                required
-                type="time"
-                value={form.startTime}
-                onChange={(e) => set('startTime', e.target.value)}
-                onKeyDown={(e) => e.preventDefault()}
-                className="text-[13px] font-semibold outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-transparent text-[#0d0d0d] cursor-pointer"
-              />
-              <span className="text-[11px] text-[#9ca3af]">→</span>
-              <input
-                required
-                type="time"
-                value={form.endTime}
-                onChange={(e) => set('endTime', e.target.value)}
-                onKeyDown={(e) => e.preventDefault()}
-                className="text-[13px] font-semibold outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-transparent text-[#0d0d0d] cursor-pointer"
-              />
+              <button
+                type="button"
+                onClick={() => setShowTimePicker(true)}
+                className={`flex items-center gap-2 border rounded-[8px] px-3 py-2 text-[13px] cursor-pointer font-sans transition-colors hover:border-[#0d0d0d] bg-white ${form.startTime ? 'border-[#e5e7eb] text-[#374151]' : 'border-dashed border-[#d1d5db] text-[#9ca3af]'}`}
+              >
+                <span>🕐</span>
+                <span className="font-semibold">
+                  {form.startTime && form.endTime
+                    ? `${form.startTime} → ${form.endTime}`
+                    : 'Izberite čas'}
+                </span>
+              </button>
               {formatDuration(form.startTime, form.endTime) && (
-                <span className="ml-auto text-[10px] font-semibold text-[#16a34a] bg-[#f0fdf4] rounded-[5px] px-2 py-[3px] whitespace-nowrap">
+                <span className="text-[10px] font-semibold text-[#16a34a] bg-[#f0fdf4] rounded-[5px] px-2 py-[3px] whitespace-nowrap">
                   {formatDuration(form.startTime, form.endTime)}
                 </span>
               )}
@@ -423,5 +422,15 @@ export default function SessionFormModal({
         </form>
       </div>
     </div>
+
+    {showTimePicker && (
+      <ClockTimePicker
+        startTime={form.startTime}
+        endTime={form.endTime}
+        onChange={(start, end) => setForm(prev => ({ ...prev, startTime: start, endTime: end }))}
+        onClose={() => setShowTimePicker(false)}
+      />
+    )}
+    </>
   );
 }

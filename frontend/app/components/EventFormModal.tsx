@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { EventItem } from './EventCard';
 import TagPicker from './TagPicker';
+import DateRangePicker from './DateRangePicker';
+import ClockTimePicker from './ClockTimePicker';
 
 export type EventFormValues = {
   title: string;
@@ -44,6 +46,19 @@ function formatDuration(startDate: string, startTime: string, endDate: string, e
   return [days && `${days}d`, hours && `${hours}h`, mins && `${mins}min`].filter(Boolean).join(' ');
 }
 
+function fmtDateLabel(start: string, end: string): string {
+  if (!start) return 'Izberite datum';
+  const fmt = (s: string) => new Date(`${s}T00:00:00`).toLocaleDateString('sl-SI', { day: 'numeric', month: 'numeric', year: 'numeric' });
+  if (!end || start === end) return fmt(start);
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
+function fmtTimeLabel(start: string, end: string): string {
+  if (!start) return 'Izberite čas';
+  if (!end) return `${start} →`;
+  return `${start} → ${end}`;
+}
+
 type EventFormInternal = {
   title: string;
   description: string;
@@ -57,15 +72,8 @@ type EventFormInternal = {
 };
 
 const EMPTY: EventFormInternal = {
-  title: '',
-  description: '',
-  startDate: '',
-  startTime: '',
-  endDate: '',
-  endTime: '',
-  location: '',
-  capacity: 50,
-  tags: [],
+  title: '', description: '', startDate: '', startTime: '',
+  endDate: '', endTime: '', location: '', capacity: 50, tags: [],
 };
 
 function eventToForm(event: EventItem): EventFormInternal {
@@ -82,26 +90,19 @@ function eventToForm(event: EventItem): EventFormInternal {
   };
 }
 
-export default function EventFormModal({
-  event,
-  token,
-  onClose,
-  onSave,
-}: EventFormModalProps) {
-  const [form, setForm] = useState<EventFormInternal>(() =>
-    event ? eventToForm(event) : EMPTY,
-  );
+export default function EventFormModal({ event, token, onClose, onSave }: EventFormModalProps) {
+  const [form, setForm] = useState<EventFormInternal>(() => event ? eventToForm(event) : EMPTY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const firstInputRef = useRef<HTMLInputElement>(null);
 
   const handleClose = useCallback(() => onClose(), [onClose]);
 
   useEffect(() => {
     firstInputRef.current?.focus();
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose();
-    };
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleClose]);
@@ -109,13 +110,15 @@ export default function EventFormModal({
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    return () => { document.body.style.overflow = prev; };
   }, []);
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!form.startDate || !form.startTime || !form.endDate || !form.endTime) {
+      setError('Izberite datum in čas.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -130,9 +133,7 @@ export default function EventFormModal({
       });
       onClose();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Napaka pri shranjevanju.',
-      );
+      setError(err instanceof Error ? err.message : 'Napaka pri shranjevanju.');
     } finally {
       setSaving(false);
     }
@@ -142,178 +143,151 @@ export default function EventFormModal({
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  const duration = formatDuration(form.startDate, form.startTime, form.endDate, form.endTime);
+
   return (
-    <div
-      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
+    <>
       <div
-        className="bg-white rounded-[18px] w-full max-w-[500px] max-h-[90vh] overflow-y-auto p-6"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="event-form-title"
+        className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
-        <div className="flex items-center justify-between mb-5">
-          <h3 id="event-form-title" className="text-[17px] font-bold">
-            {event ? 'Uredi konferenco' : 'Dodaj konferenco'}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-7 h-7 rounded-full bg-[#f3f4f6] flex items-center justify-center text-[#6b7280] hover:bg-[#e5e7eb] border-0 cursor-pointer font-sans text-[14px]"
-          >
-            ✕
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-              Naslov *
-            </span>
-            <input
-              ref={firstInputRef}
-              required
-              value={form.title}
-              onChange={(e) => set('title', e.target.value)}
-              className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-              Opis *
-            </span>
-            <textarea
-              required
-              rows={3}
-              value={form.description}
-              onChange={(e) => set('description', e.target.value)}
-              className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors resize-none"
-            />
-          </label>
-
-          {/* Date/time range row */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-              Datum & čas *
-            </span>
-            <div className="flex items-center gap-2 border border-[#e5e7eb] rounded-[8px] px-3 py-2 flex-wrap">
-              <input
-                required
-                type="date"
-                value={form.startDate}
-                onChange={(e) => {
-                  set('startDate', e.target.value);
-                  if (!form.endDate) set('endDate', e.target.value);
-                }}
-                onKeyDown={(e) => e.preventDefault()}
-                className="text-[13px] outline-none border-0 p-0 bg-transparent text-[#374151] cursor-pointer"
-              />
-              <input
-                required
-                type="time"
-                value={form.startTime}
-                onChange={(e) => set('startTime', e.target.value)}
-                onKeyDown={(e) => e.preventDefault()}
-                className="text-[13px] font-semibold outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-transparent text-[#0d0d0d] cursor-pointer"
-              />
-              <span className="text-[11px] text-[#9ca3af]">→</span>
-              <input
-                required
-                type="date"
-                value={form.endDate}
-                onChange={(e) => set('endDate', e.target.value)}
-                onKeyDown={(e) => e.preventDefault()}
-                className="text-[13px] outline-none border-0 p-0 bg-transparent text-[#374151] cursor-pointer"
-              />
-              <input
-                required
-                type="time"
-                value={form.endTime}
-                onChange={(e) => set('endTime', e.target.value)}
-                onKeyDown={(e) => e.preventDefault()}
-                className="text-[13px] font-semibold outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-transparent text-[#0d0d0d] cursor-pointer"
-              />
-              {formatDuration(form.startDate, form.startTime, form.endDate, form.endTime) && (
-                <span className="ml-auto text-[10px] font-semibold text-[#16a34a] bg-[#f0fdf4] rounded-[5px] px-2 py-[3px] whitespace-nowrap">
-                  {formatDuration(form.startDate, form.startTime, form.endDate, form.endTime)}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-                Lokacija *
-              </span>
-              <input
-                required
-                value={form.location}
-                onChange={(e) => set('location', e.target.value)}
-                placeholder="npr. Ljubljana"
-                className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-                Kapaciteta *
-              </span>
-              <input
-                required
-                type="number"
-                min={1}
-                value={form.capacity}
-                onChange={(e) =>
-                  set(
-                    'capacity',
-                    e.target.value === ''
-                      ? 0
-                      : Number.parseInt(e.target.value, 10),
-                  )
-                }
-                className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
-              />
-            </label>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">
-              Oznake
-            </label>
-            <TagPicker
-              token={token}
-              value={form.tags}
-              onChange={(slugs) => setForm((prev) => ({ ...prev, tags: slugs }))}
-            />
-          </div>
-
-          {error && (
-            <p className="text-[12px] text-[#dc2626]">{error}</p>
-          )}
-
-          <div className="flex gap-2 justify-end mt-1">
+        <div
+          className="bg-white rounded-[18px] w-full max-w-[500px] max-h-[90vh] overflow-y-auto p-6"
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="event-form-title"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <h3 id="event-form-title" className="text-[17px] font-bold">
+              {event ? 'Uredi konferenco' : 'Dodaj konferenco'}
+            </h3>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-[8px] text-[13px] font-semibold bg-[#f3f4f6] text-[#374151] hover:bg-[#e5e7eb] transition-colors border-0 cursor-pointer font-sans"
+              className="w-7 h-7 rounded-full bg-[#f3f4f6] flex items-center justify-center text-[#6b7280] hover:bg-[#e5e7eb] border-0 cursor-pointer font-sans text-[14px]"
             >
-              Prekliči
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2 rounded-[8px] text-[13px] font-semibold bg-[#0d0d0d] text-white hover:bg-[#1f1f1f] transition-colors disabled:opacity-50 border-0 cursor-pointer font-sans"
-            >
-              {saving ? 'Shranjujem...' : 'Shrani'}
+              ✕
             </button>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">Naslov *</span>
+              <input
+                ref={firstInputRef}
+                required
+                value={form.title}
+                onChange={(e) => set('title', e.target.value)}
+                className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">Opis *</span>
+              <textarea
+                required
+                rows={3}
+                value={form.description}
+                onChange={(e) => set('description', e.target.value)}
+                className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors resize-none"
+              />
+            </label>
+
+            {/* Date & time buttons */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">Datum & čas *</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setShowDatePicker(true)}
+                  className={`flex items-center gap-2 border rounded-[8px] px-3 py-2 text-[13px] cursor-pointer font-sans transition-colors hover:border-[#0d0d0d] bg-white ${form.startDate ? 'border-[#e5e7eb] text-[#374151]' : 'border-dashed border-[#d1d5db] text-[#9ca3af]'}`}
+                >
+                  <span>📅</span>
+                  <span>{fmtDateLabel(form.startDate, form.endDate)}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTimePicker(true)}
+                  className={`flex items-center gap-2 border rounded-[8px] px-3 py-2 text-[13px] cursor-pointer font-sans transition-colors hover:border-[#0d0d0d] bg-white ${form.startTime ? 'border-[#e5e7eb] text-[#374151]' : 'border-dashed border-[#d1d5db] text-[#9ca3af]'}`}
+                >
+                  <span>🕐</span>
+                  <span className="font-semibold">{fmtTimeLabel(form.startTime, form.endTime)}</span>
+                </button>
+                {duration && (
+                  <span className="text-[10px] font-semibold text-[#16a34a] bg-[#f0fdf4] rounded-[5px] px-2 py-[3px]">
+                    {duration}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">Lokacija *</span>
+                <input
+                  required
+                  value={form.location}
+                  onChange={(e) => set('location', e.target.value)}
+                  placeholder="npr. Ljubljana"
+                  className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">Kapaciteta *</span>
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  value={form.capacity}
+                  onChange={(e) => set('capacity', e.target.value === '' ? 0 : Number.parseInt(e.target.value, 10))}
+                  className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
+                />
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">Oznake</label>
+              <TagPicker
+                token={token}
+                value={form.tags}
+                onChange={(slugs) => setForm((prev) => ({ ...prev, tags: slugs }))}
+              />
+            </div>
+
+            {error && <p className="text-[12px] text-[#dc2626]">{error}</p>}
+
+            <div className="flex gap-2 justify-end mt-1">
+              <button type="button" onClick={onClose}
+                className="px-4 py-2 rounded-[8px] text-[13px] font-semibold bg-[#f3f4f6] text-[#374151] hover:bg-[#e5e7eb] transition-colors border-0 cursor-pointer font-sans">
+                Prekliči
+              </button>
+              <button type="submit" disabled={saving}
+                className="px-4 py-2 rounded-[8px] text-[13px] font-semibold bg-[#0d0d0d] text-white hover:bg-[#1f1f1f] transition-colors disabled:opacity-50 border-0 cursor-pointer font-sans">
+                {saving ? 'Shranjujem...' : 'Shrani'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+
+      {showDatePicker && (
+        <DateRangePicker
+          startDate={form.startDate}
+          endDate={form.endDate}
+          onChange={(start, end) => setForm(prev => ({ ...prev, startDate: start, endDate: end }))}
+          onClose={() => setShowDatePicker(false)}
+        />
+      )}
+
+      {showTimePicker && (
+        <ClockTimePicker
+          startTime={form.startTime}
+          endTime={form.endTime}
+          onChange={(start, end) => setForm(prev => ({ ...prev, startTime: start, endTime: end }))}
+          onClose={() => setShowTimePicker(false)}
+        />
+      )}
+    </>
   );
 }
