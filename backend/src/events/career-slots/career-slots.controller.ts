@@ -20,6 +20,7 @@ import { CareerSlotsService } from './career-slots.service';
 import { CreateCareerSlotDto } from './dto/create-career-slot.dto';
 import { UpdateCareerSlotDto } from './dto/update-career-slot.dto';
 import { RespondToRequestDto } from './dto/respond-to-request.dto';
+import { RequestCareerSlotDto } from './dto/request-career-slot.dto';
 import { FirebaseAuthGuard } from '../../common/guards/firebase-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -86,13 +87,14 @@ export class CareerSlotsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Request a spot in a career slot' })
   @ApiResponse({ status: 201, description: 'Request submitted' })
-  @ApiResponse({ status: 409, description: 'Already requested or slot full' })
+  @ApiResponse({ status: 409, description: 'Already requested, slot full, or sub-slot taken' })
   async requestSlot(
     @Param('eventId') eventId: string,
     @Param('slotId') slotId: string,
+    @Body() dto: RequestCareerSlotDto,
     @CurrentUser() user: FirebaseUser,
   ) {
-    await this.careerSlotsService.requestSlot(eventId, slotId, user.uid);
+    await this.careerSlotsService.requestSlot(eventId, slotId, user.uid, dto.subSlotIndex);
   }
 
   @Get(':slotId/requests')
