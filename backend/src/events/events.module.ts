@@ -16,7 +16,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     SessionsModule,
     ConnectionsModule,
     CareerSlotsModule,
-    NotificationsModule
+    NotificationsModule,
   ],
   controllers: [EventsController],
   providers: [EventsService, EventsRepository],
