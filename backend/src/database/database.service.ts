@@ -125,6 +125,52 @@ from combined
 order by score desc
 limit result_limit;
 $$;
+
+create table if not exists event_profile_index (
+  event_id text primary key,
+  title text not null,
+  description text not null,
+  location text not null,
+  tags text[] not null default '{}',
+  start_at timestamptz not null,
+  end_at timestamptz not null,
+  capacity integer not null default 0,
+  registered_count integer not null default 0,
+  event_text text not null,
+  event_embedding vector(384),
+  embedding_model text,
+  event_hash text not null,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists event_profile_start_at_idx
+  on event_profile_index (start_at);
+
+create index if not exists event_profile_embedding_idx
+  on event_profile_index
+  using ivfflat (event_embedding vector_cosine_ops)
+  with (lists = 100);
+
+create or replace function semantic_event_search(
+  query_embedding vector(384),
+  now_at timestamptz,
+  result_limit integer default 30
+)
+returns table (
+  event_id text,
+  score double precision
+)
+language sql
+as $$
+  select
+    e.event_id,
+    greatest(0, 1 - (e.event_embedding <=> query_embedding)) as score
+  from event_profile_index e
+  where e.end_at >= now_at
+    and e.event_embedding is not null
+  order by e.event_embedding <=> query_embedding
+  limit result_limit;
+$$;
 `;
 
 @Injectable()

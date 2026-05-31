@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
 import TagPicker from '../components/TagPicker';
 import { saveStoredUser, useStoredUser } from '../lib/auth';
@@ -79,14 +80,75 @@ type CropDraft = {
   zoom: number;
 };
 
-const TABS = ['Srečanja', 'Dogodki', 'Povabila', 'Sledilci'];
+const TABS = ['Srečanja', 'Dogodki', 'Povabila', 'Prijatelji'];
 
-const CARDS = [
+type ProfileNavCard = {
+  title: string;
+  location: string;
+  desc: string;
+  from: string;
+  to: string;
+  href?: string;
+};
+
+const CARDS: ProfileNavCard[] = [
   { title: 'AI v industriji', location: 'Dvorana A', desc: 'Panelna razprava o prihodnosti', from: '#7c6cf6', to: '#c084fc' },
   { title: 'Karierni razgovor', location: 'Sejna soba 3', desc: 'Srečanje z delodajalci', from: '#fb923c', to: '#fbbf24' },
   { title: 'Akademsko mreženje', location: 'Atrij', desc: 'Izmenjava izkušenj', from: '#22d3ee', to: '#6ee7b7' },
   { title: 'Industrijsko srečanje', location: 'Razstavni prostor', desc: 'Razstava rešitev', from: '#f472b6', to: '#fb7185' },
 ];
+
+const INVITE_CARDS: ProfileNavCard[] = [
+  {
+    title: 'Odpri Povabila',
+    location: 'Povabila',
+    desc: 'Preglej nova in obdelana povabila.',
+    from: '#7c6cf6',
+    to: '#c084fc',
+    href: '/invites',
+  },
+  {
+    title: 'Karierna Povabila',
+    location: 'Povabila',
+    desc: 'Sprejmi ali zavrni povabila na razgovore.',
+    from: '#22d3ee',
+    to: '#6ee7b7',
+    href: '/invites',
+  },
+];
+
+const FRIEND_CARDS: ProfileNavCard[] = [
+  {
+    title: 'Odpri Prijatelje',
+    location: 'Prijatelji',
+    desc: 'Upravljaj povezave in zahteve za povezavo.',
+    from: '#fb923c',
+    to: '#fbbf24',
+    href: '/connections',
+  },
+  {
+    title: 'Poveži se z novimi',
+    location: 'Prijatelji',
+    desc: 'Preveri predloge in razširi svojo mrežo.',
+    from: '#f472b6',
+    to: '#fb7185',
+    href: '/community',
+  },
+];
+
+type RecommendedEvent = {
+  id: string;
+  title: string;
+  description: string;
+  startAt: string;
+  endAt: string;
+  location: string;
+  capacity: number;
+  registeredCount: number;
+  tags?: string[];
+  friendsGoing?: Array<{ uid: string; displayName: string }>;
+  score: number;
+};
 
 const DEFAULT_FORM: ProfileForm = {
   bio: '',
@@ -159,6 +221,7 @@ function profileToForm(profile?: UserProfile): ProfileForm {
 type RoleRequestState = 'idle' | 'submitting' | 'submitted' | 'error';
 
 export default function ProfilePage() {
+  const router = useRouter();
   const user = useStoredUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [form, setForm] = useState<ProfileForm>(DEFAULT_FORM);
@@ -177,6 +240,10 @@ export default function ProfilePage() {
   const [roleRequestError, setRoleRequestError] = useState('');
   const [connectionCount, setConnectionCount] = useState(0);
   const [meetingCount, setMeetingCount] = useState(0);
+  const [recommendedEvents, setRecommendedEvents] = useState<RecommendedEvent[]>(
+    [],
+  );
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
   const token = user?.idToken;
   const displayName = profile?.displayName ?? user?.displayName ?? 'Udeleženec';
@@ -260,6 +327,28 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!token) return;
 
+    async function loadRecommendedEvents() {
+      setLoadingRecommendations(true);
+      try {
+        const res = await fetch(`${API}/events/recommendations/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const payload = (await res.json()) as RecommendedEvent[];
+        setRecommendedEvents(payload);
+      } catch {
+        // keep current recommendations on transient errors
+      } finally {
+        setLoadingRecommendations(false);
+      }
+    }
+
+    void loadRecommendedEvents();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+
     async function loadMeetingCount() {
       try {
         const res = await fetch(`${API}/invites/me`, {
@@ -290,6 +379,9 @@ export default function ProfilePage() {
     () => displayName.split(' ').map((word) => word[0]).slice(0, 2).join('').toUpperCase(),
     [displayName],
   );
+
+  const staticTabCards: ProfileNavCard[] =
+    activeTab === 2 ? INVITE_CARDS : activeTab === 3 ? FRIEND_CARDS : CARDS;
 
   function field(key: keyof ProfileForm) {
     return (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -860,31 +952,131 @@ export default function ProfilePage() {
 
       {/* 2-col card grid */}
       <div className="grid grid-cols-2 gap-3">
-        {CARDS.map((card, i) => (
-          <div key={i} className="rounded-2xl overflow-hidden bg-white border border-[#f0f0f0] cursor-pointer">
-            <div className="h-[128px] relative" style={{ background: `linear-gradient(135deg, ${card.from}, ${card.to})` }}>
-              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 220 128" fill="none" preserveAspectRatio="xMidYMid slice">
-                <circle cx="170" cy="20" r="75" fill="rgba(255,255,255,0.1)" />
-                <circle cx="20" cy="110" r="55" fill="rgba(255,255,255,0.07)" />
-              </svg>
-              <button className="absolute bottom-[9px] right-[9px] bg-white/20 backdrop-blur-sm border-0 rounded-lg w-7 h-7 flex items-center justify-center cursor-pointer">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                </svg>
-              </button>
-            </div>
-            <div className="px-[14px] py-3">
-              <p className="text-sm font-semibold mb-1">{card.title}</p>
-              <p className="text-xs text-[#8e8e93] flex items-center gap-1 mb-[3px]">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
-                </svg>
-                {card.location}
-              </p>
-              <p className="text-xs text-[#b0b0b0]">{card.desc}</p>
-            </div>
+        {activeTab === 1 && loadingRecommendations && (
+          <div className="col-span-2 rounded-2xl border border-[#f0f0f0] bg-white px-4 py-5 text-sm text-[#8e8e93]">
+            Nalaganje priporočil dogodkov...
           </div>
-        ))}
+        )}
+
+        {activeTab === 1 &&
+          !loadingRecommendations &&
+          recommendedEvents.length === 0 && (
+            <div className="col-span-2 rounded-2xl border border-[#f0f0f0] bg-white px-4 py-5 text-sm text-[#8e8e93]">
+              Trenutno ni novih priporočil dogodkov.
+            </div>
+          )}
+
+        {activeTab === 1 &&
+          recommendedEvents.map((event, i) => (
+            <div
+              key={event.id}
+              className="rounded-2xl overflow-hidden bg-white border border-[#f0f0f0] cursor-pointer"
+              role="button"
+              tabIndex={0}
+              onClick={() => router.push(`/events/${event.id}`)}
+              onKeyDown={(eventKey) => {
+                if (eventKey.key === 'Enter' || eventKey.key === ' ') {
+                  eventKey.preventDefault();
+                  router.push(`/events/${event.id}`);
+                }
+              }}
+            >
+              <div
+                className="h-[128px] relative"
+                style={{
+                  background:
+                    i % 4 === 0
+                      ? 'linear-gradient(135deg, #7c6cf6, #c084fc)'
+                      : i % 4 === 1
+                        ? 'linear-gradient(135deg, #fb923c, #fbbf24)'
+                        : i % 4 === 2
+                          ? 'linear-gradient(135deg, #22d3ee, #6ee7b7)'
+                          : 'linear-gradient(135deg, #f472b6, #fb7185)',
+                }}
+              >
+                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 220 128" fill="none" preserveAspectRatio="xMidYMid slice">
+                  <circle cx="170" cy="20" r="75" fill="rgba(255,255,255,0.1)" />
+                  <circle cx="20" cy="110" r="55" fill="rgba(255,255,255,0.07)" />
+                </svg>
+                <div className="absolute bottom-[9px] right-[9px] rounded-lg bg-white/20 px-2 py-1 text-[11px] font-semibold text-white">
+                  {Math.round(event.score * 100)}%
+                </div>
+              </div>
+              <div className="px-[14px] py-3">
+                <p className="text-sm font-semibold mb-1">{event.title}</p>
+                <p className="text-xs text-[#8e8e93] flex items-center gap-1 mb-[3px]">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+                  </svg>
+                  {event.location}
+                </p>
+                <p className="text-xs text-[#b0b0b0] line-clamp-2 mb-1">
+                  {event.description}
+                </p>
+                {(event.tags ?? []).length > 0 && (
+                  <p className="text-[11px] text-[#8e8e93]">
+                    Oznake: {(event.tags ?? []).slice(0, 3).join(', ')}
+                  </p>
+                )}
+                {(event.friendsGoing?.length ?? 0) > 0 && (
+                  <p className="text-[11px] text-[#4f46e5] font-semibold mt-1">
+                    {(event.friendsGoing ?? []).length === 1
+                      ? '1 prijatelj gre'
+                      : `${(event.friendsGoing ?? []).length} prijatelji gredo`}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+
+        {activeTab !== 1 &&
+          staticTabCards.map((card, i) => (
+            <div
+              key={i}
+              className="rounded-2xl overflow-hidden bg-white border border-[#f0f0f0] cursor-pointer"
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                if (card.href) {
+                  router.push(card.href);
+                }
+              }}
+              onKeyDown={(eventKey) => {
+                if (
+                  card.href &&
+                  (eventKey.key === 'Enter' || eventKey.key === ' ')
+                ) {
+                  eventKey.preventDefault();
+                  router.push(card.href);
+                }
+              }}
+            >
+              <div
+                className="h-[128px] relative"
+                style={{ background: `linear-gradient(135deg, ${card.from}, ${card.to})` }}
+              >
+                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 220 128" fill="none" preserveAspectRatio="xMidYMid slice">
+                  <circle cx="170" cy="20" r="75" fill="rgba(255,255,255,0.1)" />
+                  <circle cx="20" cy="110" r="55" fill="rgba(255,255,255,0.07)" />
+                </svg>
+                <button className="absolute bottom-[9px] right-[9px] bg-white/20 backdrop-blur-sm border-0 rounded-lg w-7 h-7 flex items-center justify-center cursor-pointer">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  </svg>
+                </button>
+              </div>
+              <div className="px-[14px] py-3">
+                <p className="text-sm font-semibold mb-1">{card.title}</p>
+                <p className="text-xs text-[#8e8e93] flex items-center gap-1 mb-[3px]">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+                  </svg>
+                  {card.location}
+                </p>
+                <p className="text-xs text-[#b0b0b0]">{card.desc}</p>
+              </div>
+            </div>
+          ))}
       </div>
 
       {cropDraft && (
