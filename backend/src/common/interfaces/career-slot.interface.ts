@@ -4,7 +4,9 @@ export interface CareerSlot {
   id: string;
   title: string;
   description: string;
-  scheduledAt: Date;
+  startAt: Date;
+  endAt: Date;
+  location: string;
   capacity: number;
   requirements?: string[];
   createdByUid: string;
@@ -14,6 +16,7 @@ export interface CareerSlot {
 export interface CareerSlotRequest {
   id: string;
   requesterUid: string;
+  subSlotIndex: number;
   status: CareerSlotRequestStatus;
   requestedAt: Date;
   respondedAt?: Date;
@@ -23,6 +26,7 @@ export interface CareerSlotWithMeta extends CareerSlot {
   creatorDisplayName: string;
   approvedCount: number;
   myRequestStatus: CareerSlotRequestStatus | null;
+  mySubSlotIndex: number | null;
 }
 
 export interface CareerSlotRequestWithName extends CareerSlotRequest {
