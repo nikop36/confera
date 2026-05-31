@@ -19,6 +19,8 @@ export type SessionFormValues = {
 type SessionFormModalProps = {
   session: SessionItem | null;
   token: string;
+  eventStartAt: string;
+  eventEndAt: string;
   onClose: () => void;
   onSave: (values: SessionFormValues) => Promise<void>;
 };
@@ -31,30 +33,84 @@ type CommunityUser = {
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
-const EMPTY: SessionFormValues = {
+function toDatePart(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function toTimePart(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatDuration(startTime: string, endTime: string): string {
+  if (!startTime || !endTime) return '';
+  const diffMs =
+    new Date(`1970-01-01T${endTime}`).getTime() -
+    new Date(`1970-01-01T${startTime}`).getTime();
+  if (diffMs <= 0) return '';
+  const totalMin = Math.floor(diffMs / 60000);
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  return [hours && `${hours}h`, mins && `${mins}min`].filter(Boolean).join(' ');
+}
+
+function getEventDays(startAt: string, endAt: string): string[] {
+  const days: string[] = [];
+  const cur = new Date(startAt);
+  cur.setHours(0, 0, 0, 0);
+  const last = new Date(endAt);
+  last.setHours(0, 0, 0, 0);
+  while (cur <= last) {
+    days.push(toDatePart(cur.toISOString()));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return days;
+}
+
+function formatDayLabel(dateStr: string): string {
+  // Append time to avoid UTC-midnight shifting the date in local timezone
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString('sl-SI', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'numeric',
+  });
+}
+
+type SessionFormInternal = {
+  title: string;
+  description: string;
+  speakers: Speaker[];
+  selectedDay: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  capacity: number | null;
+  tags: string[];
+};
+
+const EMPTY: SessionFormInternal = {
   title: '',
   description: '',
   speakers: [],
-  startAt: '',
-  endAt: '',
+  selectedDay: '',
+  startTime: '',
+  endTime: '',
   location: '',
   capacity: null,
   tags: [],
 };
 
-function toDatetimeLocal(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function sessionToForm(session: SessionItem): SessionFormValues {
+function sessionToForm(session: SessionItem): SessionFormInternal {
   return {
     title: session.title,
     description: session.description,
     speakers: session.speakers,
-    startAt: toDatetimeLocal(session.startAt),
-    endAt: toDatetimeLocal(session.endAt),
+    selectedDay: toDatePart(session.startAt),
+    startTime: toTimePart(session.startAt),
+    endTime: toTimePart(session.endAt),
     location: session.location,
     capacity: session.capacity,
     tags: session.tags ?? [],
@@ -64,11 +120,15 @@ function sessionToForm(session: SessionItem): SessionFormValues {
 export default function SessionFormModal({
   session,
   token,
+  eventStartAt,
+  eventEndAt,
   onClose,
   onSave,
 }: SessionFormModalProps) {
-  const [form, setForm] = useState<SessionFormValues>(() =>
-    session ? sessionToForm(session) : EMPTY,
+  const [form, setForm] = useState<SessionFormInternal>(() =>
+    session
+      ? sessionToForm(session)
+      : { ...EMPTY, selectedDay: toDatePart(eventStartAt) },
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -119,7 +179,16 @@ export default function SessionFormModal({
     setSaving(true);
     setError('');
     try {
-      await onSave(form);
+      await onSave({
+        title: form.title,
+        description: form.description,
+        speakers: form.speakers,
+        startAt: `${form.selectedDay}T${form.startTime}`,
+        endAt: `${form.selectedDay}T${form.endTime}`,
+        location: form.location,
+        capacity: form.capacity,
+        tags: form.tags,
+      });
       onClose();
     } catch (err) {
       setError(
@@ -130,9 +199,9 @@ export default function SessionFormModal({
     }
   }
 
-  function set<K extends keyof SessionFormValues>(
+  function set<K extends keyof SessionFormInternal>(
     field: K,
-    value: SessionFormValues[K],
+    value: SessionFormInternal[K],
   ) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
@@ -154,6 +223,9 @@ export default function SessionFormModal({
       form.speakers.filter((_, i) => i !== index),
     );
   }
+
+  const days = getEventDays(eventStartAt, eventEndAt);
+  const isMultiDay = days.length > 1;
 
   return (
     <div
@@ -234,32 +306,48 @@ export default function SessionFormModal({
             </button>
           </div>
 
-          {/* Start / End */}
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-                Začetek *
-              </span>
+          {/* Day + time range */}
+          <div className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
+              Čas seje *
+            </span>
+            <div className="flex items-center gap-2 border border-[#e5e7eb] rounded-[8px] px-3 py-2 flex-wrap">
+              {isMultiDay && (
+                <>
+                  <select
+                    required
+                    value={form.selectedDay}
+                    onChange={(e) => set('selectedDay', e.target.value)}
+                    className="text-[13px] outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-white text-[#374151] cursor-pointer"
+                  >
+                    {days.map((d) => (
+                      <option key={d} value={d}>{formatDayLabel(d)}</option>
+                    ))}
+                  </select>
+                  <span className="text-[11px] text-[#d1d5db]">|</span>
+                </>
+              )}
               <input
                 required
-                type="datetime-local"
-                value={form.startAt}
-                onChange={(e) => set('startAt', e.target.value)}
-                className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
+                type="time"
+                value={form.startTime}
+                onChange={(e) => set('startTime', e.target.value)}
+                className="text-[13px] font-semibold outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-transparent text-[#0d0d0d]"
               />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-                Konec *
-              </span>
+              <span className="text-[11px] text-[#9ca3af]">→</span>
               <input
                 required
-                type="datetime-local"
-                value={form.endAt}
-                onChange={(e) => set('endAt', e.target.value)}
-                className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
+                type="time"
+                value={form.endTime}
+                onChange={(e) => set('endTime', e.target.value)}
+                className="text-[13px] font-semibold outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-transparent text-[#0d0d0d]"
               />
-            </label>
+              {formatDuration(form.startTime, form.endTime) && (
+                <span className="ml-auto text-[10px] font-semibold text-[#16a34a] bg-[#f0fdf4] rounded-[5px] px-2 py-[3px] whitespace-nowrap">
+                  {formatDuration(form.startTime, form.endTime)}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Location / Capacity */}
