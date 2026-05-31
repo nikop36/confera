@@ -7,6 +7,8 @@ import {
   EventNotFoundError,
 } from '../events.repository';
 import { ConnectionsRepository } from '../../connections/connections.repository';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { UsersRepository } from '../../users/users.repository';
 
 describe('EventsService', () => {
   let service: EventsService;
@@ -20,6 +22,8 @@ describe('EventsService', () => {
   const mockCancelRegistration = jest.fn();
   const mockListRegistrations = jest.fn();
   const mockListAcceptedConnectionUids = jest.fn().mockResolvedValue([]);
+  const mockCreateNotification = jest.fn().mockResolvedValue(undefined);
+  const mockFindByUid = jest.fn().mockResolvedValue(null);
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -43,6 +47,18 @@ describe('EventsService', () => {
           provide: ConnectionsRepository,
           useValue: {
             listAcceptedConnectionUids: mockListAcceptedConnectionUids,
+          },
+        },
+        {
+          provide: NotificationsService,
+          useValue: {
+            createNotification: mockCreateNotification,
+          },
+        },
+        {
+          provide: UsersRepository,
+          useValue: {
+            findByUid: mockFindByUid,
           },
         },
       ],

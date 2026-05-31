@@ -10,7 +10,13 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { ConnectionsModule } from '../connections/connections.module';
 
 @Module({
-  imports: [FirebaseModule, UsersModule, EventsModule, ConnectionsModule, NotificationsModule],
+  imports: [
+    FirebaseModule,
+    UsersModule,
+    EventsModule,
+    ConnectionsModule,
+    NotificationsModule,
+  ],
   controllers: [ExportController, EventsExportController],
   providers: [ExportService, EventsExportService],
 })
