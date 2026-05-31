@@ -87,14 +87,22 @@ export class CareerSlotsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Request a spot in a career slot' })
   @ApiResponse({ status: 201, description: 'Request submitted' })
-  @ApiResponse({ status: 409, description: 'Already requested, slot full, or sub-slot taken' })
+  @ApiResponse({
+    status: 409,
+    description: 'Already requested, slot full, or sub-slot taken',
+  })
   async requestSlot(
     @Param('eventId') eventId: string,
     @Param('slotId') slotId: string,
     @Body() dto: RequestCareerSlotDto,
     @CurrentUser() user: FirebaseUser,
   ) {
-    await this.careerSlotsService.requestSlot(eventId, slotId, user.uid, dto.subSlotIndex);
+    await this.careerSlotsService.requestSlot(
+      eventId,
+      slotId,
+      user.uid,
+      dto.subSlotIndex,
+    );
   }
 
   @Get(':slotId/requests')
