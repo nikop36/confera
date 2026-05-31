@@ -20,6 +20,7 @@ const mockFindRequestById = jest.fn();
 const mockCreateRequest = jest.fn();
 const mockUpdateRequest = jest.fn();
 const mockCountApproved = jest.fn();
+const mockFindApprovedBySubSlotIndex = jest.fn();
 const mockFindByUid = jest.fn();
 const mockCreateNotification = jest.fn();
 
@@ -44,6 +45,7 @@ describe('CareerSlotsService', () => {
             createRequest: mockCreateRequest,
             updateRequest: mockUpdateRequest,
             countApproved: mockCountApproved,
+            findApprovedBySubSlotIndex: mockFindApprovedBySubSlotIndex,
           },
         },
         {
@@ -65,7 +67,7 @@ describe('CareerSlotsService', () => {
     it('throws NotFoundException when slot does not exist', async () => {
       mockFindSlotById.mockResolvedValue(null);
       await expect(
-        service.requestSlot('event-1', 'slot-1', 'user-1'),
+        service.requestSlot('event-1', 'slot-1', 'user-1', 0),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -86,11 +88,11 @@ describe('CareerSlotsService', () => {
         requestedAt: new Date(),
       });
       await expect(
-        service.requestSlot('event-1', 'slot-1', 'user-1'),
+        service.requestSlot('event-1', 'slot-1', 'user-1', 0),
       ).rejects.toThrow(ConflictException);
     });
 
-    it('throws ConflictException when slot is at capacity', async () => {
+    it('throws ConflictException when sub-slot index is out of range', async () => {
       mockFindSlotById.mockResolvedValue({
         id: 'slot-1',
         capacity: 1,
@@ -100,10 +102,8 @@ describe('CareerSlotsService', () => {
         scheduledAt: new Date(),
         createdAt: new Date(),
       });
-      mockFindRequestByRequester.mockResolvedValue(null);
-      mockCountApproved.mockResolvedValue(1);
       await expect(
-        service.requestSlot('event-1', 'slot-1', 'user-1'),
+        service.requestSlot('event-1', 'slot-1', 'user-1', 1),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -120,7 +120,7 @@ describe('CareerSlotsService', () => {
       mockFindRequestByRequester.mockResolvedValue(null);
       mockCountApproved.mockResolvedValue(0);
       mockCreateRequest.mockResolvedValue({ id: 'req-new' });
-      await service.requestSlot('event-1', 'slot-1', 'user-1');
+      await service.requestSlot('event-1', 'slot-1', 'user-1', 0);
       expect(mockCreateRequest).toHaveBeenCalledWith(
         'event-1',
         'slot-1',
@@ -142,6 +142,7 @@ describe('CareerSlotsService', () => {
     const request = {
       id: 'req-1',
       requesterUid: 'user-2',
+      subSlotIndex: 0,
       status: 'pending' as const,
       requestedAt: new Date(),
     };
@@ -178,6 +179,7 @@ describe('CareerSlotsService', () => {
       mockFindSlotById.mockResolvedValue(slot);
       mockFindRequestById.mockResolvedValue(request);
       mockCountApproved.mockResolvedValue(0);
+      mockFindApprovedBySubSlotIndex.mockResolvedValue(null);
       mockUpdateRequest.mockResolvedValue(undefined);
       mockFindByUid.mockResolvedValue({
         email: 'user@test.com',
