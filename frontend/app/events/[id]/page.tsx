@@ -469,11 +469,13 @@ export default function ConferenceProgramPage() {
       ) : null}
 
       {/* Session modal */}
-      {modalSession !== undefined && (
+      {modalSession !== undefined && conference && (
         <SessionFormModal
           key={modalSession?.id ?? 'create'}
           session={modalSession}
           token={user?.idToken ?? ''}
+          eventStartAt={conference.startAt}
+          eventEndAt={conference.endAt}
           onClose={() => setModalSession(undefined)}
           onSave={handleSessionSave}
         />
