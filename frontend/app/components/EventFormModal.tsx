@@ -21,28 +21,61 @@ type EventFormModalProps = {
   onSave: (values: EventFormValues) => Promise<void>;
 };
 
-const EMPTY: EventFormValues = {
+function toDatePart(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function toTimePart(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatDuration(startDate: string, startTime: string, endDate: string, endTime: string): string {
+  if (!startDate || !startTime || !endDate || !endTime) return '';
+  const diffMs = new Date(`${endDate}T${endTime}`).getTime() - new Date(`${startDate}T${startTime}`).getTime();
+  if (diffMs <= 0) return '';
+  const totalMin = Math.floor(diffMs / 60000);
+  const days = Math.floor(totalMin / 1440);
+  const hours = Math.floor((totalMin % 1440) / 60);
+  const mins = totalMin % 60;
+  return [days && `${days}d`, hours && `${hours}h`, mins && `${mins}min`].filter(Boolean).join(' ');
+}
+
+type EventFormInternal = {
+  title: string;
+  description: string;
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  location: string;
+  capacity: number;
+  tags: string[];
+};
+
+const EMPTY: EventFormInternal = {
   title: '',
   description: '',
-  startAt: '',
-  endAt: '',
+  startDate: '',
+  startTime: '',
+  endDate: '',
+  endTime: '',
   location: '',
   capacity: 50,
   tags: [],
 };
 
-function toDatetimeLocal(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function eventToForm(event: EventItem): EventFormValues {
+function eventToForm(event: EventItem): EventFormInternal {
   return {
     title: event.title,
     description: event.description,
-    startAt: toDatetimeLocal(event.startAt),
-    endAt: toDatetimeLocal(event.endAt),
+    startDate: toDatePart(event.startAt),
+    startTime: toTimePart(event.startAt),
+    endDate: toDatePart(event.endAt),
+    endTime: toTimePart(event.endAt),
     location: event.location,
     capacity: event.capacity,
     tags: event.tags ?? [],
@@ -55,7 +88,7 @@ export default function EventFormModal({
   onClose,
   onSave,
 }: EventFormModalProps) {
-  const [form, setForm] = useState<EventFormValues>(() =>
+  const [form, setForm] = useState<EventFormInternal>(() =>
     event ? eventToForm(event) : EMPTY,
   );
   const [saving, setSaving] = useState(false);
@@ -86,7 +119,15 @@ export default function EventFormModal({
     setSaving(true);
     setError('');
     try {
-      await onSave(form);
+      await onSave({
+        title: form.title,
+        description: form.description,
+        startAt: `${form.startDate}T${form.startTime}`,
+        endAt: `${form.endDate}T${form.endTime}`,
+        location: form.location,
+        capacity: form.capacity,
+        tags: form.tags,
+      });
       onClose();
     } catch (err) {
       setError(
@@ -97,7 +138,7 @@ export default function EventFormModal({
     }
   }
 
-  function set(field: keyof EventFormValues, value: string | number) {
+  function set<K extends keyof EventFormInternal>(field: K, value: EventFormInternal[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -155,31 +196,50 @@ export default function EventFormModal({
             />
           </label>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-                Začetek *
-              </span>
+          {/* Date/time range row */}
+          <div className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
+              Datum & čas *
+            </span>
+            <div className="flex items-center gap-2 border border-[#e5e7eb] rounded-[8px] px-3 py-2 flex-wrap">
               <input
                 required
-                type="datetime-local"
-                value={form.startAt}
-                onChange={(e) => set('startAt', e.target.value)}
-                className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
+                type="date"
+                value={form.startDate}
+                onChange={(e) => {
+                  set('startDate', e.target.value);
+                  if (!form.endDate) set('endDate', e.target.value);
+                }}
+                className="text-[13px] outline-none border-0 p-0 bg-transparent text-[#374151]"
               />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-                Konec *
-              </span>
               <input
                 required
-                type="datetime-local"
-                value={form.endAt}
-                onChange={(e) => set('endAt', e.target.value)}
-                className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
+                type="time"
+                value={form.startTime}
+                onChange={(e) => set('startTime', e.target.value)}
+                className="text-[13px] font-semibold outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-transparent text-[#0d0d0d]"
               />
-            </label>
+              <span className="text-[11px] text-[#9ca3af]">→</span>
+              <input
+                required
+                type="date"
+                value={form.endDate}
+                onChange={(e) => set('endDate', e.target.value)}
+                className="text-[13px] outline-none border-0 p-0 bg-transparent text-[#374151]"
+              />
+              <input
+                required
+                type="time"
+                value={form.endTime}
+                onChange={(e) => set('endTime', e.target.value)}
+                className="text-[13px] font-semibold outline-none border border-[#e5e7eb] rounded-[6px] px-2 py-[3px] bg-transparent text-[#0d0d0d]"
+              />
+              {formatDuration(form.startDate, form.startTime, form.endDate, form.endTime) && (
+                <span className="ml-auto text-[10px] font-semibold text-[#16a34a] bg-[#f0fdf4] rounded-[5px] px-2 py-[3px] whitespace-nowrap">
+                  {formatDuration(form.startDate, form.startTime, form.endDate, form.endTime)}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
