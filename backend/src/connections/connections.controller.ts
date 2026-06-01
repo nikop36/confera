@@ -83,6 +83,13 @@ export class ConnectionsController {
     return this.connectionsService.listAcceptedPairs();
   }
 
+  @Get('graph/me')
+  @ApiOperation({ summary: 'Get ego network graph for current user' })
+  @ApiResponse({ status: 200, description: 'Graph nodes and edges returned' })
+  async getGraph(@CurrentUser() user: FirebaseUser) {
+    return this.connectionsService.getGraph(user);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Remove accepted connection' })
