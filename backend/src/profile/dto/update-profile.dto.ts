@@ -19,6 +19,16 @@ export class UpdateProfileDto {
   @IsOptional()
   affiliation?: string;
 
+  @ApiPropertyOptional({ example: 'sl' })
+  @IsString()
+  @IsOptional()
+  language?: string;
+
+  @ApiPropertyOptional({ example: 'Europe/Ljubljana' })
+  @IsString()
+  @IsOptional()
+  timezone?: string;
+
   @ApiPropertyOptional({ example: ['AI', 'Machine Learning'] })
   @IsArray()
   @IsString({ each: true })

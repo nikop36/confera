@@ -10,6 +10,11 @@ const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
 
 export type ProfileImageKind = 'avatar' | 'cover';
 
+function locale(): 'sl' | 'en' {
+  if (typeof window === 'undefined') return 'sl';
+  return window.localStorage.getItem('confera_locale') === 'en' ? 'en' : 'sl';
+}
+
 function extensionFromFile(file: File) {
   const extension = file.name.split('.').pop()?.toLowerCase();
   if (extension && /^[a-z0-9]+$/.test(extension)) return extension;
@@ -27,7 +32,11 @@ export async function uploadProfileImage({
   kind: ProfileImageKind;
 }) {
   if (!supabase) {
-    throw new Error('Supabase shramba ni nastavljena. Preverite NEXT_PUBLIC_SUPABASE_URL in NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+    throw new Error(
+      locale() === 'en'
+        ? 'Supabase storage is not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+        : 'Supabase shramba ni nastavljena. Preverite NEXT_PUBLIC_SUPABASE_URL in NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+    );
   }
 
   const extension = extensionFromFile(file);
@@ -42,7 +51,12 @@ export async function uploadProfileImage({
     });
 
   if (error) {
-    throw new Error(error.message || 'Slike ni bilo mogoče naložiti v Supabase.');
+    throw new Error(
+      error.message ||
+        (locale() === 'en'
+          ? 'Could not upload image to Supabase.'
+          : 'Slike ni bilo mogoče naložiti v Supabase.'),
+    );
   }
 
   const { data } = supabase.storage

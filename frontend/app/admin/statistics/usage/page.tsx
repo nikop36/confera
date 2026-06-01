@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useStoredUser } from '../../../lib/auth';
+import { useT } from '../../../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -15,6 +16,7 @@ type UsagePayload = {
 };
 
 export default function AdminStatisticsUsagePage() {
+  const t = useT();
   const user = useStoredUser();
   const [payload, setPayload] = useState<UsagePayload | null>(null);
   const [error, setError] = useState('');
@@ -72,7 +74,7 @@ export default function AdminStatisticsUsagePage() {
     <div>
       <h1 className="text-[32px] font-bold tracking-tight">Usage</h1>
       <p className="text-sm text-[#8e8e93] mt-1 mb-5">
-        Dnevni trend registracij in dokončanih profilov.
+        {t('admin.stats.usage.subtitle', 'Daily trend of registrations and completed profiles.')}
       </p>
       <section className="rounded-[12px] border border-[#ececec] bg-white p-4 mb-5">
         <div className="flex flex-wrap items-end gap-3">
@@ -110,6 +112,7 @@ function UsageLineChart({
 }: {
   series: Array<{ date: string; usersCreated: number; profilesCompleted: number }>;
 }) {
+  const t = useT();
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
@@ -118,7 +121,7 @@ function UsageLineChart({
     profiles: number;
   } | null>(null);
   if (series.length === 0) {
-    return <p className="text-sm text-[#8e8e93]">Ni podatkov za izbrano obdobje.</p>;
+    return <p className="text-sm text-[#8e8e93]">{t('admin.stats.noDataPeriod', 'No data for the selected period.')}</p>;
   }
 
   const width = 680;
@@ -175,8 +178,8 @@ function UsageLineChart({
         })}
         <path d={toPath('usersY')} fill="none" stroke="#111827" strokeWidth={2.2} />
         <path d={toPath('profilesY')} fill="none" stroke="#2563eb" strokeWidth={2.2} />
-        <text x={12} y={14} fontSize={10} fill="#6b7280">Število</text>
-        <text x={width - 46} y={height - 8} fontSize={10} fill="#6b7280">Datum</text>
+        <text x={12} y={14} fontSize={10} fill="#6b7280">{t('admin.chart.axis.count', 'Count')}</text>
+        <text x={width - 46} y={height - 8} fontSize={10} fill="#6b7280">{t('admin.chart.axis.date', 'Date')}</text>
         {points.map((point, index) => (
           <g key={point.date}>
             <circle
@@ -225,13 +228,13 @@ function UsageLineChart({
           style={{ left: tooltip.x + 10, top: tooltip.y - 40 }}
         >
           <div>{tooltip.label}</div>
-          <div>Registracije: {tooltip.users}</div>
-          <div>Dokončani profili: {tooltip.profiles}</div>
+          <div>{t('admin.stats.usage.registrations', 'Registrations')}: {tooltip.users}</div>
+          <div>{t('admin.stats.usage.completedProfiles', 'Completed profiles')}: {tooltip.profiles}</div>
         </div>
       )}
       <div className="mt-2 flex gap-4 text-xs text-[#6b7280]">
-        <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#111827]" /> Registracije</span>
-        <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#2563eb]" /> Dokončani profili</span>
+        <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#111827]" /> {t('admin.stats.usage.registrations', 'Registrations')}</span>
+        <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#2563eb]" /> {t('admin.stats.usage.completedProfiles', 'Completed profiles')}</span>
       </div>
     </div>
   );
@@ -262,8 +265,9 @@ function PresetButton({
 }
 
 function RoleBarChart({ roles }: { roles: Array<{ role: string; count: number }> }) {
+  const t = useT();
   if (roles.length === 0) {
-    return <p className="text-sm text-[#8e8e93]">Ni podatkov o vlogah.</p>;
+    return <p className="text-sm text-[#8e8e93]">{t('admin.stats.usage.noRoles', 'No role data available.')}</p>;
   }
   const max = Math.max(1, ...roles.map((item) => item.count));
   return (

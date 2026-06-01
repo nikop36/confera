@@ -130,6 +130,26 @@ export class MatchingIndexService {
     }
   }
 
+  async removeProfile(uid: string) {
+    if (!this.databaseService.enabled) return;
+    await this.databaseService.query(
+      `delete from participant_profile_index where uid = $1`,
+      [uid],
+    );
+  }
+
+  async safeRemoveProfile(uid: string) {
+    try {
+      await this.removeProfile(uid);
+    } catch (error) {
+      this.logger.warn(
+        `Profile index cleanup failed for ${uid}: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+    }
+  }
+
   async findMatches(
     profile: SearchableProfile,
     limit = 10,

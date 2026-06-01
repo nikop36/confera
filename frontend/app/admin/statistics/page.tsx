@@ -1,47 +1,49 @@
 'use client';
 
 import Link from 'next/link';
-
-const SECTIONS = [
-  {
-    title: 'Overview',
-    description: 'Skupni pogled na vse statistične module.',
-    href: '/admin/statistics',
-  },
-  {
-    title: 'Operations',
-    description: 'Zasedenost sob, potrjena srečanja, anomalije in drilldown.',
-    href: '/admin/statistics/operations',
-  },
-  {
-    title: 'Usage',
-    description: 'Trend registracij in dokončanih profilov.',
-    href: '/admin/statistics/usage',
-  },
-  {
-    title: 'Matching',
-    description: 'Konverzije iz povezav v srečanja in intervjuje.',
-    href: '/admin/statistics/matching',
-  },
-  {
-    title: 'Engagement',
-    description: 'Obvestila, stopnja prebranosti in odziv na povabila.',
-    href: '/admin/statistics/engagement',
-  },
-  {
-    title: 'Reports',
-    description: 'Izvoz poročil (JSON/CSV) za admin analizo.',
-    href: '/admin/statistics/reports',
-  },
-];
+import { useT } from '../../lib/i18n';
 
 export default function AdminStatisticsOverviewPage() {
+  const t = useT();
+  const SECTIONS = [
+    {
+      title: 'Overview',
+      description: t('admin.stats.overview.desc', 'Unified view of all statistics modules.'),
+      href: '/admin/statistics',
+    },
+    {
+      title: 'Operations',
+      description: t('admin.stats.operations.desc', 'Room occupancy, confirmed meetings, anomalies, and drilldown.'),
+      href: '/admin/statistics/operations',
+    },
+    {
+      title: 'Usage',
+      description: t('admin.stats.usage.desc', 'Registration and completed profile trends.'),
+      href: '/admin/statistics/usage',
+    },
+    {
+      title: 'Matching',
+      description: t('admin.stats.matching.desc', 'Conversions from connections to meetings and interviews.'),
+      href: '/admin/statistics/matching',
+    },
+    {
+      title: 'Engagement',
+      description: t('admin.stats.engagement.desc', 'Notifications, read-rate, and invite response metrics.'),
+      href: '/admin/statistics/engagement',
+    },
+    {
+      title: 'Reports',
+      description: t('admin.stats.reports.desc', 'Export reports (JSON/CSV) for admin analysis.'),
+      href: '/admin/statistics/reports',
+    },
+  ];
+
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-[32px] font-bold tracking-tight">Statistics</h1>
         <p className="text-sm text-[#8e8e93] mt-1">
-          Enoten pogled za operativno statistiko in analitiko.
+          {t('admin.stats.overview.subtitle', 'Unified view for operational statistics and analytics.')}
         </p>
       </div>
 

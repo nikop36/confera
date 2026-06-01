@@ -146,4 +146,35 @@ export class UsersRepository {
     await batch.commit();
     return snapshot.size;
   }
+
+  async deleteAccountData(uid: string): Promise<void> {
+    const db = this.firebaseService.getFirestore();
+
+    await Promise.all([
+      db.collection('users').doc(uid).delete(),
+      this.deleteCollectionByField('connectionRequests', 'requesterUid', uid),
+      this.deleteCollectionByField('connectionRequests', 'recipientUid', uid),
+      this.deleteCollectionByField('notifications', 'userUid', uid),
+      this.deleteCollectionByField('roleRequests', 'requesterUid', uid),
+    ]);
+  }
+
+  private async deleteCollectionByField(
+    collectionName: string,
+    fieldName: string,
+    value: string,
+  ): Promise<void> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db
+      .collection(collectionName)
+      .where(fieldName, '==', value)
+      .limit(1000)
+      .get();
+
+    if (snapshot.empty) return;
+
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+  }
 }

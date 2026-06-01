@@ -5,6 +5,7 @@ import type { EventItem } from './EventCard';
 import TagPicker from './TagPicker';
 import DateRangePicker from './DateRangePicker';
 import ClockTimePicker from './ClockTimePicker';
+import { useT } from '../lib/i18n';
 
 export type EventFormValues = {
   title: string;
@@ -47,14 +48,14 @@ function formatDuration(startDate: string, startTime: string, endDate: string, e
 }
 
 function fmtDateLabel(start: string, end: string): string {
-  if (!start) return 'Izberite datum';
+  if (!start) return 'select-date';
   const fmt = (s: string) => new Date(`${s}T00:00:00`).toLocaleDateString('sl-SI', { day: 'numeric', month: 'numeric', year: 'numeric' });
   if (!end || start === end) return fmt(start);
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
 function fmtTimeLabel(start: string, end: string): string {
-  if (!start) return 'Izberite čas';
+  if (!start) return 'select-time';
   if (!end) return `${start} →`;
   return `${start} → ${end}`;
 }
@@ -91,6 +92,7 @@ function eventToForm(event: EventItem): EventFormInternal {
 }
 
 export default function EventFormModal({ event, token, onClose, onSave }: EventFormModalProps) {
+  const t = useT();
   const [form, setForm] = useState<EventFormInternal>(() => event ? eventToForm(event) : EMPTY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -116,7 +118,7 @@ export default function EventFormModal({ event, token, onClose, onSave }: EventF
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!form.startDate || !form.startTime || !form.endDate || !form.endTime) {
-      setError('Izberite datum in čas.');
+      setError(t('eventForm.error.selectDateTime', 'Select date and time.'));
       return;
     }
     setSaving(true);
@@ -133,7 +135,11 @@ export default function EventFormModal({ event, token, onClose, onSave }: EventF
       });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Napaka pri shranjevanju.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('events.error.save', 'Save failed.'),
+      );
     } finally {
       setSaving(false);
     }
@@ -160,7 +166,9 @@ export default function EventFormModal({ event, token, onClose, onSave }: EventF
         >
           <div className="flex items-center justify-between mb-5">
             <h3 id="event-form-title" className="text-[17px] font-bold">
-              {event ? 'Uredi konferenco' : 'Dodaj konferenco'}
+              {event
+                ? t('eventForm.title.edit', 'Edit event')
+                : t('eventForm.title.create', 'Add event')}
             </h3>
             <button
               type="button"
@@ -173,7 +181,7 @@ export default function EventFormModal({ event, token, onClose, onSave }: EventF
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">Naslov *</span>
+              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">{t('eventForm.field.title')} *</span>
               <input
                 ref={firstInputRef}
                 required
@@ -184,7 +192,7 @@ export default function EventFormModal({ event, token, onClose, onSave }: EventF
             </label>
 
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">Opis *</span>
+              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">{t('eventForm.field.description')} *</span>
               <textarea
                 required
                 rows={3}
@@ -196,7 +204,7 @@ export default function EventFormModal({ event, token, onClose, onSave }: EventF
 
             {/* Date & time buttons */}
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">Datum & čas *</span>
+              <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">{t('eventForm.field.dateTime')} *</span>
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
@@ -204,7 +212,7 @@ export default function EventFormModal({ event, token, onClose, onSave }: EventF
                   className={`flex items-center gap-2 border rounded-[8px] px-3 py-2 text-[13px] cursor-pointer font-sans transition-colors hover:border-[#0d0d0d] bg-white ${form.startDate ? 'border-[#e5e7eb] text-[#374151]' : 'border-dashed border-[#d1d5db] text-[#9ca3af]'}`}
                 >
                   <span>📅</span>
-                  <span>{fmtDateLabel(form.startDate, form.endDate)}</span>
+                  <span>{fmtDateLabel(form.startDate, form.endDate) === 'select-date' ? t('eventForm.selectDate', 'Select date') : fmtDateLabel(form.startDate, form.endDate)}</span>
                 </button>
                 <button
                   type="button"
@@ -212,7 +220,7 @@ export default function EventFormModal({ event, token, onClose, onSave }: EventF
                   className={`flex items-center gap-2 border rounded-[8px] px-3 py-2 text-[13px] cursor-pointer font-sans transition-colors hover:border-[#0d0d0d] bg-white ${form.startTime ? 'border-[#e5e7eb] text-[#374151]' : 'border-dashed border-[#d1d5db] text-[#9ca3af]'}`}
                 >
                   <span>🕐</span>
-                  <span className="font-semibold">{fmtTimeLabel(form.startTime, form.endTime)}</span>
+                  <span className="font-semibold">{fmtTimeLabel(form.startTime, form.endTime) === 'select-time' ? t('eventForm.selectTime', 'Select time') : fmtTimeLabel(form.startTime, form.endTime)}</span>
                 </button>
                 {duration && (
                   <span className="text-[10px] font-semibold text-[#16a34a] bg-[#f0fdf4] rounded-[5px] px-2 py-[3px]">
@@ -224,17 +232,17 @@ export default function EventFormModal({ event, token, onClose, onSave }: EventF
 
             <div className="grid grid-cols-2 gap-3">
               <label className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">Lokacija *</span>
+                <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">{t('eventForm.field.location')} *</span>
                 <input
                   required
                   value={form.location}
                   onChange={(e) => set('location', e.target.value)}
-                  placeholder="npr. Ljubljana"
+                  placeholder={t('eventForm.placeholder.location', 'e.g. Ljubljana')}
                   className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
                 />
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">Kapaciteta *</span>
+                <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">{t('eventForm.field.capacity')} *</span>
                 <input
                   required
                   type="number"
@@ -247,7 +255,7 @@ export default function EventFormModal({ event, token, onClose, onSave }: EventF
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">Oznake</label>
+              <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">{t('eventForm.field.tags')}</label>
               <TagPicker
                 token={token}
                 value={form.tags}
@@ -260,11 +268,11 @@ export default function EventFormModal({ event, token, onClose, onSave }: EventF
             <div className="flex gap-2 justify-end mt-1">
               <button type="button" onClick={onClose}
                 className="px-4 py-2 rounded-[8px] text-[13px] font-semibold bg-[#f3f4f6] text-[#374151] hover:bg-[#e5e7eb] transition-colors border-0 cursor-pointer font-sans">
-                Prekliči
+                {t('common.cancel', 'Cancel')}
               </button>
               <button type="submit" disabled={saving}
                 className="px-4 py-2 rounded-[8px] text-[13px] font-semibold bg-[#0d0d0d] text-white hover:bg-[#1f1f1f] transition-colors disabled:opacity-50 border-0 cursor-pointer font-sans">
-                {saving ? 'Shranjujem...' : 'Shrani'}
+                {saving ? t('settings.saving') : t('common.save', 'Save')}
               </button>
             </div>
           </form>

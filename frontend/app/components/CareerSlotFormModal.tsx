@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import TagPicker from './TagPicker';
 import ClockTimePicker from './ClockTimePicker';
+import { useT } from '../lib/i18n';
 
 export type CareerSlotFormValues = {
   title: string;
@@ -77,6 +78,7 @@ type FormInternal = {
 };
 
 export default function CareerSlotFormModal({ slot, token, eventStartAt, eventEndAt, onClose, onSave }: Props) {
+  const t = useT();
   const [form, setForm] = useState<FormInternal>(() =>
     slot
       ? {
@@ -113,7 +115,7 @@ export default function CareerSlotFormModal({ slot, token, eventStartAt, eventEn
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!form.startTime || !form.endTime) { setError('Izberite čas.'); return; }
+    if (!form.startTime || !form.endTime) { setError(t('eventForm.selectTime', 'Select time')); return; }
     setSaving(true);
     setError('');
     try {
@@ -128,7 +130,7 @@ export default function CareerSlotFormModal({ slot, token, eventStartAt, eventEn
       });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Napaka pri shranjevanju.');
+      setError(err instanceof Error ? err.message : t('events.error.save', 'Save failed.'));
     } finally {
       setSaving(false);
     }
@@ -148,7 +150,9 @@ export default function CareerSlotFormModal({ slot, token, eventStartAt, eventEn
         <div className="bg-white rounded-[20px] w-full max-w-[480px] p-6 shadow-xl">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-[16px] font-bold">
-              {slot ? 'Uredi karierni razgovor' : 'Dodaj karierni razgovor'}
+              {slot
+                ? t('careerForm.title.edit', 'Edit career interview')
+                : t('careerForm.title.create', 'Add career interview')}
             </h3>
             <button type="button" onClick={onClose}
               className="text-[#8e8e93] hover:text-[#0d0d0d] text-[20px] leading-none bg-transparent border-0 cursor-pointer font-sans">
@@ -162,20 +166,20 @@ export default function CareerSlotFormModal({ slot, token, eventStartAt, eventEn
 
           <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
             <div>
-              <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">Naslov *</label>
+              <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">{t('eventForm.field.title')} *</label>
               <input className={inputCls} value={form.title} onChange={(e) => set('title', e.target.value)}
-                placeholder="npr. 1:1 s CTO podjetja Acme" required />
+                  placeholder={t('careerForm.placeholder.title', 'e.g. 1:1 with company CTO')} required />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">Opis *</label>
+              <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">{t('eventForm.field.description')} *</label>
               <textarea className={`${inputCls} resize-none`} rows={3} value={form.description}
                 onChange={(e) => set('description', e.target.value)}
-                placeholder="Kaj iščete, o čem se želite pogovoriti…" required />
+                placeholder={t('careerForm.placeholder.description', 'What are you looking for, what would you like to discuss?')} required />
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">Čas *</label>
+              <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">{t('sessionForm.time', 'Session time')} *</label>
               <div className="flex items-center gap-2 flex-wrap">
                 {isMultiDay && (
                   <select required value={form.selectedDay} onChange={(e) => set('selectedDay', e.target.value)}
@@ -187,7 +191,7 @@ export default function CareerSlotFormModal({ slot, token, eventStartAt, eventEn
                   className={`flex items-center gap-2 border rounded-[8px] px-3 py-2 text-[13px] cursor-pointer font-sans transition-colors hover:border-[#0d0d0d] bg-white ${form.startTime ? 'border-[#e5e7eb] text-[#374151]' : 'border-dashed border-[#d1d5db] text-[#9ca3af]'}`}>
                   <span>🕐</span>
                   <span className="font-semibold">
-                    {form.startTime && form.endTime ? `${form.startTime} → ${form.endTime}` : 'Izberite čas'}
+                    {form.startTime && form.endTime ? `${form.startTime} → ${form.endTime}` : t('eventForm.selectTime', 'Select time')}
                   </span>
                 </button>
               </div>
@@ -195,19 +199,19 @@ export default function CareerSlotFormModal({ slot, token, eventStartAt, eventEn
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">Lokacija *</label>
+                <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">{t('eventForm.field.location')} *</label>
                 <input className={inputCls} value={form.location} onChange={(e) => set('location', e.target.value)}
-                  placeholder="npr. Soba 1" required />
+                  placeholder={t('careerForm.placeholder.location', 'e.g. Room 1')} required />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">Število mest *</label>
+                <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">{t('careerForm.capacity', 'Number of slots')} *</label>
                 <input type="number" min={1} className={inputCls} value={form.capacity}
                   onChange={(e) => set('capacity', parseInt(e.target.value, 10) || 1)} required />
               </div>
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-[#6e6e73] mb-2 uppercase tracking-[0.06em]">Zahteve (oznake)</label>
+              <label className="block text-[11px] font-semibold text-[#6e6e73] mb-2 uppercase tracking-[0.06em]">{t('careerForm.requirements', 'Requirements (tags)')}</label>
               <TagPicker token={token} value={form.requirements}
                 onChange={(slugs) => setForm((prev) => ({ ...prev, requirements: slugs }))} />
             </div>
@@ -215,11 +219,11 @@ export default function CareerSlotFormModal({ slot, token, eventStartAt, eventEn
             <div className="flex gap-3 mt-2">
               <button type="button" onClick={onClose}
                 className="flex-1 py-[10px] rounded-full border border-[#e5e7eb] text-[13px] font-semibold text-[#6b7280] hover:border-[#0d0d0d] hover:text-[#0d0d0d] transition-colors bg-transparent cursor-pointer font-sans">
-                Prekliči
+                {t('common.cancel', 'Cancel')}
               </button>
               <button type="submit" disabled={saving}
                 className="flex-1 py-[10px] rounded-full bg-[#0d0d0d] text-white text-[13px] font-semibold hover:bg-[#1f1f1f] disabled:opacity-50 transition-colors border-0 cursor-pointer font-sans">
-                {saving ? 'Shranjujem…' : 'Shrani'}
+                {saving ? t('settings.saving') : t('common.save', 'Save')}
               </button>
             </div>
           </form>

@@ -5,6 +5,7 @@ import type { SessionItem, Speaker } from './SessionCard';
 import SpeakerInput from './SpeakerInput';
 import TagPicker from './TagPicker';
 import ClockTimePicker from './ClockTimePicker';
+import { useT } from '../lib/i18n';
 
 export type SessionFormValues = {
   title: string;
@@ -126,6 +127,7 @@ export default function SessionFormModal({
   onClose,
   onSave,
 }: SessionFormModalProps) {
+  const t = useT();
   const [form, setForm] = useState<SessionFormInternal>(() =>
     session
       ? sessionToForm(session)
@@ -179,7 +181,7 @@ export default function SessionFormModal({
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!form.startTime || !form.endTime) {
-      setError('Izberite čas seje.');
+      setError(t('sessionForm.error.selectTime', 'Select session time.'));
       return;
     }
     setSaving(true);
@@ -198,7 +200,7 @@ export default function SessionFormModal({
       onClose();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Napaka pri shranjevanju.',
+        err instanceof Error ? err.message : t('events.error.save', 'Save failed.'),
       );
     } finally {
       setSaving(false);
@@ -250,7 +252,9 @@ export default function SessionFormModal({
       >
         <div className="flex items-center justify-between mb-5">
           <h3 id="session-form-title" className="text-[17px] font-bold">
-            {session ? 'Uredi sejo' : 'Dodaj sejo'}
+            {session
+              ? t('sessionForm.title.edit', 'Edit session')
+              : t('sessionForm.title.create', 'Add session')}
           </h3>
           <button
             type="button"
@@ -265,7 +269,7 @@ export default function SessionFormModal({
           {/* Title */}
           <label className="flex flex-col gap-1">
             <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-              Naslov *
+              {t('eventForm.field.title')} *
             </span>
             <input
               ref={firstInputRef}
@@ -279,7 +283,7 @@ export default function SessionFormModal({
           {/* Description */}
           <label className="flex flex-col gap-1">
             <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-              Opis *
+              {t('eventForm.field.description')} *
             </span>
             <textarea
               required
@@ -293,7 +297,7 @@ export default function SessionFormModal({
           {/* Speakers */}
           <div className="flex flex-col gap-2">
             <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-              Predavatelji
+              {t('sessionForm.speakers', 'Speakers')}
             </span>
             {form.speakers.map((speaker, index) => (
               <SpeakerInput
@@ -309,14 +313,14 @@ export default function SessionFormModal({
               onClick={addSpeaker}
               className="text-[11px] font-semibold text-[#6b7280] hover:text-[#0d0d0d] border border-dashed border-[#d1d5db] rounded-[8px] py-[6px] bg-transparent cursor-pointer transition-colors font-sans"
             >
-              + Dodaj predavatelja
+              + {t('sessionForm.addSpeaker', 'Add speaker')}
             </button>
           </div>
 
           {/* Day + time */}
           <div className="flex flex-col gap-1">
             <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-              Čas seje *
+              {t('sessionForm.time', 'Session time')} *
             </span>
             <div className="flex items-center gap-2 flex-wrap">
               {isMultiDay && (
@@ -340,7 +344,7 @@ export default function SessionFormModal({
                 <span className="font-semibold">
                   {form.startTime && form.endTime
                     ? `${form.startTime} → ${form.endTime}`
-                    : 'Izberite čas'}
+                    : t('eventForm.selectTime', 'Select time')}
                 </span>
               </button>
               {formatDuration(form.startTime, form.endTime) && (
@@ -355,19 +359,19 @@ export default function SessionFormModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-                Lokacija / sled *
+                {t('sessionForm.locationTrack', 'Location / track')} *
               </span>
               <input
                 required
                 value={form.location}
                 onChange={(e) => set('location', e.target.value)}
-                placeholder="npr. Dvorana A"
+                placeholder={t('sessionForm.locationPlaceholder', 'e.g. Hall A')}
                 className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
               />
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-                Kapaciteta
+                {t('eventForm.field.capacity')}
               </span>
               <input
                 type="number"
@@ -381,7 +385,7 @@ export default function SessionFormModal({
                       : Number.parseInt(e.target.value, 10),
                   )
                 }
-                placeholder="Brez omejitve"
+                placeholder={t('sessionForm.capacityUnlimited', 'No limit')}
                 className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
               />
             </label>
@@ -390,7 +394,7 @@ export default function SessionFormModal({
           {/* Tags */}
           <div>
             <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">
-              Oznake
+              {t('eventForm.field.tags')}
             </label>
             <TagPicker
               token={token}
@@ -409,14 +413,14 @@ export default function SessionFormModal({
               onClick={onClose}
               className="px-4 py-2 rounded-[8px] text-[13px] font-semibold bg-[#f3f4f6] text-[#374151] hover:bg-[#e5e7eb] transition-colors border-0 cursor-pointer font-sans"
             >
-              Prekliči
+              {t('common.cancel', 'Cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="px-4 py-2 rounded-[8px] text-[13px] font-semibold bg-[#0d0d0d] text-white hover:bg-[#1f1f1f] transition-colors disabled:opacity-50 border-0 cursor-pointer font-sans"
             >
-              {saving ? 'Shranjujem...' : 'Shrani'}
+              {saving ? t('settings.saving') : t('common.save', 'Save')}
             </button>
           </div>
         </form>

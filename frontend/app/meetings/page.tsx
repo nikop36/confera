@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import AppShell from '../components/AppShell';
 import { useStoredUser } from '../lib/auth';
+import { useLocale, useT } from '../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -30,6 +31,8 @@ type InvitesPayload = {
 
 export default function MeetingsPage() {
   const user = useStoredUser();
+  const t = useT();
+  const locale = useLocale();
   const [data, setData] = useState<InvitesPayload>({
     processed: [],
     interviewerPending: [],
@@ -53,12 +56,18 @@ export default function MeetingsPage() {
           const message = Array.isArray(body.message)
             ? body.message[0]
             : body.message;
-          throw new Error(message ?? 'Failed to load meetings');
+          throw new Error(
+            message ?? t('meetings.error.load', 'Failed to load meetings'),
+          );
         }
         const payload = (await response.json()) as InvitesPayload;
         setData(payload);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load meetings');
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('meetings.error.load', 'Failed to load meetings'),
+        );
       } finally {
         setLoading(false);
       }
@@ -79,10 +88,9 @@ export default function MeetingsPage() {
   return (
     <AppShell>
       <div className="mb-6">
-        <h2 className="text-[22px] font-bold">Srečanja</h2>
+        <h2 className="text-[22px] font-bold">{t('meetings.title')}</h2>
         <p className="text-[13px] text-[#8e8e93] mt-1">
-          Tukaj so prikazani vsi potrjeni intervjuji ter vaši intervjuji kot
-          intervjuvalec.
+          {t('meetings.subtitle')}
         </p>
       </div>
 
@@ -94,24 +102,25 @@ export default function MeetingsPage() {
 
       <section className="mb-6">
         <h3 className="text-[16px] font-semibold mb-3">
-          Moji potrjeni intervjuji ({candidateInterviews.length})
+          {t('meetings.mine')} ({candidateInterviews.length})
         </h3>
         {loading ? (
-          <EmptyCard text="Nalaganje..." />
+          <EmptyCard text={t('meetings.loading')} />
         ) : candidateInterviews.length === 0 ? (
-          <EmptyCard text="Nimate še potrjenih intervjujev." />
+          <EmptyCard text={t('meetings.noneConfirmed')} />
         ) : (
           <div className="flex flex-col gap-2">
             {candidateInterviews.map((item) => (
               <MeetingCard
                 key={`candidate-${item.id}`}
-                personLabel="Intervjuvalec"
+                personLabel={t('meetings.interviewer')}
                 personName={item.interviewer.displayName ?? 'Neznan'}
                 personEmail={item.interviewer.email ?? ''}
                 personUid={item.interviewer.uid}
                 slot={item.slot}
                 roomName={item.room?.name ?? 'N/A'}
                 notes={item.notes}
+                locale={locale}
               />
             ))}
           </div>
@@ -120,18 +129,18 @@ export default function MeetingsPage() {
 
       <section>
         <h3 className="text-[16px] font-semibold mb-3">
-          Intervjuji kot intervjuvalec ({interviewerInterviews.length})
+          {t('meetings.asInterviewer')} ({interviewerInterviews.length})
         </h3>
         {loading ? (
-          <EmptyCard text="Nalaganje..." />
+          <EmptyCard text={t('meetings.loading')} />
         ) : interviewerInterviews.length === 0 ? (
-          <EmptyCard text="Trenutno nimate dodeljenih intervjujev." />
+          <EmptyCard text={t('meetings.noneInterviewer')} />
         ) : (
           <div className="flex flex-col gap-2">
             {interviewerInterviews.map((item) => (
               <MeetingCard
                 key={`interviewer-${item.id}`}
-                personLabel="Kandidat"
+                personLabel={t('meetings.candidate')}
                 personName={item.candidate.displayName ?? 'Neznan'}
                 personEmail={item.candidate.email ?? ''}
                 personUid={item.candidate.uid}
@@ -139,6 +148,7 @@ export default function MeetingsPage() {
                 roomName={item.room?.name ?? 'N/A'}
                 notes={item.notes}
                 status={item.invitationStatus}
+                locale={locale}
               />
             ))}
           </div>
@@ -165,6 +175,7 @@ function MeetingCard({
   roomName,
   notes,
   status,
+  locale,
 }: {
   personLabel: string;
   personName: string;
@@ -174,7 +185,9 @@ function MeetingCard({
   roomName: string;
   notes?: string;
   status?: InviteStatus;
+  locale: 'sl' | 'en';
 }) {
+  const t = useT();
   return (
     <div className="rounded-[12px] border border-[#f0f0f0] px-4 py-3">
       <div className="flex items-start justify-between gap-3">
@@ -192,10 +205,10 @@ function MeetingCard({
         {status && <StatusPill status={status} />}
       </div>
       <p className="mt-2 text-[12px] text-[#3d3d3d]">
-        Termin: <span className="font-medium">{formatSlotRange(slot)}</span>
+        {t('invites.slot')}: <span className="font-medium">{formatSlotRange(slot, locale)}</span>
       </p>
       <p className="text-[12px] text-[#3d3d3d]">
-        Prostor: <span className="font-medium">{roomName}</span>
+        {t('invites.room')}: <span className="font-medium">{roomName}</span>
       </p>
       {notes && <p className="mt-1 text-[12px] text-[#6e6e73]">{notes}</p>}
     </div>
@@ -203,6 +216,7 @@ function MeetingCard({
 }
 
 function StatusPill({ status }: { status: InviteStatus }) {
+  const t = useT();
   const className =
     status === 'accepted'
       ? 'bg-[#ecfdf3] text-[#166534]'
@@ -211,10 +225,10 @@ function StatusPill({ status }: { status: InviteStatus }) {
         : 'bg-[#eff6ff] text-[#1d4ed8]';
   const label =
     status === 'accepted'
-      ? 'Sprejeto'
+      ? t('meetings.accepted')
       : status === 'rejected'
-        ? 'Zavrnjeno'
-        : 'Čaka odgovor';
+        ? t('meetings.rejected')
+        : t('meetings.pending');
   return (
     <span className={`px-2.5 py-1 rounded-[8px] text-[11px] font-semibold ${className}`}>
       {label}
@@ -222,12 +236,13 @@ function StatusPill({ status }: { status: InviteStatus }) {
   );
 }
 
-function formatSlotRange(slot: InviteItem['slot']): string {
-  if (!slot) return 'Ni termina';
+function formatSlotRange(slot: InviteItem['slot'], locale: 'sl' | 'en'): string {
+  if (!slot) return locale === 'en' ? 'No slot' : 'Ni termina';
   const start = toDate(slot.startAt);
   const end = toDate(slot.endAt);
-  if (!start || !end) return 'Neveljaven termin';
-  return `${start.toLocaleString('sl-SI')} - ${end.toLocaleString('sl-SI')}`;
+  if (!start || !end) return locale === 'en' ? 'Invalid slot' : 'Neveljaven termin';
+  const localeCode = locale === 'en' ? 'en-GB' : 'sl-SI';
+  return `${start.toLocaleString(localeCode)} - ${end.toLocaleString(localeCode)}`;
 }
 
 function toDate(value: string | { _seconds?: number; seconds?: number }): Date | null {

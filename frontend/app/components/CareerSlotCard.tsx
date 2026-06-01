@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useT } from '../lib/i18n';
 
 export type CareerSlotItem = {
   id: string;
@@ -58,16 +59,18 @@ function deriveSubSlots(slot: CareerSlotItem) {
 }
 
 function StatusBadge({ status }: { status: 'pending' | 'approved' | 'declined' }) {
+  const t = useT();
   if (status === 'pending')
-    return <span className="text-[10px] font-semibold text-[#92400e] bg-[#fef3c7] px-2 py-[2px] rounded-full">⏳ V obravnavi</span>;
+    return <span className="text-[10px] font-semibold text-[#92400e] bg-[#fef3c7] px-2 py-[2px] rounded-full">⏳ {t('meetings.pending', 'Pending')}</span>;
   if (status === 'approved')
-    return <span className="text-[10px] font-semibold text-[#166534] bg-[#ecfdf3] px-2 py-[2px] rounded-full">✓ Odobreno</span>;
-  return <span className="text-[10px] font-semibold text-[#dc2626] bg-[#fff1f2] px-2 py-[2px] rounded-full">Zavrnjeno</span>;
+    return <span className="text-[10px] font-semibold text-[#166534] bg-[#ecfdf3] px-2 py-[2px] rounded-full">✓ {t('careerCard.approved', 'Approved')}</span>;
+  return <span className="text-[10px] font-semibold text-[#dc2626] bg-[#fff1f2] px-2 py-[2px] rounded-full">{t('meetings.rejected', 'Rejected')}</span>;
 }
 
 export default function CareerSlotCard({
   slot, currentUserUid, isAdminOrOrganizer, eventId, token, onEdit, onDelete, onRefresh,
 }: Props) {
+  const t = useT();
   const [expanded, setExpanded] = useState(false);
   const [requests, setRequests] = useState<SubSlotRequest[]>([]);
   const [requestsLoaded, setRequestsLoaded] = useState(false);
@@ -111,11 +114,11 @@ export default function CareerSlotCard({
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { message?: string | string[] };
         const msg = Array.isArray(body.message) ? body.message[0] : body.message;
-        throw new Error(msg ?? 'Napaka.');
+        throw new Error(msg ?? t('careerCard.error.action', 'Action failed.'));
       }
       onRefresh();
     } catch (err) {
-      setActError(err instanceof Error ? err.message : 'Napaka.');
+      setActError(err instanceof Error ? err.message : t('careerCard.error.action', 'Action failed.'));
     } finally {
       setActing(false);
     }
@@ -140,12 +143,12 @@ export default function CareerSlotCard({
         <div className="flex items-start justify-between gap-1">
           <p className="text-[11px] font-bold text-[#0d0d0d] leading-tight line-clamp-2">💼 {slot.title}</p>
           <span className="text-[9px] font-semibold text-[#92400e] bg-[#fef3c7] px-[5px] py-[1px] rounded-full whitespace-nowrap flex-shrink-0">
-            Karierni
+            {t('careerCard.type', 'Career')}
           </span>
         </div>
         <p className="text-[10px] text-[#6b7280]">{slot.creatorDisplayName}</p>
         <p className="text-[10px] text-[#8e8e93]">
-          {slot.approvedCount} / {slot.capacity} mest
+          {slot.approvedCount} / {slot.capacity} {t('eventDetail.seats', 'seats')}
           {slot.myRequestStatus && (
             <> · <StatusBadge status={slot.myRequestStatus} /></>
           )}
@@ -159,12 +162,12 @@ export default function CareerSlotCard({
             <div className="flex gap-2 mb-1">
               <button type="button" onClick={onEdit}
                 className="text-[10px] font-semibold text-[#6b7280] hover:text-[#0d0d0d] bg-transparent border-0 cursor-pointer font-sans p-0">
-                Uredi
+                {t('common.edit', 'Edit')}
               </button>
               <span className="text-[#e5e7eb]">·</span>
               <button type="button" onClick={onDelete}
                 className="text-[10px] font-semibold text-[#dc2626] hover:text-[#b91c1c] bg-transparent border-0 cursor-pointer font-sans p-0">
-                Izbriši
+                {t('common.delete', 'Delete')}
               </button>
             </div>
           )}
@@ -185,11 +188,11 @@ export default function CareerSlotCard({
                 {canManage && approved ? (
                   <span className="text-[10px] text-[#166534] truncate">{approved.requesterDisplayName}</span>
                 ) : isMySlot ? (
-                  <span className="text-[10px] font-semibold text-[#166534]">✓ Moj termin</span>
+                  <span className="text-[10px] font-semibold text-[#166534]">✓ {t('careerCard.mySlot', 'My slot')}</span>
                 ) : isPending ? (
-                  <span className="text-[10px] text-[#92400e]">V obravnavi</span>
+                  <span className="text-[10px] text-[#92400e]">{t('meetings.pending', 'Pending')}</span>
                 ) : isTakenByOther ? (
-                  <span className="text-[10px] text-[#8e8e93]">Zasedeno</span>
+                  <span className="text-[10px] text-[#8e8e93]">{t('careerCard.taken', 'Taken')}</span>
                 ) : slot.myRequestStatus ? null : (
                   <button
                     type="button"
@@ -197,7 +200,7 @@ export default function CareerSlotCard({
                     onClick={(e) => { e.stopPropagation(); void handleSignUp(index); }}
                     className="text-[10px] font-semibold text-white bg-[#f59e0b] hover:bg-[#d97706] disabled:opacity-50 px-2 py-[2px] rounded-full border-0 cursor-pointer font-sans transition-colors"
                   >
-                    Prijava
+                    {t('careerCard.apply', 'Apply')}
                   </button>
                 )}
               </div>

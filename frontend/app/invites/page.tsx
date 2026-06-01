@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import AppShell from '../components/AppShell';
 import { useStoredUser } from '../lib/auth';
+import { useLocale, useT } from '../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -49,6 +50,8 @@ type InvitesPayload = {
 
 export default function InvitesPage() {
   const user = useStoredUser();
+  const t = useT();
+  const locale = useLocale();
   const [payload, setPayload] = useState<InvitesPayload>({
     pendingCount: 0,
     pending: [],
@@ -70,12 +73,18 @@ export default function InvitesPage() {
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
           const message = Array.isArray(body.message) ? body.message[0] : body.message;
-          throw new Error(message ?? 'Failed to load invites');
+          throw new Error(
+            message ?? t('invites.error.load', 'Failed to load invites'),
+          );
         }
         const data = (await response.json()) as InvitesPayload;
         setPayload(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load invites');
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('invites.error.load', 'Failed to load invites'),
+        );
       } finally {
         setLoading(false);
       }
@@ -100,7 +109,9 @@ export default function InvitesPage() {
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         const message = Array.isArray(body.message) ? body.message[0] : body.message;
-        throw new Error(message ?? 'Failed to update invite');
+        throw new Error(
+          message ?? t('invites.error.update', 'Failed to update invite'),
+        );
       }
 
       setPayload((prev) => {
@@ -114,7 +125,11 @@ export default function InvitesPage() {
       });
       window.dispatchEvent(new Event('invites:refresh'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Action failed');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('invites.error.action', 'Action failed'),
+      );
     } finally {
       setActingId(null);
     }
@@ -123,9 +138,9 @@ export default function InvitesPage() {
   return (
     <AppShell>
       <div className="mb-6">
-        <h2 className="text-[22px] font-bold">Povabila</h2>
+        <h2 className="text-[22px] font-bold">{t('invites.title')}</h2>
         <p className="text-[13px] text-[#8e8e93] mt-1">
-          Tukaj so prikazana samo nova povabila, ki čakajo na vaš odgovor.
+          {t('invites.subtitle')}
         </p>
       </div>
 
@@ -137,15 +152,15 @@ export default function InvitesPage() {
 
       <section className="mb-6">
         <h3 className="text-[16px] font-semibold mb-3">
-          Čakajoča povabila ({payload.pending.length})
+          {t('invites.pending')} ({payload.pending.length})
         </h3>
         {loading ? (
           <div className="rounded-[12px] bg-[#f7f7f7] px-4 py-3 text-sm text-[#8e8e93]">
-            Nalaganje povabil...
+            {t('invites.loading')}
           </div>
         ) : payload.pending.length === 0 ? (
           <div className="rounded-[12px] border border-[#f0f0f0] px-4 py-4 text-sm text-[#8e8e93]">
-            Trenutno ni novih povabil.
+            {t('invites.none')}
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -153,6 +168,7 @@ export default function InvitesPage() {
               <InviteCard
                 key={invite.id}
                 invite={invite}
+                locale={locale}
                 actions={
                   <div className="flex gap-2">
                     <button
@@ -161,7 +177,7 @@ export default function InvitesPage() {
                       onClick={() => void handleRespond(invite.id, 'accepted')}
                       className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#d1fae5] bg-[#ecfdf3] text-[#166534] disabled:opacity-40"
                     >
-                      Sprejmi
+                      {t('invites.accept')}
                     </button>
                     <button
                       type="button"
@@ -169,7 +185,7 @@ export default function InvitesPage() {
                       onClick={() => void handleRespond(invite.id, 'rejected')}
                       className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#fecaca] bg-[#fff1f2] text-[#b91c1c] disabled:opacity-40"
                     >
-                      Zavrni
+                      {t('invites.reject')}
                     </button>
                   </div>
                 }
@@ -185,20 +201,25 @@ export default function InvitesPage() {
 function InviteCard({
   invite,
   actions,
+  locale,
   counterpartRole = 'interviewer',
 }: {
   invite: InviteItem;
   actions: ReactNode;
+  locale: 'sl' | 'en';
   counterpartRole?: 'candidate' | 'interviewer';
 }) {
+  const t = useT();
   const person =
     counterpartRole === 'candidate' ? invite.candidate : invite.interviewer;
   const personName =
     person.displayName ??
-    (counterpartRole === 'candidate' ? 'Neznan kandidat' : 'Neznan sogovornik');
+    (counterpartRole === 'candidate'
+      ? t('invites.unknownCandidate')
+      : t('invites.unknownInterviewer'));
   const personEmail = person.email ?? '';
-  const timeRange = formatSlotRange(invite.slot);
-  const roomName = invite.room?.name ?? 'N/A';
+  const timeRange = formatSlotRange(invite.slot, locale);
+  const roomName = invite.room?.name ?? '-';
 
   return (
     <div className="rounded-[12px] border border-[#f0f0f0] px-4 py-3 flex items-start gap-3">
@@ -216,10 +237,10 @@ function InviteCard({
         </p>
         <p className="text-[12px] text-[#8e8e93] truncate">{personEmail}</p>
         <p className="mt-1 text-[12px] text-[#3d3d3d]">
-          Termin: <span className="font-medium">{timeRange}</span>
+          {t('invites.slot')}: <span className="font-medium">{timeRange}</span>
         </p>
         <p className="text-[12px] text-[#3d3d3d]">
-          Prostor: <span className="font-medium">{roomName}</span>
+          {t('invites.room')}: <span className="font-medium">{roomName}</span>
         </p>
         {invite.notes && (
           <p className="mt-1 text-[12px] text-[#6e6e73] line-clamp-2">{invite.notes}</p>
@@ -232,12 +253,14 @@ function InviteCard({
 
 function formatSlotRange(
   slot: InviteItem['slot'],
+  locale: 'sl' | 'en',
 ): string {
-  if (!slot) return 'Ni termina';
+  if (!slot) return locale === 'en' ? 'No slot' : 'Ni termina';
   const start = toDate(slot.startAt);
   const end = toDate(slot.endAt);
-  if (!start || !end) return 'Neveljaven termin';
-  return `${start.toLocaleString('sl-SI')} - ${end.toLocaleString('sl-SI')}`;
+  if (!start || !end) return locale === 'en' ? 'Invalid slot' : 'Neveljaven termin';
+  const localeCode = locale === 'en' ? 'en-GB' : 'sl-SI';
+  return `${start.toLocaleString(localeCode)} - ${end.toLocaleString(localeCode)}`;
 }
 
 function toDate(value: string | { _seconds?: number; seconds?: number }): Date | null {

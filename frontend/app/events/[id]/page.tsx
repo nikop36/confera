@@ -12,6 +12,7 @@ import { useStoredUser } from '../../lib/auth';
 import { type Tag } from '../../components/TagPicker';
 import CareerSlotCard, { type CareerSlotItem } from '../../components/CareerSlotCard';
 import CareerSlotFormModal, { type CareerSlotFormValues } from '../../components/CareerSlotFormModal';
+import { useLocale, useT } from '../../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -41,20 +42,21 @@ function getRowSpan(item: GridItem, timeSlots: string[]): number {
   return Math.max(1, span);
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('sl-SI', {
+function formatDate(iso: string, locale: 'sl' | 'en'): string {
+  return new Date(iso).toLocaleDateString(locale === 'en' ? 'en-GB' : 'sl-SI', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
 }
 
-function formatTimeRange(startAt: string, endAt: string): string {
+function formatTimeRange(startAt: string, endAt: string, locale: 'sl' | 'en'): string {
   const opts: Intl.DateTimeFormatOptions = {
     hour: '2-digit',
     minute: '2-digit',
   };
-  return `${new Date(startAt).toLocaleTimeString('sl-SI', opts)} – ${new Date(endAt).toLocaleTimeString('sl-SI', opts)}`;
+  const localeCode = locale === 'en' ? 'en-GB' : 'sl-SI';
+  return `${new Date(startAt).toLocaleTimeString(localeCode, opts)} – ${new Date(endAt).toLocaleTimeString(localeCode, opts)}`;
 }
 
 function groupByDay(items: GridItem[]): { date: string; daySessions: GridItem[] }[] {
@@ -71,8 +73,8 @@ function groupByDay(items: GridItem[]): { date: string; daySessions: GridItem[] 
     .map(([date, daySessions]) => ({ date, daySessions }));
 }
 
-function formatDayHeading(dateStr: string): string {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString('sl-SI', {
+function formatDayHeading(dateStr: string, locale: 'sl' | 'en'): string {
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString(locale === 'en' ? 'en-GB' : 'sl-SI', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -81,6 +83,8 @@ function formatDayHeading(dateStr: string): string {
 }
 
 export default function ConferenceProgramPage() {
+  const t = useT();
+  const locale = useLocale();
   const params = useParams();
   const eventId = params['id'] as string;
   const router = useRouter();
@@ -125,8 +129,8 @@ export default function ConferenceProgramPage() {
           headers: { Authorization: `Bearer ${user.idToken}` },
         }),
       ]);
-      if (!confRes.ok) throw new Error('Konferenca ni bila najdena.');
-      if (!sessRes.ok) throw new Error('Napaka pri nalaganju programa.');
+      if (!confRes.ok) throw new Error(t('eventDetail.error.notFound', 'Event not found.'));
+      if (!sessRes.ok) throw new Error(t('eventDetail.error.loadProgram', 'Failed to load program.'));
       const confData = (await confRes.json()) as EventItem;
       const sessData = (await sessRes.json()) as SessionItem[];
       const careerData = careerRes.ok ? ((await careerRes.json()) as CareerSlotItem[]) : [];
@@ -134,7 +138,7 @@ export default function ConferenceProgramPage() {
       setSessions(sessData);
       setCareerSlots(careerData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Prišlo je do napake.');
+      setError(err instanceof Error ? err.message : t('events.error.generic'));
     } finally {
       setLoading(false);
     }
@@ -178,7 +182,7 @@ export default function ConferenceProgramPage() {
         const msg = Array.isArray(body.message)
           ? body.message[0]
           : body.message;
-        throw new Error(msg ?? 'Napaka pri prijavi.');
+        throw new Error(msg ?? t('events.error.register'));
       }
       setSessions((prev) =>
         prev.map((s) =>
@@ -195,7 +199,7 @@ export default function ConferenceProgramPage() {
       setRegisterErrors((prev) => ({
         ...prev,
         [sessionId]:
-          err instanceof Error ? err.message : 'Napaka pri prijavi.',
+          err instanceof Error ? err.message : t('events.error.register'),
       }));
     } finally {
       setRegisteringIds((prev) => ({ ...prev, [sessionId]: false }));
@@ -221,7 +225,7 @@ export default function ConferenceProgramPage() {
         const msg = Array.isArray(body.message)
           ? body.message[0]
           : body.message;
-        throw new Error(msg ?? 'Napaka pri odjavi.');
+        throw new Error(msg ?? t('events.error.cancel'));
       }
       setSessions((prev) =>
         prev.map((s) =>
@@ -238,7 +242,7 @@ export default function ConferenceProgramPage() {
       setRegisterErrors((prev) => ({
         ...prev,
         [sessionId]:
-          err instanceof Error ? err.message : 'Napaka pri odjavi.',
+          err instanceof Error ? err.message : t('events.error.cancel'),
       }));
     } finally {
       setRegisteringIds((prev) => ({ ...prev, [sessionId]: false }));
@@ -272,7 +276,7 @@ export default function ConferenceProgramPage() {
       const msg = Array.isArray(body.message)
         ? body.message[0]
         : body.message;
-      throw new Error(msg ?? 'Napaka pri shranjevanju.');
+      throw new Error(msg ?? t('events.error.save'));
     }
     await loadData();
   }
@@ -280,7 +284,7 @@ export default function ConferenceProgramPage() {
   async function handleSessionDelete(sessionId: string) {
     if (
       !user?.idToken ||
-      !confirm('Ste prepričani, da želite izbrisati to sejo?')
+      !confirm(t('eventDetail.confirmDeleteSession', 'Are you sure you want to delete this session?'))
     )
       return;
     try {
@@ -291,11 +295,11 @@ export default function ConferenceProgramPage() {
           headers: { Authorization: `Bearer ${user.idToken}` },
         },
       );
-      if (!res.ok) throw new Error('Napaka pri brisanju.');
+      if (!res.ok) throw new Error(t('events.error.delete'));
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Napaka pri brisanju.',
+        err instanceof Error ? err.message : t('events.error.delete'),
       );
     }
   }
@@ -318,22 +322,22 @@ export default function ConferenceProgramPage() {
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { message?: string | string[] };
       const msg = Array.isArray(body.message) ? body.message[0] : body.message;
-      throw new Error(msg ?? 'Napaka pri shranjevanju.');
+      throw new Error(msg ?? t('events.error.save'));
     }
     await loadData();
   }
 
   async function handleCareerSlotDelete(slotId: string) {
-    if (!user?.idToken || !confirm('Ste prepričani, da želite izbrisati ta razgovor?')) return;
+    if (!user?.idToken || !confirm(t('eventDetail.confirmDeleteCareer', 'Are you sure you want to delete this career interview?'))) return;
     try {
       const res = await fetch(`${API}/events/${eventId}/career-slots/${slotId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${user.idToken}` },
       });
-      if (!res.ok) throw new Error('Napaka pri brisanju.');
+      if (!res.ok) throw new Error(t('events.error.delete'));
       setCareerSlots((prev) => prev.filter((s) => s.id !== slotId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Napaka pri brisanju.');
+      setError(err instanceof Error ? err.message : t('events.error.delete'));
     }
   }
 
@@ -349,7 +353,7 @@ export default function ConferenceProgramPage() {
         onClick={() => router.push('/events')}
         className="text-[12px] text-[#8e8e93] hover:text-[#0d0d0d] mb-4 flex items-center gap-1 bg-transparent border-0 cursor-pointer font-sans p-0"
       >
-        ← Dogodki
+        ← {t('events.title')}
       </button>
 
       {error && (
@@ -372,24 +376,24 @@ export default function ConferenceProgramPage() {
               <div className="flex gap-4 flex-wrap mt-3 text-[12px] text-[#8e8e93]">
                 <span>
                   📅{' '}
-                  {formatDate(conference.startAt)} ·{' '}
-                  {formatTimeRange(conference.startAt, conference.endAt)}
+                  {formatDate(conference.startAt, locale)} ·{' '}
+                  {formatTimeRange(conference.startAt, conference.endAt, locale)}
                 </span>
                 <span>📍 {conference.location}</span>
                 <span>
                   👥 {conference.registeredCount} / {conference.capacity}{' '}
-                  mest
+                  {t('eventDetail.seats', 'seats')}
                 </span>
               </div>
             </div>
             <div className="flex-shrink-0">
               {conference.isRegistered ? (
                 <span className="bg-[#ecfdf3] text-[#166534] text-[11px] font-semibold px-3 py-[6px] rounded-full">
-                  ✓ Prijavljen/a
+                  ✓ {t('eventDetail.registered', 'Registered')}
                 </span>
               ) : (
                 <span className="bg-[#f3f4f6] text-[#6b7280] text-[11px] font-semibold px-3 py-[6px] rounded-full">
-                  Ni prijavljen/a
+                  {t('eventDetail.notRegistered', 'Not registered')}
                 </span>
               )}
             </div>
@@ -397,13 +401,13 @@ export default function ConferenceProgramPage() {
 
           {/* Program grid */}
           <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-3">
-            Program
+            {t('eventDetail.program', 'Program')}
           </p>
 
           {allItems.length === 0 ? (
             <div className="rounded-[14px] border border-[#f0f0f0] px-5 py-6 text-sm text-[#8e8e93]">
-              Ni dodanih sej.{' '}
-              {isAdminOrOrganizer && 'Dodajte prvo sejo spodaj.'}
+              {t('eventDetail.noSessions', 'No sessions yet.')}{' '}
+              {isAdminOrOrganizer && t('eventDetail.addFirstSession', 'Add the first session below.')}
             </div>
           ) : (
             <div className="flex flex-col gap-5">
@@ -430,7 +434,7 @@ export default function ConferenceProgramPage() {
                   <div key={date}>
                     {itemsByDay.length > 1 && (
                       <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">
-                        {formatDayHeading(date)}
+                        {formatDayHeading(date, locale)}
                       </p>
                     )}
                     <div className="bg-white border border-[#e5e7eb] rounded-[16px] overflow-hidden">
@@ -452,7 +456,7 @@ export default function ConferenceProgramPage() {
                         {timeSlots.map((slot) => (
                           <React.Fragment key={slot}>
                             <div className="border-b border-[#f0f0f0] px-2 py-3 text-[10px] font-bold text-[#8e8e93] text-center flex items-start justify-center pt-3">
-                              {new Date(slot).toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(slot).toLocaleTimeString(locale === 'en' ? 'en-GB' : 'sl-SI', { hour: '2-digit', minute: '2-digit' })}
                             </div>
                             {tracks.map((track) => {
                               if (claimedCells.has(`${slot}-${track}`)) return null;
@@ -520,7 +524,7 @@ export default function ConferenceProgramPage() {
                   onClick={() => setModalSession(null)}
                   className="flex-1 py-[10px] border-[1.5px] border-dashed border-[#d1d5db] rounded-[12px] text-[12px] font-semibold text-[#8e8e93] hover:border-[#0d0d0d] hover:text-[#0d0d0d] hover:bg-[#fafafa] transition-colors bg-transparent cursor-pointer font-sans"
                 >
-                  + Dodaj sejo
+                  + {t('eventDetail.addSession', 'Add session')}
                 </button>
               )}
               <button
@@ -528,7 +532,7 @@ export default function ConferenceProgramPage() {
                 onClick={() => setModalCareerSlot(null)}
                 className="flex-1 py-[10px] border-[1.5px] border-dashed border-[#fcd34d] rounded-[12px] text-[12px] font-semibold text-[#92400e] hover:border-[#f59e0b] hover:bg-[#fffbeb] transition-colors bg-transparent cursor-pointer font-sans"
               >
-                + Dodaj karierni razgovor
+                + {t('eventDetail.addCareer', 'Add career interview')}
               </button>
             </div>
           )}

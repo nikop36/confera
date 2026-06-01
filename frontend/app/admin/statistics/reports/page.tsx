@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useStoredUser } from '../../../lib/auth';
+import { useT } from '../../../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 export default function AdminStatisticsReportsPage() {
+  const t = useT();
   const user = useStoredUser();
   const [preset, setPreset] = useState<'all' | '7d' | '30d'>('30d');
   const [from, setFrom] = useState('');
@@ -79,7 +81,7 @@ export default function AdminStatisticsReportsPage() {
     <div>
       <h1 className="text-[32px] font-bold tracking-tight">Reports</h1>
       <p className="text-sm text-[#8e8e93] mt-1 mb-5">
-        Izvozi združena statistična poročila za admin analizo.
+        {t('admin.stats.reports.subtitle', 'Export consolidated statistical reports for admin analysis.')}
       </p>
       {error && <div className="mb-4 rounded-[12px] bg-[#fff1f2] px-4 py-3 text-sm text-[#dc2626]">{error}</div>}
 
@@ -153,9 +155,10 @@ function ExportLink({ href, label }: { href: string; label: string }) {
 }
 
 function VolumeChartXY({ items }: { items: Array<{ label: string; value: number }> }) {
+  const t = useT();
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string; value: number } | null>(null);
   if (items.length === 0) {
-    return <p className="text-sm text-[#8e8e93]">Ni podatkov za prikaz.</p>;
+    return <p className="text-sm text-[#8e8e93]">{t('admin.stats.noDataDisplay', 'No data to display.')}</p>;
   }
   const width = 620;
   const height = 260;

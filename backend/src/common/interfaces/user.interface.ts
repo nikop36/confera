@@ -17,6 +17,8 @@ export interface UserProfile {
   uid: string;
   bio?: string;
   affiliation?: string;
+  language?: string;
+  timezone?: string;
   interests?: string[];
   goals?: string[];
   meetingType?: MeetingType;

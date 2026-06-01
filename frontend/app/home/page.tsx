@@ -2,25 +2,32 @@
 
 import { useState } from 'react';
 import AppShell from '../components/AppShell';
+import { useT } from '../lib/i18n';
 
-const TABS = ['Nedavno', 'Prijatelji', 'Popularno'];
+const TAB_KEYS = ['home.tab.recent', 'home.tab.friends', 'home.tab.popular'] as const;
 
 const POSTS = [
   {
-    author: 'Organizacija Confera',
+    authorKey: 'home.post.1.author',
+    authorFallback: 'Confera Organization',
     time: '1h',
-    text: 'Pozdravljeni! Confera 2026 se začne čez 3 dni. Razpored srečanj bo objavljen jutri — preverite vaše povabila in dopolnite profil za boljša priporočila.',
+    textKey: 'home.post.1.text',
+    textFallback:
+      'Welcome! Confera 2026 starts in 3 days. Meeting schedules will be published tomorrow — check your invites and complete your profile for better recommendations.',
     bg: '#ecf4fd',
     hasImages: true,
   },
   {
-    author: 'Dr. Petra Kos',
+    authorKey: 'home.post.2.author',
+    authorFallback: 'Dr. Petra Kos',
     time: '3h',
-    text: 'Veselim se srečanj z raziskovalci na temo AI in javne uprave. Če vas zanima izmenjava izkušenj, me kontaktirajte preko sistema za srečanja.',
+    textKey: 'home.post.2.text',
+    textFallback:
+      'I am looking forward to meetings with researchers in AI and public administration. If you are interested in exchanging experience, contact me through the meeting system.',
     bg: '#fff8f0',
     hasImages: false,
   },
-];
+] as const;
 
 const IMAGE_GRADIENTS = [
   'linear-gradient(135deg,#667eea,#764ba2)',
@@ -29,6 +36,7 @@ const IMAGE_GRADIENTS = [
 ];
 
 export default function HomePage() {
+  const t = useT();
   const [activeTab, setActiveTab] = useState(1);
   const [liked, setLiked] = useState<Record<number, boolean>>({});
 
@@ -37,11 +45,11 @@ export default function HomePage() {
 
       {/* Header */}
       <div className="flex items-baseline justify-between mb-5">
-        <h2 className="text-[22px] font-bold">Novice</h2>
+        <h2 className="text-[22px] font-bold">{t('home.title', 'News')}</h2>
         <div className="flex gap-5">
-          {TABS.map((tab, i) => (
+          {TAB_KEYS.map((tabKey, i) => (
             <button
-              key={tab}
+              key={tabKey}
               onClick={() => setActiveTab(i)}
               className={`bg-transparent border-0 cursor-pointer font-sans text-sm pb-0.5 border-b-2 transition-colors ${
                 activeTab === i
@@ -49,7 +57,7 @@ export default function HomePage() {
                   : 'font-normal text-[#8e8e93] border-transparent'
               }`}
             >
-              {tab}
+              {t(tabKey)}
             </button>
           ))}
         </div>
@@ -70,11 +78,11 @@ export default function HomePage() {
                     color: i === 0 ? '#fff' : '#3d3d3d',
                   }}
                 >
-                  {post.author.split(' ').map(w => w[0]).slice(0, 2).join('')}
+                  {t(post.authorKey, post.authorFallback).split(' ').map(w => w[0]).slice(0, 2).join('')}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">{post.author}</p>
-                  <p className="text-xs text-[#8e8e93]">{post.time} nazaj</p>
+                  <p className="text-sm font-semibold">{t(post.authorKey, post.authorFallback)}</p>
+                  <p className="text-xs text-[#8e8e93]">{post.time} {t('common.ago', 'ago')}</p>
                 </div>
               </div>
               <button className="bg-transparent border-0 cursor-pointer text-[#8e8e93] p-1">
@@ -86,7 +94,7 @@ export default function HomePage() {
 
             {/* Text */}
             <p className={`text-sm leading-[1.65] text-[#1d1d1f] ${post.hasImages ? 'mb-[14px]' : 'mb-4'}`}>
-              {post.text}
+              {t(post.textKey, post.textFallback)}
             </p>
 
             {/* Image grid */}
@@ -119,13 +127,13 @@ export default function HomePage() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill={liked[i] ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
-                Všeč mi je
+                {t('home.like', 'Like')}
               </button>
               <button className="flex items-center gap-[5px] text-[13px] text-[#8e8e93] bg-transparent border-0 cursor-pointer font-sans p-0">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
-                Komentar
+                {t('home.comment', 'Comment')}
               </button>
             </div>
           </article>
@@ -137,16 +145,16 @@ export default function HomePage() {
             <div className="w-[34px] h-[34px] rounded-full bg-[#e0e0e0] shrink-0" />
             <input
               type="text"
-              placeholder="Delite novost z udeleženci..."
+              placeholder={t('home.sharePlaceholder', 'Share an update with participants...')}
               className="flex-1 bg-transparent border-0 outline-none text-sm text-[#8e8e93] font-sans"
             />
           </div>
           <div className="flex items-center justify-between">
             <div className="flex gap-4">
               {[
-                { label: 'Datoteka', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg> },
-                { label: 'Slika', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg> },
-                { label: 'Lokacija', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg> },
+                { label: t('home.file', 'File'), icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg> },
+                { label: t('home.image', 'Image'), icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg> },
+                { label: t('home.location', 'Location'), icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg> },
               ].map(({ label, icon }) => (
                 <button key={label} className="flex items-center gap-[5px] text-xs text-[#8e8e93] bg-transparent border-0 cursor-pointer font-sans">
                   {icon} {label}
@@ -154,7 +162,7 @@ export default function HomePage() {
               ))}
             </div>
             <button className="px-5 py-[7px] rounded-full bg-[#0d0d0d] text-white text-[13px] font-semibold border-0 cursor-pointer font-sans">
-              Pošlji
+              {t('home.send', 'Send')}
             </button>
           </div>
         </div>

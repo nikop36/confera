@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import AppShell from '../../components/AppShell';
 import { TagPills } from '../../components/TagPicker';
 import { useStoredUser } from '../../lib/auth';
+import { useT } from '../../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -66,6 +67,7 @@ function profileNumValue(profile: PublicProfile, key: string, fallback: number):
 }
 
 export default function PublicProfilePage() {
+  const t = useT();
   const { uid } = useParams<{ uid: string }>();
   const router = useRouter();
   const viewer = useStoredUser();
@@ -154,13 +156,13 @@ export default function PublicProfilePage() {
     return (
       <AppShell>
         <div className="max-w-[560px] mx-auto text-center py-16">
-          <p className="text-[#8e8e93] text-[14px]">Profil ni bil najden.</p>
+          <p className="text-[#8e8e93] text-[14px]">{t('profilePublic.notFound', 'Profile not found.')}</p>
           <button
             type="button"
             onClick={() => router.back()}
             className="mt-4 text-[13px] font-semibold text-[#0071e3] bg-transparent border-0 cursor-pointer font-sans"
           >
-            ← Nazaj
+            ← {t('common.back', 'Back')}
           </button>
         </div>
       </AppShell>
@@ -193,7 +195,7 @@ export default function PublicProfilePage() {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          Nazaj
+          {t('common.back', 'Back')}
         </button>
 
         {/* Cover */}
@@ -262,7 +264,13 @@ export default function PublicProfilePage() {
                         : 'bg-[#0d0d0d] text-white hover:bg-[#1f1f1f] disabled:opacity-50'
                   }`}
                 >
-                  {isConnected ? 'Povezan/a ✓' : isPending ? 'Čaka odgovor' : connecting ? '…' : 'Poveži se'}
+                  {isConnected
+                    ? t('personcard.connected', 'Connected ✓')
+                    : isPending
+                      ? t('personcard.pending', 'Pending')
+                      : connecting
+                        ? '...'
+                        : t('personcard.connect', 'Connect')}
                 </button>
               )}
               {isOwnProfile && (
@@ -271,7 +279,7 @@ export default function PublicProfilePage() {
                   className="px-[18px] py-[6px] rounded-full text-[13px] font-semibold border border-[#e5e7eb] text-[#3d3d3d] hover:border-[#0d0d0d] no-underline transition-colors"
                   style={{ background: '#7fa8c8', color: '#fff', borderColor: 'transparent' }}
                 >
-                  Uredi profil
+                  {t('profilePublic.editProfile', 'Edit profile')}
                 </Link>
               )}
             </div>
@@ -297,7 +305,7 @@ export default function PublicProfilePage() {
         {/* Tags */}
         {profileTags.length > 0 && (
           <div className="bg-white border border-[#e5e7eb] rounded-[20px] px-5 py-4 mb-3">
-            <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-3">Oznake</p>
+            <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-3">{t('eventForm.field.tags')}</p>
             <TagPills tags={profileTags} />
           </div>
         )}
@@ -308,7 +316,7 @@ export default function PublicProfilePage() {
             <div className="grid grid-cols-2 gap-4">
               {(profile.interests ?? []).length > 0 && (
                 <div>
-                  <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">Interesi</p>
+                  <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">{t('profilePublic.interests', 'Interests')}</p>
                   <div className="flex flex-wrap gap-[5px]">
                     {(profile.interests ?? []).map((v, i) => (
                       <span key={v} className={`px-[8px] py-[3px] rounded-full text-[10px] font-medium ${chipColor(i)}`}>{v}</span>
@@ -318,7 +326,7 @@ export default function PublicProfilePage() {
               )}
               {(profile.goals ?? []).length > 0 && (
                 <div>
-                  <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">Cilji</p>
+                  <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">{t('profilePublic.goals', 'Goals')}</p>
                   <div className="flex flex-wrap gap-[5px]">
                     {(profile.goals ?? []).map((v, i) => (
                       <span key={v} className={`px-[8px] py-[3px] rounded-full text-[10px] font-medium ${chipColor((i + 2) % 4)}`}>{v}</span>
@@ -333,7 +341,7 @@ export default function PublicProfilePage() {
         {/* Competencies */}
         {(profile.competencies ?? []).length > 0 && (
           <div className="bg-white border border-[#e5e7eb] rounded-[20px] px-5 py-4 mb-3">
-            <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">Kompetence</p>
+            <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">{t('profilePublic.competencies', 'Competencies')}</p>
             <div className="flex flex-wrap gap-[5px]">
               {(profile.competencies ?? []).map((v, i) => (
                 <span key={v} className={`px-[8px] py-[3px] rounded-full text-[10px] font-medium ${chipColor(i)}`}>{v}</span>
@@ -345,7 +353,7 @@ export default function PublicProfilePage() {
         {/* Research keywords */}
         {(profile.researchKeywords ?? []).length > 0 && (
           <div className="bg-white border border-[#e5e7eb] rounded-[20px] px-5 py-4 mb-3">
-            <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">Raziskovalne teme</p>
+            <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">{t('profilePublic.research', 'Research topics')}</p>
             <div className="flex flex-wrap gap-[5px]">
               {(profile.researchKeywords ?? []).map((v, i) => (
                 <span key={v} className={`px-[8px] py-[3px] rounded-full text-[10px] font-medium ${chipColor(i)}`}>{v}</span>

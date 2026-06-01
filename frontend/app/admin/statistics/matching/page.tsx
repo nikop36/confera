@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useStoredUser } from '../../../lib/auth';
+import { useT } from '../../../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -16,6 +17,7 @@ type MatchingPayload = {
 };
 
 export default function AdminStatisticsMatchingPage() {
+  const t = useT();
   const user = useStoredUser();
   const [payload, setPayload] = useState<MatchingPayload | null>(null);
   const [error, setError] = useState('');
@@ -74,7 +76,7 @@ export default function AdminStatisticsMatchingPage() {
     <div>
       <h1 className="text-[32px] font-bold tracking-tight">Matching</h1>
       <p className="text-sm text-[#8e8e93] mt-1 mb-5">
-        Učinkovitost pretvorbe povezav v srečanja in intervjuje.
+        {t('admin.stats.matching.subtitle', 'Conversion efficiency from connections into meetings and interviews.')}
       </p>
       <section className="rounded-[12px] border border-[#ececec] bg-white p-4 mb-5">
         <div className="flex flex-wrap items-end gap-3">

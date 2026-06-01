@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AppShell from '../components/AppShell';
 import { useStoredUser } from '../lib/auth';
+import { useT } from '../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -27,6 +28,7 @@ type ConnectionPayload = {
 
 export default function ConnectionsPage() {
   const user = useStoredUser();
+  const t = useT();
   const [data, setData] = useState<ConnectionPayload>({
     pendingCount: 0,
     pendingReceived: [],
@@ -51,12 +53,18 @@ export default function ConnectionsPage() {
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
           const message = Array.isArray(body.message) ? body.message[0] : body.message;
-          throw new Error(message ?? 'Failed to load connections');
+          throw new Error(
+            message ?? t('connections.error.load', 'Failed to load connections'),
+          );
         }
         const payload = (await response.json()) as ConnectionPayload;
         setData(payload);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load connections');
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('connections.error.load', 'Failed to load connections'),
+        );
       } finally {
         setLoading(false);
       }
@@ -78,7 +86,10 @@ export default function ConnectionsPage() {
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         const message = Array.isArray(body.message) ? body.message[0] : body.message;
-        throw new Error(message ?? `Failed to ${action} request`);
+        throw new Error(
+          message ??
+            t('connections.error.requestAction', 'Failed to process request'),
+        );
       }
 
       setData((prev) => {
@@ -98,7 +109,11 @@ export default function ConnectionsPage() {
       });
       window.dispatchEvent(new Event('connections:refresh'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Action failed');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('connections.error.action', 'Action failed'),
+      );
     } finally {
       setActingId(null);
     }
@@ -117,7 +132,10 @@ export default function ConnectionsPage() {
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         const message = Array.isArray(body.message) ? body.message[0] : body.message;
-        throw new Error(message ?? 'Failed to remove connection');
+        throw new Error(
+          message ??
+            t('connections.error.remove', 'Failed to remove connection'),
+        );
       }
 
       setData((prev) => ({
@@ -126,7 +144,11 @@ export default function ConnectionsPage() {
       }));
       window.dispatchEvent(new Event('connections:refresh'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Action failed');
+      setError(
+        err instanceof Error
+          ? err.message
+          : t('connections.error.action', 'Action failed'),
+      );
     } finally {
       setActingId(null);
     }
@@ -135,9 +157,9 @@ export default function ConnectionsPage() {
   return (
     <AppShell>
       <div className="mb-6">
-        <h2 className="text-[22px] font-bold">Prijatelji</h2>
+        <h2 className="text-[22px] font-bold">{t('connections.title')}</h2>
         <p className="text-[13px] text-[#8e8e93] mt-1">
-          Zahteve na vrhu, potrjene povezave spodaj.
+          {t('connections.subtitle')}
         </p>
       </div>
 
@@ -149,15 +171,15 @@ export default function ConnectionsPage() {
 
       <section className="mb-6">
         <h3 className="text-[16px] font-semibold mb-3">
-          Zahteve ({data.pendingReceived.length})
+          {t('connections.requests')} ({data.pendingReceived.length})
         </h3>
         {loading ? (
           <div className="rounded-[12px] bg-[#f7f7f7] px-4 py-3 text-sm text-[#8e8e93]">
-            Nalaganje zahtev...
+            {t('connections.loadingRequests')}
           </div>
         ) : data.pendingReceived.length === 0 ? (
           <div className="rounded-[12px] border border-[#f0f0f0] px-4 py-4 text-sm text-[#8e8e93]">
-            Trenutno ni novih zahtev.
+            {t('connections.noneRequests')}
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -189,7 +211,7 @@ export default function ConnectionsPage() {
                     onClick={() => void handleRequestAction(request.id, 'approve')}
                     className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#d1fae5] bg-[#ecfdf3] text-[#166534] disabled:opacity-40"
                   >
-                    Potrdi
+                    {t('connections.approve')}
                   </button>
                   <button
                     type="button"
@@ -197,7 +219,7 @@ export default function ConnectionsPage() {
                     onClick={() => void handleRequestAction(request.id, 'reject')}
                     className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#fecaca] bg-[#fff1f2] text-[#b91c1c] disabled:opacity-40"
                   >
-                    Zavrni
+                    {t('connections.reject')}
                   </button>
                 </div>
               </div>
@@ -207,14 +229,14 @@ export default function ConnectionsPage() {
       </section>
 
       <section>
-        <h3 className="text-[16px] font-semibold mb-3">Potrjene povezave</h3>
+        <h3 className="text-[16px] font-semibold mb-3">{t('connections.accepted')}</h3>
         {loading ? (
           <div className="rounded-[12px] bg-[#f7f7f7] px-4 py-3 text-sm text-[#8e8e93]">
-            Nalaganje povezav...
+            {t('connections.loadingAccepted')}
           </div>
         ) : data.accepted.length === 0 ? (
           <div className="rounded-[12px] border border-[#f0f0f0] px-4 py-4 text-sm text-[#8e8e93]">
-            Še nimate potrjenih povezav.
+            {t('connections.noneAccepted')}
           </div>
         ) : (
           <div className="grid gap-2 md:grid-cols-2">
@@ -238,7 +260,7 @@ export default function ConnectionsPage() {
                     onClick={() => void handleRemoveConnection(connection.id)}
                     className="px-2.5 py-1 rounded-[8px] text-[12px] font-semibold border border-[#fecaca] bg-[#fff1f2] text-[#b91c1c] disabled:opacity-40"
                   >
-                    Odstrani
+                    {t('connections.remove')}
                   </button>
                 </div>
               </div>
