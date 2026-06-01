@@ -1,0 +1,89 @@
+{
+  "name": "event-matching-quality-v1",
+  "createdAt": "2026-06-01T00:00:00.000Z",
+  "kValues": [1, 3, 5],
+  "profiles": [
+    {
+      "uid": "u-ai-ml",
+      "bio": "AI engineer with focus on LLM and computer vision systems.",
+      "affiliation": "FERI",
+      "interests": ["Artificial intelligence", "Machine learning", "Computer vision"],
+      "competencies": ["Data science", "Software engineering"],
+      "researchKeywords": ["LLM", "semantic search", "neural networks"],
+      "tags": ["artificial-intelligence", "machine-learning", "computer-vision"],
+      "connectionUids": ["friend-1", "friend-2"]
+    },
+    {
+      "uid": "u-cyber",
+      "bio": "Security analyst in cloud and network environments.",
+      "affiliation": "Cyber Lab",
+      "interests": ["Cybersecurity", "Cloud infrastructure"],
+      "competencies": ["Risk analysis", "Monitoring"],
+      "researchKeywords": ["zero trust", "incident response"],
+      "tags": ["cybersecurity", "cloud-computing", "devsecops"],
+      "connectionUids": ["friend-3"]
+    },
+    {
+      "uid": "u-product",
+      "bio": "Product and startup mentor focused on growth and funding.",
+      "affiliation": "Startup Hub",
+      "interests": ["Product management", "Entrepreneurship", "Marketing"],
+      "competencies": ["Go-to-market", "Pitching"],
+      "researchKeywords": ["user research", "growth experiments"],
+      "tags": ["product-management", "entrepreneurship", "marketing"],
+      "connectionUids": []
+    }
+  ],
+  "events": [
+    {
+      "id": "e-ai-workshop",
+      "description": "Hands-on LLM workshop with semantic search demos and computer vision examples.",
+      "tags": ["artificial-intelligence", "machine-learning", "llm", "computer-vision"],
+      "friendAttendeeUids": ["friend-1"]
+    },
+    {
+      "id": "e-data-platform",
+      "description": "Data engineering and analytics pipelines for real-time AI products.",
+      "tags": ["data-science", "analytics", "software-engineering"],
+      "friendAttendeeUids": []
+    },
+    {
+      "id": "e-cloud-sec",
+      "description": "Cloud security architecture, zero trust adoption and SOC practices.",
+      "tags": ["cybersecurity", "cloud-computing", "devsecops"],
+      "friendAttendeeUids": ["friend-3"]
+    },
+    {
+      "id": "e-startup-growth",
+      "description": "Startup growth loops, product strategy and investor pitching workshops.",
+      "tags": ["entrepreneurship", "product-management", "marketing"],
+      "friendAttendeeUids": []
+    },
+    {
+      "id": "e-random-general",
+      "description": "General networking with broad topics and no focused domain.",
+      "tags": ["networking", "community"],
+      "friendAttendeeUids": []
+    },
+    {
+      "id": "e-dev-tools",
+      "description": "Incident response drills, zero trust implementation and SOC operations.",
+      "tags": ["software-engineering", "devops", "observability"],
+      "friendAttendeeUids": []
+    }
+  ],
+  "queries": [
+    {
+      "uid": "u-ai-ml",
+      "relevantEventIds": ["e-ai-workshop", "e-data-platform"]
+    },
+    {
+      "uid": "u-cyber",
+      "relevantEventIds": ["e-cloud-sec", "e-dev-tools"]
+    },
+    {
+      "uid": "u-product",
+      "relevantEventIds": ["e-startup-growth", "e-random-general"]
+    }
+  ]
+}

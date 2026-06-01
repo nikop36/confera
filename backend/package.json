@@ -19,7 +19,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "get-token": "ts-node scripts/get-token.ts"
+    "get-token": "ts-node scripts/get-token.ts",
+    "evaluate:matching-quality": "ts-node scripts/evaluate-event-matching-quality.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
