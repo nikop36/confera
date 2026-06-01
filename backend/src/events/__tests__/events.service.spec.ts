@@ -9,6 +9,8 @@ import {
 import { ConnectionsRepository } from '../../connections/connections.repository';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { UsersRepository } from '../../users/users.repository';
+import { EmbeddingService } from '../../matching/embedding.service';
+import { EventIndexService } from '../event-index.service';
 
 describe('EventsService', () => {
   let service: EventsService;
@@ -24,6 +26,16 @@ describe('EventsService', () => {
   const mockListAcceptedConnectionUids = jest.fn().mockResolvedValue([]);
   const mockCreateNotification = jest.fn().mockResolvedValue(undefined);
   const mockFindByUid = jest.fn().mockResolvedValue(null);
+  const mockCreateEmbedding = jest.fn();
+  const mockSafeUpsertEvent = jest.fn().mockResolvedValue(undefined);
+  const mockSafeRemoveEvent = jest.fn().mockResolvedValue(undefined);
+  const mockSemanticSearchEvents = jest.fn().mockResolvedValue([]);
+  const mockEventIndexService = {
+    enabled: false,
+    safeUpsertEvent: mockSafeUpsertEvent,
+    safeRemoveEvent: mockSafeRemoveEvent,
+    semanticSearchEvents: mockSemanticSearchEvents,
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -61,12 +73,24 @@ describe('EventsService', () => {
             findByUid: mockFindByUid,
           },
         },
+        {
+          provide: EmbeddingService,
+          useValue: {
+            createEmbedding: mockCreateEmbedding,
+            model: 'test-model',
+          },
+        },
+        {
+          provide: EventIndexService,
+          useValue: mockEventIndexService,
+        },
       ],
     }).compile();
 
     service = module.get<EventsService>(EventsService);
     jest.clearAllMocks();
     mockListAcceptedConnectionUids.mockResolvedValue([]);
+    mockEventIndexService.enabled = false;
   });
 
   describe('createEvent', () => {
@@ -80,6 +104,15 @@ describe('EventsService', () => {
         location: 'Dvorana A',
         capacity: 50,
       };
+      mockCreateEvent.mockResolvedValue({
+        id: 'created-id',
+        ...dto,
+        startAt: new Date(dto.startAt),
+        endAt: new Date(dto.endAt),
+        createdBy: 'admin-uid',
+        createdAt: new Date(),
+        registeredCount: 0,
+      });
 
       await service.createEvent(dto, 'admin-uid');
 
@@ -92,6 +125,7 @@ describe('EventsService', () => {
           endAt: new Date('2026-06-15T10:00:00.000Z'),
         }),
       );
+      expect(mockSafeUpsertEvent).toHaveBeenCalled();
     });
   });
 
@@ -162,6 +196,7 @@ describe('EventsService', () => {
       await service.deleteEvent('e1');
 
       expect(mockDeleteEvent).toHaveBeenCalledWith('e1');
+      expect(mockSafeRemoveEvent).toHaveBeenCalledWith('e1');
     });
   });
 
@@ -235,6 +270,99 @@ describe('EventsService', () => {
       await expect(
         service.getEventById('nonexistent', 'caller-uid'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('listRecommendedEvents quality', () => {
+    it('ranks high-overlap event above random event when no friends are going', async () => {
+      mockFindByUid.mockResolvedValue({
+        uid: 'u1',
+        bio: 'AI engineer',
+        affiliation: 'FERI',
+        interests: ['Umetna inteligenca', 'Podatkovna znanost'],
+        competencies: ['Backend'],
+        researchKeywords: ['LLM', 'Semantično iskanje'],
+      });
+
+      const now = Date.now();
+      mockListEvents.mockResolvedValue([
+        {
+          id: 'random',
+          title: 'Random networking',
+          description: 'General event',
+          location: 'Hall A',
+          tags: ['sports', 'travel'],
+          startAt: new Date(now + 3_600_000),
+          endAt: new Date(now + 7_200_000),
+          capacity: 50,
+          registeredCount: 0,
+          isRegistered: false,
+          friendsGoing: [],
+        },
+        {
+          id: 'aligned',
+          title: 'AI seminar',
+          description: 'Talk on LLM and data science',
+          location: 'Hall B',
+          tags: ['artificial-intelligence', 'llm', 'data-science'],
+          startAt: new Date(now + 3_600_000),
+          endAt: new Date(now + 7_200_000),
+          capacity: 50,
+          registeredCount: 0,
+          isRegistered: false,
+          friendsGoing: [],
+        },
+      ]);
+
+      // Force fallback path and deterministic semantic behavior.
+      mockEventIndexService.enabled = false;
+      mockCreateEmbedding.mockImplementation((text: string) => {
+        if (text.includes('tags: artificial-intelligence')) return [1, 0];
+        if (text.includes('tags: sports')) return [0, 1];
+        return [1, 0]; // user vector
+      });
+
+      const result = await service.listRecommendedEvents('u1');
+      expect(result[0].id).toBe('aligned');
+      expect(result[1].id).toBe('random');
+      expect(result[0].score).toBeGreaterThan(result[1].score);
+    });
+
+    it('returns ranked events even when SQL semantic search returns empty rows', async () => {
+      mockFindByUid.mockResolvedValue({
+        uid: 'u2',
+        bio: 'AI engineer',
+        interests: ['Umetna inteligenca'],
+        competencies: [],
+        researchKeywords: ['LLM'],
+      });
+      const now = Date.now();
+      mockListEvents.mockResolvedValue([
+        {
+          id: 'e1',
+          title: 'AI event',
+          description: 'LLM',
+          location: 'A',
+          tags: ['artificial-intelligence'],
+          startAt: new Date(now + 3_600_000),
+          endAt: new Date(now + 7_200_000),
+          capacity: 10,
+          registeredCount: 0,
+          isRegistered: false,
+          friendsGoing: [],
+        },
+      ]);
+
+      mockEventIndexService.enabled = true;
+      mockSemanticSearchEvents.mockResolvedValue([]);
+      mockCreateEmbedding.mockImplementation((text: string) => {
+        if (text.includes('tags: artificial-intelligence')) return [1, 0];
+        return [1, 0];
+      });
+
+      const result = await service.listRecommendedEvents('u2');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('e1');
     });
   });
 });

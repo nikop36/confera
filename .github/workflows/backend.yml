@@ -48,6 +48,9 @@ jobs:
       - name: Run unit tests with coverage
         run: npm run test:cov
 
+      - name: Run AI matching quality evaluation
+        run: npm run evaluate:matching-quality
+
       - name: Build backend
         run: npm run build
 

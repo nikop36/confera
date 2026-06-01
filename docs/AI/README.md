@@ -216,3 +216,30 @@ curl http://localhost:3000/matches/me \
 - SQL indeks trenutno ne pozna dogodkov ali omejitev urnika.
 - Razlogi za priporočila so razloženi na osnovi prekrivanja polj, ne celotne
   semantične analize.
+
+---
+
+## AI Matching Quality Testing
+
+Za preverjanje kakovosti ujemanja za dogodke je implementiran avtomatiziran evalvacijski pipeline:
+
+- Dataset: `backend/src/matching/quality/datasets/event-matching-quality.dataset.json`
+- Metrike: `Precision@K`, `Recall@K`, `MRR`, `NDCG@K`
+- Primerjava modelov:
+  - `ai_model` (semantika + tagi + social boost)
+  - `tag_baseline` (baseline brez semantike)
+
+Zagon:
+
+```bash
+cd backend
+npm run evaluate:matching-quality
+```
+
+Generirana poročila:
+
+- `docs/AI/reports/event-matching-quality-report.json`
+- `docs/AI/reports/event-matching-quality-report.md`
+
+Pipeline se požene tudi v CI (GitHub Actions, backend workflow), zato je kakovost
+rangiranja preverjena ob vsakem push/PR.

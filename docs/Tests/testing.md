@@ -28,6 +28,7 @@ HTML poročilo o pokritosti se ustvari v mapi `coverage/lcov-report/index.html`.
 | `src/auth/__tests__/auth.service.spec.ts` | Logika registracije v AuthService |
 | `src/profile/__tests__/profile.service.spec.ts` | Profilna logika |
 | `src/matching/__tests__/embedding.service.spec.ts` | Lokalni embedding za indeksiranje profilov |
+| `src/matching/__tests__/event-matching-evaluator.spec.ts` | Evalvacijske metrike in primerjava AI modela proti baseline |
 | `src/matching/__tests__/profile-search-document.spec.ts` | Gradnja tekstovnega profila in hash |
 | `src/matching/__tests__/matching.service.spec.ts` | Orkestracija endpointa za priporočila |
 | `src/matching/__tests__/matching-index.service.spec.ts` | Sinhronizacija SQL indeksa in razlage priporočil |
@@ -79,6 +80,7 @@ HTML poročilo o pokritosti se ustvari v mapi `coverage/lcov-report/index.html`.
 | Iskanje priporočil | Pokliče `hybrid_profile_search` in vrne rangirane zadetke |
 | Razlage priporočil | Vrne razloge na osnovi skupnih interesov, ciljev, ključnih besed in načina srečanja |
 | Napaka pri sinhronizaciji indeksa | `safeUpsertProfile` ne prekine shranjevanja profila |
+| Kakovost priporočil dogodkov | Izračuna Precision/Recall/MRR/NDCG in primerjavo proti baseline modelu |
 
 ---
 
