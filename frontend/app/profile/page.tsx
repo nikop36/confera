@@ -913,7 +913,7 @@ export default function ProfilePage() {
       )}
 
       {/* Tab bar */}
-      <div className="flex bg-[#f0f0f0] rounded-[13px] p-1 gap-0.5 mb-[18px]">
+      <div className="flex bg-[#f0f0f0] rounded-[13px] p-1 gap-0.5 mb-[18px] overflow-x-auto scrollbar-hide">
         {TAB_KEYS.map((tabKey, i) => (
           <button
             key={tabKey}
@@ -930,7 +930,7 @@ export default function ProfilePage() {
       </div>
 
       {/* 2-col card grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {activeTab === 1 && loadingRecommendations && (
           <div className="col-span-2 rounded-2xl border border-[#f0f0f0] bg-white px-4 py-5 text-sm text-[#8e8e93]">
             {t('profile.recommendations.loading', 'Loading event recommendations...')}

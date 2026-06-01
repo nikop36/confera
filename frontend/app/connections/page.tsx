@@ -194,7 +194,7 @@ export default function ConnectionsPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-2 mb-5">
+      <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide pb-1">
         {(
           [
             {
