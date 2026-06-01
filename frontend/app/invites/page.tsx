@@ -91,7 +91,7 @@ export default function InvitesPage() {
     }
 
     void load(user.idToken);
-  }, [user?.idToken]);
+  }, [user?.idToken, t]);
 
   async function handleRespond(inviteId: string, action: 'accepted' | 'rejected') {
     if (!user?.idToken) return;

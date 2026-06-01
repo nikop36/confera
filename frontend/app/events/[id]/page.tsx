@@ -142,7 +142,7 @@ export default function ConferenceProgramPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.idToken, eventId]);
+  }, [user?.idToken, eventId, t]);
 
   useEffect(() => {
     void loadData();

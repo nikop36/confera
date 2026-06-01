@@ -108,7 +108,7 @@ export default function SettingsPage() {
     }
 
     void loadSettings(user.idToken);
-  }, [user?.idToken]);
+  }, [user?.idToken, t]);
 
   async function handleSavePreferences() {
     if (!user?.idToken) return;

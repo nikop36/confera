@@ -326,7 +326,7 @@ export default function ProfilePage() {
     }
 
     void loadProfile();
-  }, [user]);
+  }, [user, t]);
 
   useEffect(() => {
     if (!token) return;

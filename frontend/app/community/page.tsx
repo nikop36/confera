@@ -108,7 +108,7 @@ export default function CommunityPage() {
     }
 
     void load();
-  }, [user?.idToken, user?.uid]);
+  }, [user?.idToken, user?.uid, t]);
 
   // Load connection state
   useEffect(() => {

@@ -74,7 +74,7 @@ export default function MeetingsPage() {
     }
 
     void load(user.idToken);
-  }, [user?.idToken]);
+  }, [user?.idToken, t]);
 
   const candidateInterviews = useMemo(
     () => data.processed.filter((item) => item.invitationStatus === 'accepted'),

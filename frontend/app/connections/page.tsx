@@ -71,7 +71,7 @@ export default function ConnectionsPage() {
     }
 
     void load();
-  }, [user?.idToken]);
+  }, [user?.idToken, t]);
 
   async function handleRequestAction(id: string, action: 'approve' | 'reject') {
     if (!user?.idToken) return;
