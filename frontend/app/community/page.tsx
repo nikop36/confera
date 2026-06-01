@@ -36,7 +36,12 @@ export default function CommunityPage() {
   const [connectingUids, setConnectingUids] = useState<Record<string, boolean>>({});
 
   const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<CommunityFilter>('all');
+  const [activeFilter, setActiveFilter] = useState<CommunityFilter>(() =>
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('filter') === 'match'
+      ? 'match'
+      : 'all',
+  );
   const [expandedUid, setExpandedUid] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -70,11 +75,13 @@ export default function CommunityPage() {
 
         // Matches are optional — degrade gracefully if unavailable
         const scoreMap = new Map<string, number>();
+        const matchOrder = new Map<string, number>();
         if (matchesRes.status === 'fulfilled' && matchesRes.value.ok) {
           const matches = (await matchesRes.value.json()) as MatchResult[];
-          for (const m of matches) {
+          matches.forEach((m, index) => {
             scoreMap.set(m.uid, m.score);
-          }
+            matchOrder.set(m.uid, index);
+          });
         }
 
         // Annotate users with match score, exclude self
@@ -85,13 +92,15 @@ export default function CommunityPage() {
             score: scoreMap.get(u.uid),
           }));
 
-        // Sort: matched first (desc score), then alphabetical
+        // Sort: matched first in backend ranking order, then alphabetical
         annotated.sort((a, b) => {
-          if (a.score !== undefined && b.score !== undefined) {
-            return b.score - a.score;
+          const aOrder = matchOrder.get(a.uid);
+          const bOrder = matchOrder.get(b.uid);
+          if (aOrder !== undefined && bOrder !== undefined) {
+            return aOrder - bOrder;
           }
-          if (a.score !== undefined) return -1;
-          if (b.score !== undefined) return 1;
+          if (aOrder !== undefined) return -1;
+          if (bOrder !== undefined) return 1;
           return a.displayName.localeCompare(b.displayName, 'sl-SI');
         });
 
@@ -164,6 +173,8 @@ export default function CommunityPage() {
     const q = search.trim().toLocaleLowerCase('sl-SI');
     return users.filter((u) => {
       if (activeFilter === 'match' && u.score === undefined) return false;
+      // Keep "Ujemanja" consistent with sidebar suggestions: hide already connected users.
+      if (activeFilter === 'match' && connectedUids.has(u.uid)) return false;
       if (activeFilter === 'participant' && u.role !== 'participant') return false;
       if (activeFilter === 'industry' && u.role !== 'industry') return false;
       if (activeFilter === 'organizer' && u.role !== 'organizer') return false;

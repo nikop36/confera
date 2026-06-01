@@ -44,7 +44,13 @@ export default function ConnectionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actingId, setActingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'zahteve' | 'povezave' | 'graf'>('zahteve');
+  const [activeTab, setActiveTab] = useState<'zahteve' | 'povezave' | 'graf'>(() => {
+    if (typeof window === 'undefined') return 'zahteve';
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab === 'graf') return 'graf';
+    if (tab === 'povezave') return 'povezave';
+    return 'zahteve';
+  });
   const [connectedUids, setConnectedUids] = useState<Set<string>>(new Set());
   const [pendingSentUids, setPendingSentUids] = useState<Set<string>>(new Set());
 
