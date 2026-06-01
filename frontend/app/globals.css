@@ -327,3 +327,17 @@ body {
 .light-theme .vignette {
   background: radial-gradient(ellipse 80% 60% at 50% 40%, transparent 40%, #ffffff 100%);
 }
+
+/* iOS safe area for fixed bottom tab bar */
+.mobile-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Hide scrollbar visually while keeping scroll behaviour */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
