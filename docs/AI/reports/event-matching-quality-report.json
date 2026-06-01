@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-01T10:24:15.490Z",
+  "generatedAt": "2026-06-01T10:49:07.141Z",
   "dataset": {
     "name": "event-matching-quality-v1",
     "createdAt": "2026-06-01T00:00:00.000Z",
@@ -115,5 +115,17 @@
         "5": 0.1698791639654974
       }
     }
+  },
+  "gates": {
+    "config": {
+      "minMrr": 0.5,
+      "minPrecisionAt3": 0.25,
+      "minRecallAt3": 0.5,
+      "minNdcgAt3": 0.6,
+      "minMrrDeltaVsBaseline": 0,
+      "minNdcgDeltaAt3VsBaseline": 0
+    },
+    "passed": true,
+    "failures": []
   }
 }

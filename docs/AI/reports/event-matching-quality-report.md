@@ -1,6 +1,6 @@
 # Poročilo: AI Matching Quality Testing
 
-Datum generiranja: 2026-06-01T10:24:15.490Z
+Datum generiranja: 2026-06-01T10:49:07.141Z
 
 ## Testni nabor podatkov
 
@@ -31,6 +31,18 @@ Datum generiranja: 2026-06-01T10:24:15.490Z
 | 1 | 100.00% | 100.00% | 0.00% | 50.00% | 50.00% | 0.00% | 100.00% | 100.00% | 0.00% |
 | 3 | 66.67% | 44.44% | 22.22% | 100.00% | 66.67% | 33.33% | 100.00% | 74.21% | 25.79% |
 | 5 | 40.00% | 33.33% | 6.67% | 100.00% | 83.33% | 16.67% | 100.00% | 83.01% | 16.99% |
+
+## Kakovostna vrata (CI Gates)
+
+- Status: PASSED
+- Pragovi:
+  - min MRR: 50.00%
+  - min Precision@3: 25.00%
+  - min Recall@3: 50.00%
+  - min NDCG@3: 60.00%
+  - min ΔMRR vs baseline: 0.00 p.p.
+  - min ΔNDCG@3 vs baseline: 0.00 p.p.
+- Kršitve: ni
 
 ## Identificirane težave
 
