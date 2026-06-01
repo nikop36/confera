@@ -5,8 +5,8 @@ export class GraphNodeDto {
   @ApiProperty({ example: 'user-123' })
   id!: string;
 
-  @ApiProperty({ enum: ['self', 'connection'] })
-  type!: 'self' | 'connection';
+  @ApiProperty({ enum: ['self', 'connection', 'fof'] })
+  type!: 'self' | 'connection' | 'fof';
 
   @ApiProperty({ example: 'John Doe' })
   displayName!: string;

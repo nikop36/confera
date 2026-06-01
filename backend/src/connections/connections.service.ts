@@ -203,13 +203,22 @@ export class ConnectionsService {
       r.requesterUid === user.uid ? r.recipientUid : r.requesterUid,
     );
 
-    const [peersResult, matchesResult, meetingsResult] = await Promise.allSettled([
-      Promise.all(peerUids.map((uid) => this.usersRepository.findByUid(uid))),
-      this.matchingIndexService.enabled
-        ? this.matchingIndexService.findMatches(profile as SearchableProfile)
-        : Promise.resolve([]),
-      this.schedulingRepository.listMeetingsByParticipant(user.uid),
-    ]);
+    const [peersResult, matchesResult, meetingsResult, peerConnectionsResult] =
+      await Promise.allSettled([
+        Promise.all(peerUids.map((uid) => this.usersRepository.findByUid(uid))),
+        this.matchingIndexService.enabled
+          ? this.matchingIndexService.findMatches(profile as SearchableProfile)
+          : Promise.resolve([]),
+        this.schedulingRepository.listMeetingsByParticipant(user.uid),
+        // For each peer, fetch their accepted connection UIDs to find peer↔peer edges
+        Promise.all(
+          peerUids.map((uid) =>
+            this.connectionsRepository
+              .listAcceptedConnectionUids(uid)
+              .then((uids) => ({ uid, connectedUids: uids })),
+          ),
+        ),
+      ]);
 
     const peers =
       peersResult.status === 'fulfilled'
@@ -284,6 +293,68 @@ export class ConnectionsService {
       }
     }
 
-    return { nodes: [selfNode, ...peerNodes], edges };
+    // Peer-to-peer edges + collect FOF UIDs (connected to peers but not to self)
+    const fofUids = new Set<string>();
+    if (peerConnectionsResult.status === 'fulfilled') {
+      const peerSet = new Set(peerUids);
+      const seen = new Set<string>();
+      for (const { uid: uidA, connectedUids } of peerConnectionsResult.value) {
+        for (const uidB of connectedUids) {
+          if (uidB === user.uid) continue;
+          if (!peerSet.has(uidB)) {
+            fofUids.add(uidB); // reachable through a peer, not directly connected
+            continue;
+          }
+          const key = [uidA, uidB].sort().join('|');
+          if (seen.has(key)) continue;
+          seen.add(key);
+          edges.push({
+            id: `peer-conn-${key}`,
+            source: uidA,
+            target: uidB,
+            edgeType: 'connection',
+          });
+        }
+      }
+    }
+
+    // Fetch FOF profiles and build FOF nodes + peer→fof edges
+    const fofProfiles = await Promise.allSettled(
+      [...fofUids].map((uid) => this.usersRepository.findByUid(uid)),
+    );
+    const fofNodes: GraphNodeDto[] = fofProfiles
+      .filter(
+        (r): r is PromiseFulfilledResult<NonNullable<Awaited<ReturnType<typeof this.usersRepository.findByUid>>>> =>
+          r.status === 'fulfilled' && Boolean(r.value),
+      )
+      .map((r) => ({
+        id: r.value.uid,
+        type: 'fof' as const,
+        displayName: r.value.displayName,
+        role: r.value.role,
+        affiliation: r.value.affiliation,
+        isConnected: false,
+      }));
+
+    const fofNodeIds = new Set(fofNodes.map((n) => n.id));
+    if (peerConnectionsResult.status === 'fulfilled') {
+      const seen = new Set<string>();
+      for (const { uid: peerUid, connectedUids } of peerConnectionsResult.value) {
+        for (const fofUid of connectedUids) {
+          if (!fofNodeIds.has(fofUid)) continue;
+          const key = [peerUid, fofUid].sort().join('|');
+          if (seen.has(key)) continue;
+          seen.add(key);
+          edges.push({
+            id: `fof-conn-${key}`,
+            source: peerUid,
+            target: fofUid,
+            edgeType: 'connection',
+          });
+        }
+      }
+    }
+
+    return { nodes: [selfNode, ...peerNodes, ...fofNodes], edges };
   }
 }

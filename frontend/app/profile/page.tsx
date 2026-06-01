@@ -6,13 +6,6 @@ import AppShell from '../components/AppShell';
 import TagPicker from '../components/TagPicker';
 import { saveStoredUser, useStoredUser } from '../lib/auth';
 import { useT } from '../lib/i18n';
-import {
-  COMPETENCY_GROUPS,
-  GOAL_GROUPS,
-  INTEREST_GROUPS,
-  KEYWORD_GROUPS,
-  type ProfileTaxonomyGroup,
-} from '../lib/profile-taxonomy';
 import { uploadProfileImage } from '../lib/supabase-storage';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -417,18 +410,6 @@ export default function ProfilePage() {
     };
   }
 
-  function toggleListField(key: 'interests' | 'goals' | 'competencies' | 'researchKeywords', value: string) {
-    setForm((prev) => {
-      const current = prev[key];
-      const next = current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value];
-
-      return { ...prev, [key]: next };
-    });
-    setSuccess('');
-  }
-
   function closeEditMode() {
     setEditMode(false);
     setForm(profileToForm(profile ?? undefined));
@@ -542,11 +523,11 @@ export default function ProfilePage() {
       const payload = {
         bio: form.bio.trim() || undefined,
         affiliation: form.affiliation.trim() || undefined,
-        interests: form.interests,
-        goals: form.goals,
+        interests: [],
+        goals: [],
+        competencies: [],
+        researchKeywords: form.tags.map(s => s.replace(/-/g, ' ')),
         meetingType: form.meetingType,
-        competencies: form.competencies,
-        researchKeywords: form.researchKeywords,
         tags: form.tags,
         roleProfile: {
           ...(profile?.roleProfile ?? {}),
@@ -887,39 +868,7 @@ export default function ProfilePage() {
               />
             </FormField>
 
-            <MultiChoiceField
-              label={t('profile.field.interests', 'Areas of interest')}
-              description={t('profile.field.interestsDesc', 'Choose topics that interest you most.')}
-              groups={INTEREST_GROUPS}
-              value={form.interests}
-              onToggle={(value) => toggleListField('interests', value)}
-            />
-
-            <MultiChoiceField
-              label={t('profile.field.goals', 'Networking goals')}
-              description={t('profile.field.goalsDesc', 'Select what you want to achieve at the conference.')}
-              groups={GOAL_GROUPS}
-              value={form.goals}
-              onToggle={(value) => toggleListField('goals', value)}
-            />
-
-            <MultiChoiceField
-              label={t('profile.field.competencies', 'Competencies')}
-              description={t('profile.field.competenciesDesc', 'Select skills, experience, or roles that describe you well.')}
-              groups={COMPETENCY_GROUPS}
-              value={form.competencies}
-              onToggle={(value) => toggleListField('competencies', value)}
-            />
-
-            <MultiChoiceField
-              label={t('profile.field.keywords', 'Keywords')}
-              description={t('profile.field.keywordsDesc', 'Select specific terms that help AI matching later.')}
-              groups={KEYWORD_GROUPS}
-              value={form.researchKeywords}
-              onToggle={(value) => toggleListField('researchKeywords', value)}
-            />
-
-            <FormField label={t('profile.field.tags', 'Tags')}>
+            <FormField label={t('profile.field.tags', 'Tags')} description={t('profile.field.tagsDesc', 'Select tags that describe you — used in AI matching and across the whole platform.')}>
               <TagPicker
                 token={token ?? ''}
                 value={form.tags}
@@ -964,7 +913,7 @@ export default function ProfilePage() {
       )}
 
       {/* Tab bar */}
-      <div className="flex bg-[#f0f0f0] rounded-[13px] p-1 gap-0.5 mb-[18px]">
+      <div className="flex bg-[#f0f0f0] rounded-[13px] p-1 gap-0.5 mb-[18px] overflow-x-auto scrollbar-hide">
         {TAB_KEYS.map((tabKey, i) => (
           <button
             key={tabKey}
@@ -981,7 +930,7 @@ export default function ProfilePage() {
       </div>
 
       {/* 2-col card grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {activeTab === 1 && loadingRecommendations && (
           <div className="col-span-2 rounded-2xl border border-[#f0f0f0] bg-white px-4 py-5 text-sm text-[#8e8e93]">
             {t('profile.recommendations.loading', 'Loading event recommendations...')}
@@ -1127,10 +1076,11 @@ export default function ProfilePage() {
   );
 }
 
-function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+function FormField({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-xs font-semibold text-[#6e6e73] mb-1.5">{label}</span>
+      <span className="block text-xs font-semibold text-[#6e6e73] mb-1">{label}</span>
+      {description && <span className="block text-[11px] text-[#8e8e93] mb-2">{description}</span>}
       {children}
     </label>
   );
@@ -1351,158 +1301,3 @@ function ImageCropModal({
   );
 }
 
-function MultiChoiceField({
-  label,
-  description,
-  groups,
-  value,
-  onToggle,
-}: {
-  label: string;
-  description: string;
-  groups: ProfileTaxonomyGroup[];
-  value: string[];
-  onToggle: (value: string) => void;
-}) {
-  const t = useT();
-  const [query, setQuery] = useState('');
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
-  const [customInput, setCustomInput] = useState('');
-  const normalizedQuery = query.trim().toLocaleLowerCase('sl-SI');
-  const visibleLimit = 3;
-
-  const filteredGroups = groups
-    .map((group) => ({
-      ...group,
-      options: normalizedQuery
-        ? group.options.filter((option) => option.toLocaleLowerCase('sl-SI').includes(normalizedQuery))
-        : group.options,
-    }))
-    .filter((group) => group.options.length > 0);
-
-  function toggleGroup(title: string) {
-    setExpandedGroups((current) => (
-      current.includes(title)
-        ? current.filter((item) => item !== title)
-        : [...current, title]
-    ));
-  }
-
-  function addCustomOption() {
-    const option = customInput.trim();
-    if (!option) return;
-
-    const normalizedOption = option.toLocaleLowerCase('sl-SI');
-    const alreadySelected = value.some((item) => item.toLocaleLowerCase('sl-SI') === normalizedOption);
-
-    if (!alreadySelected) {
-      onToggle(option);
-    }
-
-    setCustomInput('');
-  }
-
-  return (
-    <div className="rounded-[16px] border border-[#f0f0f0] bg-[#fcfcfd] p-4">
-      <div className="mb-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-bold text-[#1d1d1f]">{label}</p>
-          <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={t('profile.options.search', 'Search options...')}
-              className="min-w-[180px] max-w-[260px] flex-1 rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[12px] text-[#1d1d1f] outline-none transition-colors placeholder:text-[#a1a1aa] focus:border-[#0d0d0d]"
-            />
-            {value.length > 0 && (
-              <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#6e6e73] border border-[#eceff3]">
-                {t('profile.options.selected', '{{count}} selected').replace('{{count}}', String(value.length))}
-              </span>
-            )}
-          </div>
-        </div>
-        <p className="text-[12px] text-[#8e8e93] mt-1">{description}</p>
-      </div>
-      <div className="grid gap-3">
-        {filteredGroups.map((group) => {
-          const expanded = expandedGroups.includes(group.title) || normalizedQuery.length > 0;
-          const hiddenCount = Math.max(group.options.length - visibleLimit, 0);
-          const visibleOptions = expanded ? group.options : group.options.slice(0, visibleLimit);
-
-          return (
-            <div key={group.title}>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#a1a1aa]">
-                {group.title}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {visibleOptions.map((option) => {
-                  const selected = value.includes(option);
-
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => onToggle(option)}
-                      aria-pressed={selected}
-                      className={`rounded-full px-3 py-1.5 text-[13px] border transition-colors ${
-                        selected
-                          ? 'bg-[#0d0d0d] text-white border-[#0d0d0d]'
-                          : 'bg-white text-[#4b5563] border-[#e5e7eb] hover:bg-[#f7f7f7]'
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  );
-                })}
-                {!normalizedQuery && hiddenCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(group.title)}
-                    className="rounded-full border border-[#e5e7eb] bg-[#f7f7f7] px-3 py-1.5 text-[13px] font-semibold text-[#4b5563] transition-colors hover:bg-[#eef2f7]"
-                  >
-                    {expanded
-                      ? t('profile.options.showLess', 'Show less')
-                      : t('profile.options.showMore', 'Show more ({{count}})').replace('{{count}}', String(hiddenCount))}
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#a1a1aa]">
-            {t('profile.options.other', 'Other')}
-          </p>
-          <div className="flex max-w-[520px] gap-2">
-            <input
-              type="text"
-              value={customInput}
-              onChange={(event) => setCustomInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  addCustomOption();
-                }
-              }}
-              placeholder={t('profile.options.addOwn', 'Add your own option...')}
-              className="min-w-0 flex-1 rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] text-[#1d1d1f] outline-none transition-colors placeholder:text-[#a1a1aa] focus:border-[#0d0d0d]"
-            />
-            <button
-              type="button"
-              onClick={addCustomOption}
-              className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#4b5563] transition-colors hover:bg-[#f7f7f7]"
-            >
-              {t('common.add', 'Add')}
-            </button>
-          </div>
-        </div>
-        {filteredGroups.length === 0 && (
-          <p className="rounded-[12px] bg-white px-3 py-2 text-[13px] text-[#8e8e93] border border-[#eceff3]">
-            {t('profile.options.noResults', 'No results for this search term.')}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}

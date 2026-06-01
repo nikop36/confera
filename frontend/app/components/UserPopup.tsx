@@ -19,6 +19,7 @@ type Props = {
 
 export function UserPopup({ node, isConnected, isPending, isConnecting, onConnect, onClose }: Props) {
   if (node.nodeType === 'self') return null;
+  const isFof = node.nodeType === 'fof';
 
   return (
     <div
@@ -59,6 +60,7 @@ export function UserPopup({ node, isConnected, isPending, isConnecting, onConnec
       </p>
       <p style={{ fontSize: 12, color: '#8e8e93', margin: '0 0 6px' }}>
         {ROLE_LABEL[node.role] ?? node.role}
+        {isFof && <span style={{ marginLeft: 6, fontSize: 10, color: '#d1d5db', fontStyle: 'italic' }}>prijatelj prijatelja</span>}
       </p>
       {node.affiliation && (
         <p style={{ fontSize: 12, color: '#555', margin: '0 0 10px' }}>{String(node.affiliation)}</p>

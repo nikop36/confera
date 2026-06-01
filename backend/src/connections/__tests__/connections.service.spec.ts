@@ -39,6 +39,8 @@ describe('ConnectionsService', () => {
             findPendingBetweenUsers: mockFindPendingBetweenUsers,
             findAcceptedBetweenUsers: mockFindAcceptedBetweenUsers,
             createRequest: mockCreateRequest,
+            listAcceptedConnectionUids: jest.fn().mockResolvedValue([]),
+            listAccepted: jest.fn().mockResolvedValue([]),
           },
         },
         {

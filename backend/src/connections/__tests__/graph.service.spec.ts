@@ -53,6 +53,7 @@ describe('ConnectionsService - getGraph()', () => {
             findAcceptedBetweenUsers: jest.fn(),
             createRequest: jest.fn(),
             listAccepted: jest.fn(),
+            listAcceptedConnectionUids: jest.fn().mockResolvedValue([]),
           },
         },
         {
