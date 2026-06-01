@@ -44,11 +44,11 @@ function applyForceLayout(
   const idIndex = new Map(simNodes.map((n, i) => [n.id, i]));
 
   const simLinks: SimLink[] = edges
+    .filter((e) => idIndex.has(e.source) && idIndex.has(e.target))
     .map((e) => ({
-      source: simNodes[idIndex.get(e.source) ?? 0],
-      target: simNodes[idIndex.get(e.target) ?? 0],
-    }))
-    .filter((l) => l.source && l.target);
+      source: simNodes[idIndex.get(e.source)!],
+      target: simNodes[idIndex.get(e.target)!],
+    }));
 
   const selfSim = simNodes.find((n) =>
     nodes.find((rn) => rn.id === n.id)?.data?.nodeType === 'self',
@@ -121,7 +121,7 @@ export function ConnectionGraph({ idToken, connectedUids, pendingUids, onConnect
     );
   }
 
-  if (nodes.length === 0) {
+  if (!loading && rawNodes.length === 0) {
     return (
       <div className="rounded-[14px] border border-[#f0f0f0] px-5 py-6 text-sm text-[#8e8e93]">
         Nimate še nobenih potrjenih povezav za prikaz v grafu.
