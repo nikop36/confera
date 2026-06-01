@@ -158,7 +158,7 @@ export default function EventFormModal({ event, token, onClose, onSave }: EventF
         onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
         <div
-          className="bg-white rounded-[18px] w-full max-w-[500px] max-h-[90vh] overflow-y-auto p-6"
+          className="bg-white rounded-[18px] w-full max-w-[calc(100vw-2rem)] sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-4 sm:p-6"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"

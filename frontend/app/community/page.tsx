@@ -217,13 +217,7 @@ export default function CommunityPage() {
           <p className="text-[12px] text-[#8e8e93] mb-3">
             {t('community.shown')} {visible.length} {t('community.of')} {filtered.length}
           </p>
-          <div
-            className="grid gap-[10px]"
-            style={{
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              alignItems: 'start',
-            }}
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[10px] items-start">
             {visible.map((person) => (
               <PersonCard
                 key={person.uid}
@@ -261,8 +255,7 @@ export default function CommunityPage() {
 function SkeletonGrid() {
   return (
     <div
-      className="grid gap-[10px]"
-      style={{ gridTemplateColumns: 'repeat(3, 1fr)', alignItems: 'start' }}
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[10px] items-start"
     >
       {Array.from({ length: 6 }).map((_, i) => (
         <div

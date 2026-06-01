@@ -313,7 +313,7 @@ export default function PublicProfilePage() {
         {/* Interests + Goals */}
         {((profile.interests ?? []).length > 0 || (profile.goals ?? []).length > 0) && (
           <div className="bg-white border border-[#e5e7eb] rounded-[20px] px-5 py-4 mb-3">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {(profile.interests ?? []).length > 0 && (
                 <div>
                   <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">{t('profilePublic.interests', 'Interests')}</p>

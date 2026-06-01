@@ -60,7 +60,7 @@ export default function Home() {
     <div className="bg-white font-sans text-[#0d0d0d]" style={{ overflowX: "clip" }}>
 
       {/* ── Navbar ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-10 h-[62px] bg-white/90 backdrop-blur-md border-b border-[#f0f0f0]">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 lg:px-10 h-[62px] bg-white/90 backdrop-blur-md border-b border-[#f0f0f0]">
         <Link href="/" className="flex items-center gap-2 no-underline">
           <div className="w-2 h-2 rounded-full bg-[#7fa8c8]" />
           <span className="font-bold text-[17px] text-[#0d0d0d] tracking-wide">Confera</span>
@@ -85,7 +85,7 @@ export default function Home() {
       <HeroSection />
 
       {/* ── Features ── */}
-      <section className="py-24 px-10 max-w-[1200px] mx-auto">
+      <section className="py-16 lg:py-24 px-4 lg:px-10 max-w-[1200px] mx-auto">
         <p className="text-xs font-semibold text-[#7fa8c8] tracking-[0.18em] uppercase mb-3">{t('landing.nav.features', 'Features')}</p>
         <div className="flex items-end justify-between mb-14 flex-wrap gap-4">
           <h2 className="text-[clamp(1.8rem,3.5vw,2.6rem)] font-bold leading-tight max-w-[420px]">
@@ -122,10 +122,10 @@ export default function Home() {
       </section>
 
       {/* ── Divider ── */}
-      <div className="px-10"><div className="h-px bg-[#f0f0f0]" /></div>
+      <div className="px-4 lg:px-10"><div className="h-px bg-[#f0f0f0]" /></div>
 
       {/* ── How it works ── */}
-      <section className="py-24 px-10 max-w-[1200px] mx-auto">
+      <section className="py-16 lg:py-24 px-4 lg:px-10 max-w-[1200px] mx-auto">
         <p className="text-xs font-semibold text-[#7fa8c8] tracking-[0.18em] uppercase mb-3">{t('landing.process', 'Process')}</p>
         <h2 className="text-[clamp(1.8rem,3.5vw,2.6rem)] font-bold leading-tight mb-14">
           {t('landing.how.title', 'How does Confera work?')}
@@ -150,7 +150,7 @@ export default function Home() {
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-24 px-10 text-center bg-[#f7f7f7]">
+      <section className="py-16 lg:py-24 px-4 lg:px-10 text-center bg-[#f7f7f7]">
         <p className="text-xs font-semibold text-[#7fa8c8] tracking-[0.18em] uppercase mb-4">{t('landing.join', 'Join')}</p>
         <motion.h2
           className="text-[clamp(2rem,5vw,3.5rem)] font-bold leading-tight mx-auto mb-4"
@@ -186,7 +186,7 @@ export default function Home() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="flex items-center justify-between flex-wrap gap-4 px-10 py-6 border-t border-[#f0f0f0] bg-white">
+      <footer className="flex items-center justify-between flex-wrap gap-4 px-4 lg:px-10 py-6 border-t border-[#f0f0f0] bg-white">
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-[#7fa8c8]" />
           <span className="font-bold text-[14px] tracking-wide">Confera</span>

@@ -147,7 +147,7 @@ export default function CareerSlotFormModal({ slot, token, eventStartAt, eventEn
         className="fixed inset-0 bg-black/30 z-50 flex items-end sm:items-center justify-center p-4"
         onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
       >
-        <div className="bg-white rounded-[20px] w-full max-w-[480px] p-6 shadow-xl">
+        <div className="bg-white rounded-[20px] w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] p-4 sm:p-6 shadow-xl">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-[16px] font-bold">
               {slot
