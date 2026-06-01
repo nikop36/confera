@@ -16,6 +16,20 @@ type ReportPayload = {
     kValues: number[];
   };
   results: ReturnType<typeof evaluateEventMatchingQuality>;
+  gates: {
+    config: QualityGateConfig;
+    passed: boolean;
+    failures: string[];
+  };
+};
+
+type QualityGateConfig = {
+  minMrr: number;
+  minPrecisionAt3: number;
+  minRecallAt3: number;
+  minNdcgAt3: number;
+  minMrrDeltaVsBaseline: number;
+  minNdcgDeltaAt3VsBaseline: number;
 };
 
 function main() {
@@ -28,6 +42,8 @@ function main() {
   ) as MatchingDataset;
 
   const results = evaluateEventMatchingQuality(dataset);
+  const gateConfig = readGateConfig();
+  const gateResult = evaluateGates(results, gateConfig);
   const payload: ReportPayload = {
     generatedAt: new Date().toISOString(),
     dataset: {
@@ -39,6 +55,11 @@ function main() {
       kValues: dataset.kValues,
     },
     results,
+    gates: {
+      config: gateConfig,
+      passed: gateResult.passed,
+      failures: gateResult.failures,
+    },
   };
 
   const reportDir = resolve(__dirname, '../../docs/AI/reports');
@@ -52,10 +73,20 @@ function main() {
   console.log(`AI matching quality report generated:
  - ${jsonPath}
  - ${mdPath}`);
+
+  if (!gateResult.passed) {
+    console.error('\nAI matching quality gates FAILED:');
+    for (const failure of gateResult.failures) {
+      console.error(` - ${failure}`);
+    }
+    process.exit(1);
+  }
+
+  console.log('\nAI matching quality gates PASSED.');
 }
 
 function toMarkdown(payload: ReportPayload): string {
-  const { dataset, results, generatedAt } = payload;
+  const { dataset, results, generatedAt, gates } = payload;
   const ks = dataset.kValues.map((value) => String(value));
 
   const format = (value: number) => `${(value * 100).toFixed(2)}%`;
@@ -117,6 +148,18 @@ Datum generiranja: ${generatedAt}
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 ${kRows}
 
+## Kakovostna vrata (CI Gates)
+
+- Status: ${gates.passed ? 'PASSED' : 'FAILED'}
+- Pragovi:
+  - min MRR: ${format(gates.config.minMrr)}
+  - min Precision@3: ${format(gates.config.minPrecisionAt3)}
+  - min Recall@3: ${format(gates.config.minRecallAt3)}
+  - min NDCG@3: ${format(gates.config.minNdcgAt3)}
+  - min ΔMRR vs baseline: ${formatSigned(gates.config.minMrrDeltaVsBaseline)}
+  - min ΔNDCG@3 vs baseline: ${formatSigned(gates.config.minNdcgDeltaAt3VsBaseline)}
+${gates.failures.length > 0 ? `- Kršitve:\n${gates.failures.map((failure) => `  - ${failure}`).join('\n')}` : '- Kršitve: ni'}
+
 ## Identificirane težave
 
 ${issues.map((issue) => `- ${issue}`).join('\n')}
@@ -128,6 +171,77 @@ ${issues.map((issue) => `- ${issue}`).join('\n')}
 - Razširiti baseline (npr. TF-IDF token overlap) za bolj pošteno primerjavo.
 - Vključiti online metrike (CTR/registration rate po priporočilu) kot naslednjo fazo.
 `;
+}
+
+function readGateConfig(): QualityGateConfig {
+  return {
+    minMrr: readEnvNumber('AI_MATCHING_GATE_MIN_MRR', 0.5),
+    minPrecisionAt3: readEnvNumber('AI_MATCHING_GATE_MIN_P3', 0.25),
+    minRecallAt3: readEnvNumber('AI_MATCHING_GATE_MIN_R3', 0.5),
+    minNdcgAt3: readEnvNumber('AI_MATCHING_GATE_MIN_NDCG3', 0.6),
+    minMrrDeltaVsBaseline: readEnvNumber('AI_MATCHING_GATE_MIN_MRR_DELTA', 0),
+    minNdcgDeltaAt3VsBaseline: readEnvNumber(
+      'AI_MATCHING_GATE_MIN_NDCG3_DELTA',
+      0,
+    ),
+  };
+}
+
+function evaluateGates(
+  results: ReturnType<typeof evaluateEventMatchingQuality>,
+  config: QualityGateConfig,
+): { passed: boolean; failures: string[] } {
+  const failures: string[] = [];
+  const precision3 = results.aiModel.overall.meanPrecisionAtK['3'] ?? 0;
+  const recall3 = results.aiModel.overall.meanRecallAtK['3'] ?? 0;
+  const ndcg3 = results.aiModel.overall.meanNdcgAtK['3'] ?? 0;
+  const mrr = results.aiModel.overall.meanMrr;
+  const mrrDelta = results.comparison.mrrDelta;
+  const ndcg3Delta = results.comparison.ndcgAtKDelta['3'] ?? 0;
+
+  if (mrr < config.minMrr) {
+    failures.push(
+      `MRR ${mrr.toFixed(4)} < min ${config.minMrr.toFixed(4)} (AI_MATCHING_GATE_MIN_MRR)`,
+    );
+  }
+  if (precision3 < config.minPrecisionAt3) {
+    failures.push(
+      `Precision@3 ${precision3.toFixed(4)} < min ${config.minPrecisionAt3.toFixed(4)} (AI_MATCHING_GATE_MIN_P3)`,
+    );
+  }
+  if (recall3 < config.minRecallAt3) {
+    failures.push(
+      `Recall@3 ${recall3.toFixed(4)} < min ${config.minRecallAt3.toFixed(4)} (AI_MATCHING_GATE_MIN_R3)`,
+    );
+  }
+  if (ndcg3 < config.minNdcgAt3) {
+    failures.push(
+      `NDCG@3 ${ndcg3.toFixed(4)} < min ${config.minNdcgAt3.toFixed(4)} (AI_MATCHING_GATE_MIN_NDCG3)`,
+    );
+  }
+  if (mrrDelta < config.minMrrDeltaVsBaseline) {
+    failures.push(
+      `ΔMRR ${mrrDelta.toFixed(4)} < min ${config.minMrrDeltaVsBaseline.toFixed(4)} (AI_MATCHING_GATE_MIN_MRR_DELTA)`,
+    );
+  }
+  if (ndcg3Delta < config.minNdcgDeltaAt3VsBaseline) {
+    failures.push(
+      `ΔNDCG@3 ${ndcg3Delta.toFixed(4)} < min ${config.minNdcgDeltaAt3VsBaseline.toFixed(4)} (AI_MATCHING_GATE_MIN_NDCG3_DELTA)`,
+    );
+  }
+
+  return {
+    passed: failures.length === 0,
+    failures,
+  };
+}
+
+function readEnvNumber(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return fallback;
+  return parsed;
 }
 
 function deriveIssues(

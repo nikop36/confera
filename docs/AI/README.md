@@ -243,3 +243,17 @@ Generirana poročila:
 
 Pipeline se požene tudi v CI (GitHub Actions, backend workflow), zato je kakovost
 rangiranja preverjena ob vsakem push/PR.
+
+### Quality gates (CI)
+
+Evalvacija ima vgrajene pragove. Če so preseženi navzdol, skripta vrne `exit code 1`
+in CI pade.
+
+Nastavljivi ENV parametri:
+
+- `AI_MATCHING_GATE_MIN_MRR` (privzeto `0.5`)
+- `AI_MATCHING_GATE_MIN_P3` (privzeto `0.25`)
+- `AI_MATCHING_GATE_MIN_R3` (privzeto `0.5`)
+- `AI_MATCHING_GATE_MIN_NDCG3` (privzeto `0.6`)
+- `AI_MATCHING_GATE_MIN_MRR_DELTA` (privzeto `0`)
+- `AI_MATCHING_GATE_MIN_NDCG3_DELTA` (privzeto `0`)
