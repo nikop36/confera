@@ -45,22 +45,30 @@ export default function AdminStatisticsUsagePage() {
   useEffect(() => {
     if (!user?.idToken) return;
     const idToken = user.idToken;
+    const controller = new AbortController();
     async function load() {
       setError('');
       const url = new URL(`${API}/analytics/usage-trend`);
       if (range.from) url.searchParams.set('from', range.from);
       if (range.to) url.searchParams.set('to', range.to);
-      const response = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${idToken}` },
-        cache: 'no-store',
-      });
-      if (!response.ok) {
-        setError('Failed to load usage statistics');
-        return;
+      try {
+        const response = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${idToken}` },
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          setError('Failed to load usage statistics');
+          return;
+        }
+        setPayload((await response.json()) as UsagePayload);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setError(err instanceof Error ? err.message : 'Failed to load usage statistics');
       }
-      setPayload((await response.json()) as UsagePayload);
     }
     void load();
+    return () => controller.abort();
   }, [range.from, range.to, refreshTick, user?.idToken]);
 
   useEffect(() => {

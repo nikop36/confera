@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 
 export type Locale = 'sl' | 'en';
 
@@ -925,5 +925,8 @@ export function useLocale(): Locale {
 export function useT() {
   const locale = useLocale();
   const dict = useMemo(() => dictionaryFor(locale), [locale]);
-  return (key: string, fallback?: string) => dict[key] ?? fallback ?? key;
+  return useCallback(
+    (key: string, fallback?: string) => dict[key] ?? fallback ?? key,
+    [dict],
+  );
 }

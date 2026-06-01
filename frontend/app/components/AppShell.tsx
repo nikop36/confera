@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { clearStoredUser, useStoredUser } from '../lib/auth';
 import { useT } from '../lib/i18n';
 
@@ -131,115 +131,135 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }))
     : SUGGESTIONS.map((entry) => ({ ...entry, uid: '' }));
 
-  useEffect(() => {
-    if (!user?.idToken) return;
+  const loadMatches = useCallback(async (idToken: string) => {
+    try {
+      const response = await fetch(`${API}/matches/me`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
 
-    async function loadMatches(idToken: string) {
-      try {
-        const response = await fetch(`${API}/matches/me`, {
-          headers: { Authorization: `Bearer ${idToken}` },
-        });
-
-        if (!response.ok) {
-          setMatches([]);
-          return;
-        }
-
-        const data = (await response.json()) as MatchSuggestion[];
-        setMatches(data);
-      } catch {
+      if (!response.ok) {
         setMatches([]);
+        return;
       }
-    }
 
-    void loadMatches(user.idToken);
-  }, [user?.idToken]);
+      const data = (await response.json()) as MatchSuggestion[];
+      setMatches(data);
+    } catch {
+      setMatches([]);
+    }
+  }, []);
+
+  const loadConnections = useCallback(async (idToken: string) => {
+    try {
+      const response = await fetch(`${API}/connections/me`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as ConnectionOverview;
+      setPendingFriendRequests(data.pendingCount ?? 0);
+      setConnectedUids(
+        new Set((data.accepted ?? []).map((item) => item.counterpart.uid)),
+      );
+      setPendingSentUids(
+        new Set((data.pendingSent ?? []).map((item) => item.counterpart.uid)),
+      );
+    } catch {
+      // ignore sidebar badge refresh errors
+    }
+  }, []);
+
+  const loadInvites = useCallback(async (token: string) => {
+    try {
+      const response = await fetch(`${API}/invites/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as InviteOverview;
+      setPendingInvites(data.pendingCount ?? 0);
+      const candidateAcceptedCount = (data.processed ?? []).filter(
+        (item) => item.invitationStatus === 'accepted',
+      ).length;
+      const interviewerActiveCount = [
+        ...(data.interviewerPending ?? []),
+        ...(data.interviewerProcessed ?? []),
+      ].filter((item) => item.invitationStatus !== 'rejected').length;
+      setMeetingsBadgeCount(candidateAcceptedCount + interviewerActiveCount);
+    } catch {
+      // ignore sidebar badge refresh errors
+    }
+  }, []);
+
+  const loadNotifications = useCallback(async (token: string) => {
+    try {
+      const response = await fetch(`${API}/notifications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as ApiNotification[];
+      const mapped = data.map((item) => ({
+        id: item.id,
+        text: item.message,
+        time: formatRelativeTime(item.createdAt),
+        unread: !item.read,
+      }));
+      setNotifications(mapped);
+    } catch {
+      // ignore notification refresh errors
+    }
+  }, []);
 
   useEffect(() => {
     if (!user?.idToken) return;
     const idToken = user.idToken;
+    const initial = window.setTimeout(() => {
+      void loadMatches(idToken);
+    }, 0);
+    return () => window.clearTimeout(initial);
+  }, [user?.idToken, loadMatches]);
 
-    async function loadConnections(idToken: string) {
-      try {
-        const response = await fetch(`${API}/connections/me`, {
-          headers: { Authorization: `Bearer ${idToken}` },
-        });
-        if (!response.ok) return;
-        const data = (await response.json()) as ConnectionOverview;
-        setPendingFriendRequests(data.pendingCount ?? 0);
-        setConnectedUids(
-          new Set((data.accepted ?? []).map((item) => item.counterpart.uid)),
-        );
-        setPendingSentUids(
-          new Set((data.pendingSent ?? []).map((item) => item.counterpart.uid)),
-        );
-      } catch {
-        // ignore sidebar badge refresh errors
-      }
-    }
-
+  useEffect(() => {
+    if (!user?.idToken) return;
+    const idToken = user.idToken;
     const refresh = () => void loadConnections(idToken);
-    void loadConnections(idToken);
+    const initial = window.setTimeout(refresh, 0);
     window.addEventListener('connections:refresh', refresh);
-    return () => window.removeEventListener('connections:refresh', refresh);
-  }, [user?.idToken, pathname]);
+    const interval = window.setInterval(refresh, 45_000);
+    return () => {
+      window.clearTimeout(initial);
+      window.removeEventListener('connections:refresh', refresh);
+      window.clearInterval(interval);
+    };
+  }, [user?.idToken, loadConnections]);
 
   useEffect(() => {
     if (!user?.idToken) return;
     const idToken = user.idToken;
-
-    async function loadInvites(token: string) {
-      try {
-        const response = await fetch(`${API}/invites/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) return;
-        const data = (await response.json()) as InviteOverview;
-        setPendingInvites(data.pendingCount ?? 0);
-        const candidateAcceptedCount = (data.processed ?? []).filter(
-          (item) => item.invitationStatus === 'accepted',
-        ).length;
-        const interviewerActiveCount = [
-          ...(data.interviewerPending ?? []),
-          ...(data.interviewerProcessed ?? []),
-        ].filter((item) => item.invitationStatus !== 'rejected').length;
-        setMeetingsBadgeCount(candidateAcceptedCount + interviewerActiveCount);
-      } catch {
-        // ignore sidebar badge refresh errors
-      }
-    }
-
     const refresh = () => void loadInvites(idToken);
-    void loadInvites(idToken);
+    const initial = window.setTimeout(refresh, 0);
     window.addEventListener('invites:refresh', refresh);
-    return () => window.removeEventListener('invites:refresh', refresh);
-  }, [user?.idToken, pathname]);
+    const interval = window.setInterval(refresh, 45_000);
+    return () => {
+      window.clearTimeout(initial);
+      window.removeEventListener('invites:refresh', refresh);
+      window.clearInterval(interval);
+    };
+  }, [user?.idToken, loadInvites]);
 
   useEffect(() => {
     if (!user?.idToken) return;
     const idToken = user.idToken;
-
-    async function loadNotifications(token: string) {
-      try {
-        const response = await fetch(`${API}/notifications`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) return;
-        const data = (await response.json()) as ApiNotification[];
-        const mapped = data.map((item) => ({
-          id: item.id,
-          text: item.message,
-          time: formatRelativeTime(item.createdAt),
-          unread: !item.read,
-        }));
-        setNotifications(mapped);
-      } catch {
-        // ignore notification refresh errors
-      }
-    }
-
-    void loadNotifications(idToken);
-  }, [user?.idToken, pathname]);
+    const initial = window.setTimeout(() => {
+      void loadNotifications(idToken);
+    }, 0);
+    const interval = window.setInterval(
+      () => void loadNotifications(idToken),
+      30_000,
+    );
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+    };
+  }, [user?.idToken, loadNotifications]);
 
   useEffect(() => {
     if (!isNotificationsOpen) {

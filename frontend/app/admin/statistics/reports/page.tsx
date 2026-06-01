@@ -36,6 +36,7 @@ export default function AdminStatisticsReportsPage() {
   useEffect(() => {
     if (!user?.idToken) return;
     const idToken = user.idToken;
+    const controller = new AbortController();
     async function load() {
       setError('');
       const buildUrl = (path: string) => {
@@ -44,30 +45,36 @@ export default function AdminStatisticsReportsPage() {
         if (range.to) url.searchParams.set('to', range.to);
         return url.toString();
       };
-      const [overviewRes, usageRes, matchingRes, engagementRes] = await Promise.all([
-        fetch(buildUrl('/analytics/overview'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }),
-        fetch(buildUrl('/analytics/usage-trend'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }),
-        fetch(buildUrl('/analytics/matching-performance'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }),
-        fetch(buildUrl('/analytics/engagement'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }),
-      ]);
-      if (!overviewRes.ok || !usageRes.ok || !matchingRes.ok || !engagementRes.ok) {
-        setError('Failed to load report volumes');
-        return;
-      }
+      try {
+        const [overviewRes, usageRes, matchingRes, engagementRes] = await Promise.all([
+          fetch(buildUrl('/analytics/overview'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store', signal: controller.signal }),
+          fetch(buildUrl('/analytics/usage-trend'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store', signal: controller.signal }),
+          fetch(buildUrl('/analytics/matching-performance'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store', signal: controller.signal }),
+          fetch(buildUrl('/analytics/engagement'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store', signal: controller.signal }),
+        ]);
+        if (!overviewRes.ok || !usageRes.ok || !matchingRes.ok || !engagementRes.ok) {
+          setError('Failed to load report volumes');
+          return;
+        }
 
-      const usage = (await usageRes.json()) as {
-        series: Array<unknown>;
-        roleBreakdown: Array<unknown>;
-      };
-      setVolumes([
-        { label: 'Overview', value: 1 },
-        { label: 'Usage trend rows', value: usage.series.length },
-        { label: 'Usage role rows', value: usage.roleBreakdown.length },
-        { label: 'Matching', value: 1 },
-        { label: 'Engagement', value: 1 },
-      ]);
+        const usage = (await usageRes.json()) as {
+          series: Array<unknown>;
+          roleBreakdown: Array<unknown>;
+        };
+        setVolumes([
+          { label: 'Overview', value: 1 },
+          { label: 'Usage trend rows', value: usage.series.length },
+          { label: 'Usage role rows', value: usage.roleBreakdown.length },
+          { label: 'Matching', value: 1 },
+          { label: 'Engagement', value: 1 },
+        ]);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setError(err instanceof Error ? err.message : 'Failed to load report volumes');
+      }
     }
     void load();
+    return () => controller.abort();
   }, [range.from, range.to, refreshTick, user?.idToken]);
 
   useEffect(() => {
