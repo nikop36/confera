@@ -49,15 +49,19 @@ type TagPickerProps = {
   token: string;
   value: string[]; // selected slugs
   onChange: (slugs: string[]) => void;
-  tags?: Tag[];    // ← when provided, skip internal fetch
+  tags?: Tag[];    // when provided, skip internal fetch
 };
 
-/** Interactive multi-select tag picker — for form modals */
+const COLLAPSED_LIMIT = 16;
+
+/** Interactive multi-select tag picker with search and collapsible rows */
 export default function TagPicker({ token, value, onChange, tags: externalTags }: TagPickerProps) {
   const [internalTags, setInternalTags] = useState<Tag[]>([]);
+  const [search, setSearch] = useState('');
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    if (externalTags !== undefined) return; // managed externally
+    if (externalTags !== undefined) return;
     fetch(`${API}/tags`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -68,39 +72,87 @@ export default function TagPicker({ token, value, onChange, tags: externalTags }
       .catch(() => {});
   }, [token, externalTags]);
 
-  const tags = externalTags ?? internalTags;
+  const allTags = externalTags ?? internalTags;
 
-  if (tags.length === 0) return null;
+  if (allTags.length === 0) return null;
 
   function toggle(slug: string) {
-    onChange(
-      value.includes(slug) ? value.filter((s) => s !== slug) : [...value, slug],
-    );
+    onChange(value.includes(slug) ? value.filter((s) => s !== slug) : [...value, slug]);
   }
 
+  const query = search.trim().toLowerCase();
+
+  // Selected tags first, then unselected — keeps selections visible in collapsed mode
+  const sorted = [
+    ...allTags.filter((t) => value.includes(t.slug)),
+    ...allTags.filter((t) => !value.includes(t.slug)),
+  ];
+
+  const filtered = query
+    ? sorted.filter((t) => t.label.toLowerCase().includes(query) || t.slug.toLowerCase().includes(query))
+    : sorted;
+
+  const isSearching = query.length > 0;
+  const needsCollapse = !isSearching && filtered.length > COLLAPSED_LIMIT;
+  const visible = needsCollapse && !expanded ? filtered.slice(0, COLLAPSED_LIMIT) : filtered;
+  const hiddenCount = filtered.length - COLLAPSED_LIMIT;
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {tags.map((tag) => {
-        const selected = value.includes(tag.slug);
-        const { bg, text } = tagColour(tag.slug);
-        return (
-          <button
-            key={tag.slug}
-            type="button"
-            onClick={() => toggle(tag.slug)}
-            style={
-              selected ? { background: bg, color: text, borderColor: text } : {}
-            }
-            className={`text-[11px] font-semibold px-[9px] py-[3px] rounded-full border transition-all cursor-pointer font-sans ${
-              selected
-                ? 'border-current'
-                : 'bg-[#f3f4f6] text-[#6b7280] border-transparent hover:border-[#d1d5db]'
-            }`}
-          >
-            {tag.label}
-          </button>
-        );
-      })}
+    <div className="flex flex-col gap-2">
+      {/* Search input */}
+      <div className="relative">
+        <svg
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af] pointer-events-none"
+          width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+        >
+          <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search tags…"
+          className="w-full pl-9 pr-3 py-[6px] text-[12px] rounded-lg border border-[#e5e7eb] bg-[#f9fafb] outline-none focus:border-[#0d0d0d] focus:bg-white transition-colors placeholder:text-[#9ca3af] font-sans"
+        />
+      </div>
+
+      {/* Tag pills */}
+      {visible.length > 0 ? (
+        <div className="flex flex-wrap gap-[6px]">
+          {visible.map((tag) => {
+            const selected = value.includes(tag.slug);
+            const { bg, text } = tagColour(tag.slug);
+            return (
+              <button
+                key={tag.slug}
+                type="button"
+                onClick={() => toggle(tag.slug)}
+                style={selected ? { background: bg, color: text, borderColor: text } : {}}
+                className={`text-[11px] font-semibold px-[9px] py-[3px] rounded-full border transition-all cursor-pointer font-sans ${
+                  selected
+                    ? 'border-current'
+                    : 'bg-[#f3f4f6] text-[#6b7280] border-transparent hover:border-[#d1d5db]'
+                }`}
+              >
+                {tag.label}
+              </button>
+            );
+          })}
+
+          {/* Collapse / expand toggle */}
+          {needsCollapse && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="text-[11px] font-semibold px-[9px] py-[3px] rounded-full border border-dashed border-[#d1d5db] text-[#6b7280] bg-transparent cursor-pointer font-sans hover:border-[#0d0d0d] hover:text-[#0d0d0d] transition-colors"
+            >
+              {expanded ? 'Show less' : `+${hiddenCount} more`}
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="text-[12px] text-[#9ca3af] py-1">No tags match &ldquo;{search}&rdquo;</p>
+      )}
     </div>
   );
 }
