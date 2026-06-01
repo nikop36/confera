@@ -8,12 +8,15 @@ function list(values?: string[]) {
 }
 
 export function buildProfileSearchText(profile: SearchableProfile) {
+  const tagText = profile.tags?.length
+    ? profile.tags.map((s) => s.replace(/-/g, ' ')).join(', ')
+    : 'Ni navedeno';
   return [
     `Ime: ${profile.displayName}`,
     `Organizacija: ${profile.affiliation || 'Ni navedeno'}`,
     `Opis: ${profile.bio || 'Ni navedeno'}`,
+    `Oznake: ${tagText}`,
     `Področja interesa: ${list(profile.interests)}`,
-    `Cilji mreženja: ${list(profile.goals)}`,
     `Kompetence: ${list(profile.competencies)}`,
     `Ključne besede: ${list(profile.researchKeywords)}`,
     `Način srečanja: ${profile.meetingType || 'both'}`,

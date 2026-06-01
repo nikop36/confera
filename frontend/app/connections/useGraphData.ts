@@ -6,7 +6,7 @@ import type { Node, Edge } from '@xyflow/react';
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 export type GraphNodeData = {
-  nodeType: 'self' | 'connection';
+  nodeType: 'self' | 'connection' | 'fof';
   displayName: string;
   role: string;
   affiliation?: string;
@@ -24,7 +24,7 @@ export type GraphEdgeData = {
 
 type ApiNode = {
   id: string;
-  type: 'self' | 'connection';
+  type: 'self' | 'connection' | 'fof';
   displayName: string;
   role: string;
   affiliation?: string;
@@ -94,11 +94,27 @@ export function useGraphData(idToken: string | undefined) {
           })),
         );
 
+        // Deduplicate: keep one edge per node pair, richest type wins
+        const priority: Record<ApiEdge['edgeType'], number> = {
+          interaction: 3,
+          match: 2,
+          connection: 1,
+        };
+        const edgeMap = new Map<string, ApiEdge>();
+        for (const e of data.edges) {
+          const key = [e.source, e.target].sort().join('|');
+          const existing = edgeMap.get(key);
+          if (!existing || priority[e.edgeType] > priority[existing.edgeType]) {
+            edgeMap.set(key, e);
+          }
+        }
+
         setEdges(
-          data.edges.map((e) => ({
+          [...edgeMap.values()].map((e) => ({
             id: e.id,
             source: e.source,
             target: e.target,
+            type: 'straight',
             style: edgeStyleFor(e.edgeType, e.weight),
             data: {
               edgeType: e.edgeType,
