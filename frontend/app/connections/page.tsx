@@ -153,7 +153,11 @@ export default function ConnectionsPage() {
       },
       body: JSON.stringify({ recipientUid: uid }),
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { message?: string | string[] };
+      const msg = Array.isArray(body.message) ? body.message[0] : body.message;
+      throw new Error(msg ?? 'Napaka pri pošiljanju zahteve.');
+    }
     setPendingSentUids((prev) => new Set([...prev, uid]));
     window.dispatchEvent(new Event('connections:refresh'));
   }
