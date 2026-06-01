@@ -40,6 +40,22 @@ const SUGGESTIONS = [
   { name: 'Nina Hauptman', org: 'Public Administration', hue: 155 },
 ];
 
+const RECOMMENDATION_COLORS = [
+  { bg: '#1d1d1f', fg: '#ffffff' },
+  { bg: '#ff6b6b', fg: '#ffffff' },
+  { bg: '#dbeafe', fg: '#1e40af' },
+  { bg: '#7c3aed', fg: '#ffffff' },
+];
+
+const RECOMMENDATION_FALLBACK = [
+  'Artificial intelligence',
+  'Industry collaboration',
+  'Public administration',
+  'Sustainability',
+  'Research',
+  'Innovation',
+];
+
 type MatchSuggestion = {
   uid: string;
   displayName: string;
@@ -91,13 +107,11 @@ type SidebarNotification = {
   time: string;
   unread: boolean;
 };
-
-const RECOMMENDATIONS = [
-  { label: 'AI in robotika', bg: '#1d1d1f', fg: '#ffffff' },
-  { label: 'Industrija', bg: '#ff6b6b', fg: '#ffffff' },
-  { label: 'Javna uprava', bg: '#dbeafe', fg: '#1e40af' },
-  { label: 'Sustainability', bg: '#7c3aed', fg: '#ffffff' },
-];
+type ProfileRecommendationSource = {
+  tags?: string[];
+  interests?: string[];
+  goals?: string[];
+};
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = useStoredUser();
@@ -115,6 +129,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<SidebarNotification[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
+  const [recommendations, setRecommendations] = useState<
+    Array<{ label: string; bg: string; fg: string }>
+  >(
+    RECOMMENDATION_FALLBACK.slice(0, 4).map((label, index) => ({
+      label,
+      ...RECOMMENDATION_COLORS[index % RECOMMENDATION_COLORS.length],
+    })),
+  );
   const unreadNotificationsCount = notifications.filter(
     (item) => item.unread,
   ).length;
@@ -132,6 +154,33 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       hue: [200, 280, 155][index] ?? 210,
     }))
     : SUGGESTIONS.map((entry) => ({ ...entry, uid: '' }));
+
+  const buildRecommendations = useCallback(
+    (source?: ProfileRecommendationSource) => {
+      const uniqueLabels: string[] = [];
+      const pushUnique = (value?: string) => {
+        const normalized = value?.trim();
+        if (!normalized) return;
+        if (uniqueLabels.some((entry) => entry.toLowerCase() === normalized.toLowerCase())) {
+          return;
+        }
+        uniqueLabels.push(normalized);
+      };
+
+      (source?.tags ?? []).forEach(pushUnique);
+      (source?.interests ?? []).forEach(pushUnique);
+      (source?.goals ?? []).forEach(pushUnique);
+      RECOMMENDATION_FALLBACK.forEach(pushUnique);
+
+      setRecommendations(
+        uniqueLabels.slice(0, 4).map((label, index) => ({
+          label,
+          ...RECOMMENDATION_COLORS[index % RECOMMENDATION_COLORS.length],
+        })),
+      );
+    },
+    [],
+  );
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true); }, []);
@@ -213,6 +262,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const loadRecommendations = useCallback(
+    async (token: string) => {
+      try {
+        const response = await fetch(`${API}/profile/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          buildRecommendations();
+          return;
+        }
+        const data = (await response.json()) as ProfileRecommendationSource;
+        buildRecommendations(data);
+      } catch {
+        buildRecommendations();
+      }
+    },
+    [buildRecommendations],
+  );
+
   useEffect(() => {
     if (!user?.idToken) return;
     const idToken = user.idToken;
@@ -235,6 +303,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       window.clearInterval(interval);
     };
   }, [user?.idToken, loadConnections]);
+
+  useEffect(() => {
+    const token = user?.idToken;
+    if (!token) return;
+    const timer = window.setTimeout(() => {
+      void loadRecommendations(token);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [user?.idToken, loadRecommendations]);
 
   useEffect(() => {
     if (!user?.idToken) return;
@@ -532,7 +609,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {mounted && <section>
             <div className="flex justify-between items-center mb-[14px]">
               <h3 className="text-lg font-bold">{t('shell.suggestions')}</h3>
-              <button className="text-xs text-[#007AFF] bg-transparent border-0 cursor-pointer font-sans">{t('shell.seeAll')}</button>
+              <Link href="/community?filter=match" className="text-xs text-[#007AFF] bg-transparent border-0 cursor-pointer font-sans no-underline">
+                {t('shell.seeAll')}
+              </Link>
             </div>
             <div className="flex flex-col gap-3">
               {suggestions.map((sug, i) => (
@@ -579,7 +658,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <section>
             <h3 className="text-lg font-bold mb-[14px]">{t('shell.recommendations')}</h3>
             <div className="grid grid-cols-2 gap-[10px]">
-              {RECOMMENDATIONS.map((r, i) => (
+              {recommendations.map((r, i) => (
                 <button
                   key={i}
                   className="p-4 rounded-2xl cursor-pointer border-0 text-left font-sans"

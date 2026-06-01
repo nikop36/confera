@@ -75,7 +75,6 @@ type CropDraft = {
 };
 
 const TAB_KEYS = [
-  'profile.tab.meetings',
   'profile.tab.events',
   'profile.tab.invites',
   'profile.tab.friends',
@@ -147,6 +146,17 @@ const FRIEND_CARDS: ProfileNavCard[] = [
     from: '#f472b6',
     to: '#fb7185',
     href: '/community',
+  },
+  {
+    titleKey: 'profile.friendCards.3.title',
+    titleFallback: 'Connection graph',
+    locationKey: 'profile.friendCards.location',
+    locationFallback: 'Friends',
+    descKey: 'profile.friendCards.3.desc',
+    descFallback: 'Visualize your network and mutual connections.',
+    from: '#22d3ee',
+    to: '#60a5fa',
+    href: '/connections?tab=graf',
   },
 ];
 
@@ -401,7 +411,7 @@ export default function ProfilePage() {
   );
 
   const staticTabCards: ProfileNavCard[] =
-    activeTab === 2 ? INVITE_CARDS : activeTab === 3 ? FRIEND_CARDS : CARDS;
+    activeTab === 1 ? INVITE_CARDS : activeTab === 2 ? FRIEND_CARDS : CARDS;
 
   function field(key: keyof ProfileForm) {
     return (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -931,13 +941,13 @@ export default function ProfilePage() {
 
       {/* 2-col card grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {activeTab === 1 && loadingRecommendations && (
+        {activeTab === 0 && loadingRecommendations && (
           <div className="col-span-2 rounded-2xl border border-[#f0f0f0] bg-white px-4 py-5 text-sm text-[#8e8e93]">
             {t('profile.recommendations.loading', 'Loading event recommendations...')}
           </div>
         )}
 
-        {activeTab === 1 &&
+        {activeTab === 0 &&
           !loadingRecommendations &&
           recommendedEvents.length === 0 && (
             <div className="col-span-2 rounded-2xl border border-[#f0f0f0] bg-white px-4 py-5 text-sm text-[#8e8e93]">
@@ -945,7 +955,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-        {activeTab === 1 &&
+        {activeTab === 0 &&
           recommendedEvents.map((event, i) => (
             <div
               key={event.id}
@@ -1008,7 +1018,7 @@ export default function ProfilePage() {
             </div>
           ))}
 
-        {activeTab !== 1 &&
+        {activeTab !== 0 &&
           staticTabCards.map((card, i) => (
             <div
               key={i}
@@ -1038,11 +1048,12 @@ export default function ProfilePage() {
                   <circle cx="170" cy="20" r="75" fill="rgba(255,255,255,0.1)" />
                   <circle cx="20" cy="110" r="55" fill="rgba(255,255,255,0.07)" />
                 </svg>
-                <button className="absolute bottom-[9px] right-[9px] bg-white/20 backdrop-blur-sm border-0 rounded-lg w-7 h-7 flex items-center justify-center cursor-pointer">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2">
-                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                <div className="absolute bottom-[9px] right-[9px] bg-white/20 backdrop-blur-sm rounded-lg w-7 h-7 flex items-center justify-center">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2">
+                    <path d="M5 12h14" />
+                    <path d="m13 6 6 6-6 6" />
                   </svg>
-                </button>
+                </div>
               </div>
               <div className="px-[14px] py-3">
                 <p className="text-sm font-semibold mb-1">{t(card.titleKey, card.titleFallback)}</p>
@@ -1300,4 +1311,3 @@ function ImageCropModal({
     </div>
   );
 }
-
