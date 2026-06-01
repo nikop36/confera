@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { saveStoredUser } from '../lib/auth';
+import { saveStoredLocale, useT } from '../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useT();
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -35,7 +37,7 @@ export default function LoginPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Prijava ni uspela');
+        throw new Error(msg ?? t('auth.error.loginFailed', 'Sign in failed'));
       }
 
       const { idToken, uid } = await res.json() as { idToken: string; uid: string };
@@ -52,10 +54,14 @@ export default function LoginPage() {
         const profile = await profileRes.json() as {
           displayName?: string;
           role?: string;
+          language?: string;
           roleProfile?: { profileImageUrl?: unknown };
         };
         displayName = profile.displayName ?? displayName;
         role = profile.role ?? role;
+        if (profile.language === 'en' || profile.language === 'sl') {
+          saveStoredLocale(profile.language);
+        }
         profileImageUrl =
           typeof profile.roleProfile?.profileImageUrl === 'string'
             ? profile.roleProfile.profileImageUrl
@@ -72,7 +78,7 @@ export default function LoginPage() {
       });
       router.push(role === 'admin' ? '/admin' : '/home');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Prišlo je do napake');
+      setError(err instanceof Error ? err.message : t('common.error.generic', 'An error occurred'));
     } finally {
       setLoading(false);
     }
@@ -98,14 +104,17 @@ export default function LoginPage() {
         </Link>
 
         <div className="relative">
-          <p className="text-[11px] font-semibold text-[#7fa8c8] tracking-[0.18em] uppercase mb-4">Prijava</p>
+          <p className="text-[11px] font-semibold text-[#7fa8c8] tracking-[0.18em] uppercase mb-4">{t('auth.login.submit')}</p>
           <h1 className="text-[2.4rem] font-bold leading-tight text-[#0d0d0d] mb-5">
-            Nadaljujte<br />
-            <span className="text-[#7fa8c8]">s svojim</span><br />
-            profilom.
+            {t('auth.login.hero.line1', 'Continue')}<br />
+            <span className="text-[#7fa8c8]">{t('auth.login.hero.line2', 'with your')}</span><br />
+            {t('auth.login.hero.line3', 'profile.')}
           </h1>
           <p className="text-[14px] text-[#6e6e73] leading-relaxed max-w-[260px]">
-            Dostopajte do profila, priporočil in povabil za mreženje na konferenci.
+            {t(
+              'auth.login.hero.desc',
+              'Access your profile, recommendations, and conference networking invites.',
+            )}
           </p>
 
           {/* Network decoration */}
@@ -141,16 +150,16 @@ export default function LoginPage() {
           </Link>
 
           <div className="mb-8">
-            <h2 className="text-[28px] font-bold text-[#0d0d0d] mb-1">Prijavite se</h2>
+            <h2 className="text-[28px] font-bold text-[#0d0d0d] mb-1">{t('auth.login.title')}</h2>
             <p className="text-[14px] text-[#8e8e93]">
-              Še nimate računa?{' '}
-              <Link href="/register" className="text-[#7fa8c8] hover:underline">Ustvarite ga</Link>
+              {t('auth.login.noAccount')}{' '}
+              <Link href="/register" className="text-[#7fa8c8] hover:underline">{t('auth.login.createAccount')}</Link>
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">E-pošta</label>
+              <label htmlFor="email" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">{t('auth.login.email')}</label>
               <input
                 id="email"
                 type="email"
@@ -163,14 +172,14 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">Geslo</label>
+              <label htmlFor="password" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">{t('auth.login.password')}</label>
               <div className="relative">
                 <input
                   id="password"
                   type={showPw ? 'text' : 'password'}
                   value={form.password}
                   onChange={field('password')}
-                  placeholder="Vaše geslo"
+                  placeholder={t('auth.login.passwordPlaceholder', 'Your password')}
                   required
                   className="profile-input pr-12"
                 />
@@ -178,7 +187,11 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowPw((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#8e8e93] hover:text-[#0d0d0d] transition-colors bg-transparent border-0 cursor-pointer"
-                  aria-label={showPw ? 'Skrij geslo' : 'Prikaži geslo'}
+                  aria-label={
+                    showPw
+                      ? t('auth.password.hide', 'Hide password')
+                      : t('auth.password.show', 'Show password')
+                  }
                 >
                   {showPw ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
@@ -201,7 +214,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-3 rounded-full bg-[#0d0d0d] text-white text-[14px] font-semibold border-0 cursor-pointer font-sans mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Prijava...' : 'Prijava'}
+              {loading ? t('auth.login.submitting') : t('auth.login.submit')}
             </button>
           </form>
         </motion.div>

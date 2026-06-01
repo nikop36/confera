@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type maplibreglType from "maplibre-gl";
+import { useT } from "../lib/i18n";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -50,6 +51,7 @@ function buildNodesGeoJSON() {
 }
 
 export default function MapSection() {
+  const t = useT();
   const sectionRef = useRef<HTMLDivElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
@@ -214,7 +216,7 @@ export default function MapSection() {
     <section
       ref={sectionRef}
       style={{ height: "250vh", position: "relative" }}
-      aria-label="Mreža konferenc"
+      aria-label={t('map.aria', 'Conference network')}
     >
       {/* Sticky viewport — map + overlay live here */}
       <div
@@ -275,7 +277,7 @@ export default function MapSection() {
             pointerEvents: "none",
           }}
         >
-          <span className="section-label">Mreža udeležencev</span>
+          <span className="section-label">{t('map.label', 'Participant network')}</span>
           <h2
             className="font-display"
             style={{
@@ -286,12 +288,12 @@ export default function MapSection() {
               color: "var(--text)",
             }}
           >
-            Confera deluje{" "}
+            {t('map.title.1', 'Confera works')}{" "}
             <em style={{ fontStyle: "italic", color: "var(--accent)" }}>
-              povsod
+              {t('map.title.2', 'everywhere')}
             </em>{" "}
             <br />
-            po Sloveniji.
+            {t('map.title.3', 'across Slovenia.')}
           </h2>
           <p
             style={{
@@ -300,8 +302,10 @@ export default function MapSection() {
               lineHeight: 1.75,
             }}
           >
-            Pomikajte se navzdol in opazujte, kako sistem gradi mrežo med
-            akademijo, industrijo in javno upravo.
+            {t(
+              'map.subtitle',
+              'Scroll down and watch the system build the network between academia, industry, and public administration.',
+            )}
           </p>
         </motion.div>
 
@@ -324,7 +328,7 @@ export default function MapSection() {
               color: "var(--text-muted)",
             }}
           >
-            Premikajte navzdol
+            {t('map.scroll', 'Scroll down')}
           </p>
           <svg
             width="14"

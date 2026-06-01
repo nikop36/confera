@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type maplibreglType from "maplibre-gl";
+import { useT } from "../lib/i18n";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -21,6 +22,7 @@ const NODES: { id: string; name: string; coords: Coord; color: string }[] = [
 const STAGGER = 0.1;
 
 export default function HeroSection() {
+  const t = useT();
   const sectionRef  = useRef<HTMLDivElement>(null);
   const mapRef      = useRef<HTMLDivElement>(null);
   const svgRef      = useRef<SVGSVGElement>(null);
@@ -229,7 +231,7 @@ export default function HeroSection() {
           transition={{ duration: 0.7 }}
           style={{ display: "flex", gap: "0.5rem", marginBottom: "2.5rem", flexWrap: "wrap", justifyContent: "center" }}
         >
-          {["Akademija", "Industrija", "Javna uprava"].map((s) => (
+          {[t('hero.pill.academia', 'Academia'), t('hero.pill.industry', 'Industry'), t('hero.pill.public', 'Public sector')].map((s) => (
             <span
               key={s}
               style={{
@@ -253,9 +255,9 @@ export default function HeroSection() {
           transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
           style={{ fontSize: "clamp(2.6rem, 7vw, 5.5rem)", fontWeight: 800, lineHeight: 1.08, letterSpacing: "-0.02em", maxWidth: "820px", marginBottom: "1.5rem", color: "#0d0d0d" }}
         >
-          Mreženje, ki{" "}
-          <span style={{ color: "#7fa8c8" }}>resnično</span>
-          <br />deluje.
+          {t('hero.title.1', 'Networking that')}{" "}
+          <span style={{ color: "#7fa8c8" }}>{t('hero.title.2', 'actually')}</span>
+          <br />{t('hero.title.3', 'works.')}
         </motion.h1>
 
         <motion.p
@@ -264,8 +266,10 @@ export default function HeroSection() {
           transition={{ duration: 0.8, delay: 0.25, ease: "easeOut" }}
           style={{ fontSize: "clamp(0.95rem, 2vw, 1.1rem)", color: "#6e6e73", maxWidth: "480px", lineHeight: 1.8, marginBottom: "2.5rem" }}
         >
-          Confera poveže udeležence konferenc na osnovi interesnih področij —
-          avtomatizirano razporejanje srečanj med akademijo, industrijo in javno upravo.
+          {t(
+            'hero.subtitle',
+            'Confera connects conference participants by interest areas — automated scheduling between academia, industry, and public sector.',
+          )}
         </motion.p>
 
         <motion.div
@@ -285,7 +289,7 @@ export default function HeroSection() {
               transition: "opacity 0.2s",
             }}
           >
-            Začni brezplačno
+            {t('hero.cta.start', 'Start free')}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
@@ -302,7 +306,7 @@ export default function HeroSection() {
               transition: "border-color 0.2s",
             }}
           >
-            Prijava
+            {t('auth.login.submit', 'Sign in')}
           </a>
         </motion.div>
 
@@ -314,7 +318,7 @@ export default function HeroSection() {
           color: "#8e8e93", pointerEvents: "none",
         }}>
           <p style={{ fontSize: "0.62rem", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: "0.4rem" }}>
-            Pomikajte navzdol
+            {t('hero.scroll', 'Scroll down')}
           </p>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M12 5v14M5 12l7 7 7-7" />

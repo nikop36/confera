@@ -6,6 +6,7 @@ import AppShell from '../components/AppShell';
 import FilterBar, { type CommunityFilter } from '../components/FilterBar';
 import PersonCard, { type CommunityUser } from '../components/PersonCard';
 import { useStoredUser } from '../lib/auth';
+import { useT } from '../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -25,6 +26,7 @@ type ConnectionOverview = {
 
 export default function CommunityPage() {
   const user = useStoredUser();
+  const t = useT();
   const [users, setUsers] = useState<CommunityUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState('');
@@ -59,7 +61,9 @@ export default function CommunityPage() {
         ]);
 
         if (usersRes.status === 'rejected' || !usersRes.value.ok) {
-          throw new Error('Napaka pri nalaganju udeležencev.');
+          throw new Error(
+            t('community.error.load', 'Failed to load participants.'),
+          );
         }
 
         const rawUsers = (await usersRes.value.json()) as CommunityUser[];
@@ -93,7 +97,11 @@ export default function CommunityPage() {
 
         setUsers(annotated);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Prišlo je do napake.');
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('community.error.generic', 'An error occurred.'),
+        );
       } finally {
         setLoadingUsers(false);
       }
@@ -174,10 +182,10 @@ export default function CommunityPage() {
   return (
     <AppShell>
       <div className="mb-5">
-        <h2 className="text-[22px] font-bold">Skupnost</h2>
+        <h2 className="text-[22px] font-bold">{t('community.title')}</h2>
         <p className="text-[13px] text-[#8e8e93] mt-1">
-          Spoznajte udeležence Confere 2026
-          {!loadingUsers && ` · ${users.length} udeležencev`}
+          {t('community.subtitle')}
+          {!loadingUsers && ` · ${users.length} ${t('community.participants')}`}
         </p>
       </div>
 
@@ -207,7 +215,7 @@ export default function CommunityPage() {
       ) : (
         <>
           <p className="text-[12px] text-[#8e8e93] mb-3">
-            Prikazano {visible.length} od {filtered.length}
+            {t('community.shown')} {visible.length} {t('community.of')} {filtered.length}
           </p>
           <div
             className="grid gap-[10px]"
@@ -240,7 +248,7 @@ export default function CommunityPage() {
                 onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
                 className="px-6 py-[9px] rounded-full border border-[#e5e7eb] bg-white text-[13px] font-semibold text-[#3d3d3d] hover:bg-[#f7f7f7] transition-colors font-sans"
               >
-                Naloži več udeležencev
+                {t('community.loadMore')}
               </button>
             </div>
           )}
@@ -283,14 +291,15 @@ function EmptyState({
   search: string;
   activeFilter: CommunityFilter;
 }) {
+  const t = useT();
   if (activeFilter === 'match' && !search) {
     return (
       <div className="rounded-[14px] border border-[#f0f0f0] px-5 py-6 text-sm text-[#6e6e73]">
-        <p className="font-semibold text-[#0d0d0d] mb-1">Ni ujemanj</p>
+        <p className="font-semibold text-[#0d0d0d] mb-1">{t('community.noMatches')}</p>
         <p>
-          Vaš profil še nima dovolj podatkov za AI ujemanja.{' '}
+          {t('community.noMatchesDesc')}{' '}
           <Link href="/profile" className="text-[#0071e3] hover:underline">
-            Dopolnite profil →
+            {t('community.completeProfile')} →
           </Link>
         </p>
       </div>
@@ -298,7 +307,7 @@ function EmptyState({
   }
   return (
     <div className="rounded-[14px] border border-[#f0f0f0] px-5 py-6 text-sm text-[#8e8e93]">
-      Ni zadetkov za iskalni izraz.
+      {t('community.noResults')}
     </div>
   );
 }

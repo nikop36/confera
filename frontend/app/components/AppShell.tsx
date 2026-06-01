@@ -4,30 +4,39 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { clearStoredUser, useStoredUser } from '../lib/auth';
+import { useT } from '../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 type NavItem = {
-  label: string;
+  key:
+    | 'news'
+    | 'profile'
+    | 'meetings'
+    | 'invites'
+    | 'connections'
+    | 'community'
+    | 'events'
+    | 'settings';
   href: string;
   badge?: number;
 };
 
 const NAV: NavItem[] = [
-  { label: 'Novice', href: '/home' },
-  { label: 'Profil', href: '/profile' },
-  { label: 'Srečanja', href: '/meetings' },
-  { label: 'Povabila', href: '/invites' },
-  { label: 'Prijatelji', href: '/connections' },
-  { label: 'Skupnost', href: '/community' },
-  { label: 'Dogodki', href: '/events' },
-  { label: 'Nastavitve', href: '/settings' },
+  { key: 'news', href: '/home' },
+  { key: 'profile', href: '/profile' },
+  { key: 'meetings', href: '/meetings' },
+  { key: 'invites', href: '/invites' },
+  { key: 'connections', href: '/connections' },
+  { key: 'community', href: '/community' },
+  { key: 'events', href: '/events' },
+  { key: 'settings', href: '/settings' },
 ];
 
 const SUGGESTIONS = [
   { name: 'Dr. Petra Kos', org: 'Univerza Ljubljana', hue: 200 },
   { name: 'Andrej Novak', org: 'Startup Slovenia', hue: 280 },
-  { name: 'Nina Hauptman', org: 'Ministrstvo', hue: 155 },
+  { name: 'Nina Hauptman', org: 'Public Administration', hue: 155 },
 ];
 
 type MatchSuggestion = {
@@ -86,11 +95,12 @@ const RECOMMENDATIONS = [
   { label: 'AI in robotika', bg: '#1d1d1f', fg: '#ffffff' },
   { label: 'Industrija', bg: '#ff6b6b', fg: '#ffffff' },
   { label: 'Javna uprava', bg: '#dbeafe', fg: '#1e40af' },
-  { label: 'Vzdržnost', bg: '#7c3aed', fg: '#ffffff' },
+  { label: 'Sustainability', bg: '#7c3aed', fg: '#ffffff' },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = useStoredUser();
+  const t = useT();
   const pathname = usePathname();
   const router = useRouter();
   const [matches, setMatches] = useState<MatchSuggestion[]>([]);
@@ -333,22 +343,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               )}
             </div>
-            <p className="font-bold text-[15px] mb-0.5 leading-tight">{user?.displayName ?? 'Udeleženec'}</p>
+            <p className="font-bold text-[15px] mb-0.5 leading-tight">{user?.displayName ?? t('shell.participant', 'Participant')}</p>
             <p className="text-xs text-[#8e8e93] truncate max-w-[200px]">{user?.email ?? '—'}</p>
           </div>
 
           {/* Navigation */}
           <nav className="flex flex-col gap-0.5 flex-1">
-            {NAV.map(({ label, href, badge }) => {
+            {NAV.map(({ key, href, badge }) => {
               const active = pathname === href;
               const dynamicBadge =
-                label === 'Prijatelji'
+                key === 'connections'
                   ? pendingFriendRequests
-                  : label === 'Povabila'
+                  : key === 'invites'
                     ? pendingInvites
-                    : label === 'Srečanja'
+                    : key === 'meetings'
                       ? meetingsBadgeCount
-                    : badge;
+                      : badge;
+              const label = t(`nav.${key}`);
               return (
                 <Link
                   key={href}
@@ -359,7 +370,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       : 'text-[#3d3d3d] font-normal hover:bg-[#f5f5f5]'
                   }`}
                 >
-                  <NavIcon label={label} active={active} />
+                  <NavIcon itemKey={key} active={active} />
                   <span className="flex-1">{label}</span>
                   {typeof dynamicBadge === 'number' && dynamicBadge > 0 && (
                     <span
@@ -387,7 +398,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </div>
               <span className="font-bold text-[13px]">Confera 2026</span>
             </div>
-            <p className="text-[11px] text-[#6e6e73] leading-relaxed relative">Pametno mreženje na konferencah</p>
+            <p className="text-[11px] text-[#6e6e73] leading-relaxed relative">{t('shell.brandTagline', 'Smart networking at conferences')}</p>
           </div>
 
           <button
@@ -395,7 +406,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             onClick={handleLogout}
             className="mt-3 flex items-center justify-center rounded-xl border border-[#e5e5ea] bg-white px-4 py-2 text-sm font-semibold text-[#3d3d3d] transition-colors hover:bg-[#f5f5f5] font-sans"
           >
-            Odjava
+            {t('common.logout')}
           </button>
         </aside>
 
@@ -410,12 +421,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {/* Notifications */}
           <section>
             <div className="flex items-center justify-between mb-[14px]">
-              <h3 className="text-lg font-bold">Obvestila</h3>
+              <h3 className="text-lg font-bold">{t('shell.notifications')}</h3>
               <button
                 type="button"
                 onClick={() => setIsNotificationsOpen(true)}
                 className="relative mr-2 w-9 h-9 rounded-full border border-[#e5e7eb] bg-white flex items-center justify-center hover:bg-[#f7f7f7]"
-                aria-label="Prikaži vsa obvestila"
+                aria-label={t('shell.showAllNotifications', 'Show all notifications')}
               >
                 <svg
                   width="18"
@@ -452,7 +463,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               ))}
               {notifications.length === 0 && (
                 <div className="px-3 py-2.5 text-[13px] text-[#8e8e93]">
-                  Ni novih obvestil.
+                  {t('shell.noNotifications')}
                 </div>
               )}
             </div>
@@ -461,8 +472,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {/* Suggestions */}
           <section>
             <div className="flex justify-between items-center mb-[14px]">
-              <h3 className="text-lg font-bold">Predlogi</h3>
-              <button className="text-xs text-[#007AFF] bg-transparent border-0 cursor-pointer font-sans">Vse</button>
+              <h3 className="text-lg font-bold">{t('shell.suggestions')}</h3>
+              <button className="text-xs text-[#007AFF] bg-transparent border-0 cursor-pointer font-sans">{t('shell.seeAll')}</button>
             </div>
             <div className="flex flex-col gap-3">
               {suggestions.map((sug, i) => (
@@ -495,10 +506,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     className="px-[14px] py-[5px] rounded-full text-xs font-semibold bg-[#0d0d0d] text-white border-0 cursor-pointer shrink-0 font-sans disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {connectingUids[sug.uid]
-                      ? 'Pošiljanje...'
+                      ? t('shell.connecting', 'Sending...')
                       : pendingSentUids.has(sug.uid)
-                        ? 'Poslano'
-                        : 'Poveži'}
+                        ? t('shell.sent', 'Sent')
+                        : t('shell.connect', 'Connect')}
                   </button>
                 </div>
               ))}
@@ -507,7 +518,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Recommendations */}
           <section>
-            <h3 className="text-lg font-bold mb-[14px]">Priporočila</h3>
+            <h3 className="text-lg font-bold mb-[14px]">{t('shell.recommendations')}</h3>
             <div className="grid grid-cols-2 gap-[10px]">
               {RECOMMENDATIONS.map((r, i) => (
                 <button
@@ -528,25 +539,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <button
             type="button"
-            aria-label="Zapri"
+            aria-label={t('common.close', 'Close')}
             className="absolute inset-0 bg-black/25"
             onClick={() => setIsNotificationsOpen(false)}
           />
           <div className="relative w-full max-w-[680px] max-h-[75vh] overflow-hidden rounded-2xl bg-white shadow-xl border border-[#e5e7eb] p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[18px] font-bold">Vsa obvestila</h3>
+              <h3 className="text-[18px] font-bold">{t('shell.allNotifications', 'All notifications')}</h3>
               <button
                 type="button"
                 onClick={() => setIsNotificationsOpen(false)}
                 className="px-3 py-1.5 rounded-[8px] border border-[#e5e7eb] text-sm text-[#374151] hover:bg-[#f7f7f7]"
               >
-                Zapri
+                {t('common.close', 'Close')}
               </button>
             </div>
             <div className="max-h-[60vh] overflow-y-auto pr-1 flex flex-col gap-2">
               {notifications.length === 0 && (
                 <div className="px-3 py-2.5 text-[13px] text-[#8e8e93]">
-                  Ni novih obvestil.
+                  {t('shell.noNotifications')}
                 </div>
               )}
               {notifications.map((n) => (
@@ -571,18 +582,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function NavIcon({ label, active }: { label: string; active: boolean }) {
+function NavIcon({
+  itemKey,
+  active,
+}: {
+  itemKey: NavItem['key'];
+  active: boolean;
+}) {
   const color = active ? '#fff' : '#6e6e73';
   const props = { width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: '1.9' };
-  switch (label) {
-    case 'Novice': return <svg {...props}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>;
-    case 'Profil': return <svg {...props}><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>;
-    case 'Srečanja': return <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>;
-    case 'Povabila': return <svg {...props}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>;
-    case 'Prijatelji': return <svg {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
-    case 'Skupnost': return <svg {...props}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" /></svg>;
-    case 'Dogodki': return <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" /></svg>;
-    case 'Nastavitve': return <svg {...props}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>;
+  switch (itemKey) {
+    case 'news': return <svg {...props}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>;
+    case 'profile': return <svg {...props}><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>;
+    case 'meetings': return <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>;
+    case 'invites': return <svg {...props}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>;
+    case 'connections': return <svg {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
+    case 'community': return <svg {...props}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" /></svg>;
+    case 'events': return <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" /></svg>;
+    case 'settings': return <svg {...props}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>;
     default: return <svg {...props}><circle cx="12" cy="12" r="4" /></svg>;
   }
 }

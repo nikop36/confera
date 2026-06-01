@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useT } from '../lib/i18n';
 
 export type CommunityUser = {
   uid: string;
@@ -61,9 +62,9 @@ function initials(displayName: string): string {
 }
 
 function meetingLabel(type?: string): string | null {
-  if (type === 'in-person') return '📍 V živo';
-  if (type === 'online') return '🌐 Spletno';
-  if (type === 'both') return '🌐 Oboje';
+  if (type === 'in-person') return 'in-person';
+  if (type === 'online') return 'online';
+  if (type === 'both') return 'both';
   return null;
 }
 
@@ -76,6 +77,7 @@ export default function PersonCard({
   isConnecting,
   onConnect,
 }: PersonCardProps) {
+  const t = useT();
   const gradient = avatarGradient(person.uid);
   const topInterests = (person.interests ?? []).slice(0, 2);
   const meeting = meetingLabel(person.meetingType);
@@ -160,7 +162,7 @@ export default function PersonCard({
                 {(person.interests ?? []).length > 0 && (
                   <div>
                     <p className="text-[8px] font-bold uppercase tracking-[0.05em] text-[#a1a1aa] mb-[4px]">
-                      Interesi
+                      {t('profilePublic.interests', 'Interests')}
                     </p>
                     <div className="flex flex-wrap gap-[3px]">
                       {(person.interests ?? []).map((interest, i) => (
@@ -177,7 +179,7 @@ export default function PersonCard({
                 {(person.goals ?? []).length > 0 && (
                   <div>
                     <p className="text-[8px] font-bold uppercase tracking-[0.05em] text-[#a1a1aa] mb-[4px]">
-                      Cilji
+                      {t('profilePublic.goals', 'Goals')}
                     </p>
                     <div className="flex flex-wrap gap-[3px]">
                       {(person.goals ?? []).map((goal, i) => (
@@ -195,7 +197,13 @@ export default function PersonCard({
 
               {/* Meeting preference */}
               {meeting && (
-                <p className="text-[10px] text-[#8e8e93] mb-[9px]">{meeting}</p>
+                <p className="text-[10px] text-[#8e8e93] mb-[9px]">
+                  {meeting === 'in-person'
+                    ? t('personcard.meeting.inPerson', '📍 In person')
+                    : meeting === 'online'
+                      ? t('personcard.meeting.online', '🌐 Online')
+                      : t('personcard.meeting.both', '🌐 Both')}
+                </p>
               )}
 
               {/* Actions row */}
@@ -216,19 +224,19 @@ export default function PersonCard({
                   }`}
                 >
                   {isConnected
-                    ? 'Povezan/a ✓'
+                    ? t('personcard.connected', 'Connected ✓')
                     : isPending
-                      ? 'Čaka odgovor'
+                      ? t('personcard.pending', 'Pending')
                       : isConnecting
-                        ? 'Pošiljanje...'
-                        : 'Poveži se'}
+                        ? t('personcard.connecting', 'Sending...')
+                        : t('personcard.connect', 'Connect')}
                 </button>
                 <Link
                   href={`/profile/${person.uid}`}
                   onClick={(e) => e.stopPropagation()}
                   className="px-3 py-[7px] rounded-[8px] text-[10px] font-semibold border border-[#e5e7eb] text-[#3d3d3d] hover:border-[#0d0d0d] no-underline transition-colors"
                 >
-                  Profil →
+                  {t('personcard.profile', 'Profile')} →
                 </Link>
               </div>
             </div>

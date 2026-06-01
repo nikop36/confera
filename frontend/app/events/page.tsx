@@ -6,6 +6,7 @@ import EventCard, { type EventItem } from '../components/EventCard';
 import EventFormModal, { type EventFormValues } from '../components/EventFormModal';
 import { useStoredUser } from '../lib/auth';
 import TagPicker, { type Tag } from '../components/TagPicker';
+import { useT } from '../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -35,6 +36,7 @@ function groupByTime(events: EventItem[]): TimeGroup[] {
 
 export default function EventsPage() {
   const user = useStoredUser();
+  const t = useT();
   const isAdminOrOrganizer =
     user?.role === 'admin' || user?.role === 'organizer';
 
@@ -82,11 +84,11 @@ export default function EventsPage() {
       const res = await fetch(`${API}/events`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Napaka pri nalaganju dogodkov.');
+      if (!res.ok) throw new Error(t('events.error.load'));
       const data = (await res.json()) as EventItem[];
       setEvents(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Prišlo je do napake.');
+      setError(err instanceof Error ? err.message : t('events.error.generic'));
     } finally {
       setLoading(false);
     }
@@ -104,7 +106,7 @@ export default function EventsPage() {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         const msg = Array.isArray(body.message) ? body.message[0] : body.message;
-        throw new Error(msg ?? 'Napaka pri prijavi.');
+        throw new Error(msg ?? t('events.error.register'));
       }
       setEvents((prev) =>
         prev.map((e) =>
@@ -116,7 +118,8 @@ export default function EventsPage() {
     } catch (err) {
       setRegisterErrors((prev) => ({
         ...prev,
-        [eventId]: err instanceof Error ? err.message : 'Napaka pri prijavi.',
+        [eventId]:
+          err instanceof Error ? err.message : t('events.error.register'),
       }));
     } finally {
       setRegisteringIds((prev) => ({ ...prev, [eventId]: false }));
@@ -135,7 +138,7 @@ export default function EventsPage() {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         const msg = Array.isArray(body.message) ? body.message[0] : body.message;
-        throw new Error(msg ?? 'Napaka pri odjavi.');
+        throw new Error(msg ?? t('events.error.cancel'));
       }
       setEvents((prev) =>
         prev.map((e) =>
@@ -151,7 +154,7 @@ export default function EventsPage() {
     } catch (err) {
       setRegisterErrors((prev) => ({
         ...prev,
-        [eventId]: err instanceof Error ? err.message : 'Napaka pri odjavi.',
+        [eventId]: err instanceof Error ? err.message : t('events.error.cancel'),
       }));
     } finally {
       setRegisteringIds((prev) => ({ ...prev, [eventId]: false }));
@@ -179,7 +182,7 @@ export default function EventsPage() {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       const msg = Array.isArray(body.message) ? body.message[0] : body.message;
-      throw new Error(msg ?? 'Napaka pri shranjevanju.');
+      throw new Error(msg ?? t('events.error.save'));
     }
     void loadEvents(user.idToken);
   }
@@ -187,7 +190,7 @@ export default function EventsPage() {
   async function handleDelete(eventId: string) {
     if (
       !user?.idToken ||
-      !confirm('Ste prepričani, da želite izbrisati ta dogodek?')
+      !confirm(t('events.confirmDelete'))
     )
       return;
     try {
@@ -198,12 +201,12 @@ export default function EventsPage() {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         const msg = Array.isArray(body.message) ? body.message[0] : body.message;
-        throw new Error(msg ?? 'Napaka pri brisanju.');
+        throw new Error(msg ?? t('events.error.delete'));
       }
       setEvents((prev) => prev.filter((e) => e.id !== eventId));
       if (expandedId === eventId) setExpandedId(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Napaka pri brisanju.');
+      setError(err instanceof Error ? err.message : t('events.error.delete'));
     }
   }
 
@@ -222,10 +225,10 @@ export default function EventsPage() {
     <AppShell>
       <div className="mb-5 flex items-start justify-between">
         <div>
-          <h2 className="text-[22px] font-bold">Dogodki</h2>
+          <h2 className="text-[22px] font-bold">{t('events.title')}</h2>
           <p className="text-[13px] text-[#8e8e93] mt-1">
-            Program Confere 2026
-            {!loading && ` · ${events.length} dogodkov`}
+            {t('events.subtitle')}
+            {!loading && ` · ${events.length} ${t('events.count')}`}
           </p>
         </div>
         {isAdminOrOrganizer && (
@@ -234,7 +237,7 @@ export default function EventsPage() {
             onClick={() => setModalEvent(null)}
             className="px-4 py-[8px] rounded-full bg-[#0d0d0d] text-white text-[13px] font-semibold hover:bg-[#1f1f1f] transition-colors border-0 cursor-pointer font-sans"
           >
-            + Dodaj dogodek
+            {t('events.add')}
           </button>
         )}
       </div>
@@ -260,7 +263,7 @@ export default function EventsPage() {
                 onClick={() => setSelectedTags([])}
                 className="text-[11px] font-semibold px-[9px] py-[3px] rounded-full border border-transparent text-[#8e8e93] hover:text-[#0d0d0d] bg-transparent cursor-pointer font-sans"
               >
-                Počisti filter
+                {t('events.clearFilter')}
               </button>
             )}
           </div>
@@ -272,8 +275,8 @@ export default function EventsPage() {
       ) : filteredEvents.length === 0 ? (
         <div className="rounded-[14px] border border-[#f0f0f0] px-5 py-6 text-sm text-[#8e8e93]">
           {selectedTags.length > 0
-            ? 'Ni dogodkov za izbrane oznake.'
-            : 'Ni razpisanih dogodkov.'}
+            ? t('events.noneForTags')
+            : t('events.none')}
         </div>
       ) : (
         <div className="flex flex-col gap-3">

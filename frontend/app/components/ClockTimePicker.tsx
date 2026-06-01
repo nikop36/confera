@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useT } from '../lib/i18n';
 
 type Step = 'start-hour' | 'start-minute' | 'end-hour' | 'end-minute';
 
@@ -36,6 +37,7 @@ function parseTime(t: string): { h: number; m: number } | null {
 }
 
 export default function ClockTimePicker({ startTime, endTime, onChange, onClose }: Props) {
+  const t = useT();
   const [step, setStep] = useState<Step>('start-hour');
   const [startH, setStartH] = useState<number | null>(() => parseTime(startTime)?.h ?? null);
   const [startM, setStartM] = useState<number | null>(() => parseTime(startTime)?.m ?? null);
@@ -122,11 +124,18 @@ export default function ClockTimePicker({ startTime, endTime, onChange, onClose 
     : '──:──';
 
   const stepLabel =
-    step === 'start-hour' ? 'Začetek — ura' :
-    step === 'start-minute' ? 'Začetek — minute' :
-    step === 'end-hour' ? 'Konec — ura' : 'Konec — minute';
+    step === 'start-hour'
+      ? t('timePicker.step.startHour', 'Start — hour')
+      : step === 'start-minute'
+        ? t('timePicker.step.startMinute', 'Start — minute')
+        : step === 'end-hour'
+          ? t('timePicker.step.endHour', 'End — hour')
+          : t('timePicker.step.endMinute', 'End — minute');
 
-  const nextLabel = step === 'end-minute' ? 'Potrdi ✓' : 'Naprej →';
+  const nextLabel =
+    step === 'end-minute'
+      ? `${t('timePicker.confirm', 'Confirm')} ✓`
+      : `${t('timePicker.next', 'Next')} →`;
 
   return (
     <div
@@ -228,13 +237,13 @@ export default function ClockTimePicker({ startTime, endTime, onChange, onClose 
         <div className="flex justify-between w-full">
           <button type="button" onClick={onClose}
             className="text-[12px] text-[#6b7280] hover:text-[#0d0d0d] bg-transparent border-0 cursor-pointer font-sans">
-            Prekliči
+            {t('common.cancel', 'Cancel')}
           </button>
           <div className="flex gap-3">
             {step !== 'start-hour' && (
               <button type="button" onClick={goBack}
                 className="text-[12px] text-[#6b7280] hover:text-[#0d0d0d] bg-transparent border-0 cursor-pointer font-sans">
-                ← Nazaj
+                ← {t('common.back', 'Back')}
               </button>
             )}
             <button

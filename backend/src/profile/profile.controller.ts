@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -53,6 +54,19 @@ export class ProfileController {
   ) {
     await this.profileService.updateProfile(user.uid, dto);
     return { message: 'Profile updated successfully' };
+  }
+
+  // DELETE /profile/me
+  @Delete('me')
+  @UseGuards(FirebaseAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete current user account' })
+  @ApiResponse({ status: 200, description: 'Account deleted' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  async deleteMyAccount(@CurrentUser() user: FirebaseUser) {
+    await this.profileService.deleteMyAccount(user.uid);
+    return { message: 'Account deleted successfully' };
   }
 
   // GET /profile/:uid

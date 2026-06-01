@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
 import TagPicker from '../components/TagPicker';
 import { saveStoredUser, useStoredUser } from '../lib/auth';
+import { useT } from '../lib/i18n';
 import {
   COMPETENCY_GROUPS,
   GOAL_GROUPS,
@@ -80,37 +81,51 @@ type CropDraft = {
   zoom: number;
 };
 
-const TABS = ['Srečanja', 'Dogodki', 'Povabila', 'Prijatelji'];
+const TAB_KEYS = [
+  'profile.tab.meetings',
+  'profile.tab.events',
+  'profile.tab.invites',
+  'profile.tab.friends',
+] as const;
 
 type ProfileNavCard = {
-  title: string;
-  location: string;
-  desc: string;
+  titleKey: string;
+  titleFallback: string;
+  locationKey: string;
+  locationFallback: string;
+  descKey: string;
+  descFallback: string;
   from: string;
   to: string;
   href?: string;
 };
 
 const CARDS: ProfileNavCard[] = [
-  { title: 'AI v industriji', location: 'Dvorana A', desc: 'Panelna razprava o prihodnosti', from: '#7c6cf6', to: '#c084fc' },
-  { title: 'Karierni razgovor', location: 'Sejna soba 3', desc: 'Srečanje z delodajalci', from: '#fb923c', to: '#fbbf24' },
-  { title: 'Akademsko mreženje', location: 'Atrij', desc: 'Izmenjava izkušenj', from: '#22d3ee', to: '#6ee7b7' },
-  { title: 'Industrijsko srečanje', location: 'Razstavni prostor', desc: 'Razstava rešitev', from: '#f472b6', to: '#fb7185' },
+  { titleKey: 'profile.cards.1.title', titleFallback: 'AI in industry', locationKey: 'profile.cards.1.location', locationFallback: 'Hall A', descKey: 'profile.cards.1.desc', descFallback: 'Panel discussion about the future', from: '#7c6cf6', to: '#c084fc' },
+  { titleKey: 'profile.cards.2.title', titleFallback: 'Career interview', locationKey: 'profile.cards.2.location', locationFallback: 'Meeting room 3', descKey: 'profile.cards.2.desc', descFallback: 'Meeting with employers', from: '#fb923c', to: '#fbbf24' },
+  { titleKey: 'profile.cards.3.title', titleFallback: 'Academic networking', locationKey: 'profile.cards.3.location', locationFallback: 'Atrium', descKey: 'profile.cards.3.desc', descFallback: 'Exchange of experiences', from: '#22d3ee', to: '#6ee7b7' },
+  { titleKey: 'profile.cards.4.title', titleFallback: 'Industry meeting', locationKey: 'profile.cards.4.location', locationFallback: 'Expo area', descKey: 'profile.cards.4.desc', descFallback: 'Solutions showcase', from: '#f472b6', to: '#fb7185' },
 ];
 
 const INVITE_CARDS: ProfileNavCard[] = [
   {
-    title: 'Odpri Povabila',
-    location: 'Povabila',
-    desc: 'Preglej nova in obdelana povabila.',
+    titleKey: 'profile.inviteCards.1.title',
+    titleFallback: 'Open invites',
+    locationKey: 'profile.inviteCards.location',
+    locationFallback: 'Invites',
+    descKey: 'profile.inviteCards.1.desc',
+    descFallback: 'Review new and processed invites.',
     from: '#7c6cf6',
     to: '#c084fc',
     href: '/invites',
   },
   {
-    title: 'Karierna Povabila',
-    location: 'Povabila',
-    desc: 'Sprejmi ali zavrni povabila na razgovore.',
+    titleKey: 'profile.inviteCards.2.title',
+    titleFallback: 'Career invites',
+    locationKey: 'profile.inviteCards.location',
+    locationFallback: 'Invites',
+    descKey: 'profile.inviteCards.2.desc',
+    descFallback: 'Accept or reject interview invites.',
     from: '#22d3ee',
     to: '#6ee7b7',
     href: '/invites',
@@ -119,17 +134,23 @@ const INVITE_CARDS: ProfileNavCard[] = [
 
 const FRIEND_CARDS: ProfileNavCard[] = [
   {
-    title: 'Odpri Prijatelje',
-    location: 'Prijatelji',
-    desc: 'Upravljaj povezave in zahteve za povezavo.',
+    titleKey: 'profile.friendCards.1.title',
+    titleFallback: 'Open friends',
+    locationKey: 'profile.friendCards.location',
+    locationFallback: 'Friends',
+    descKey: 'profile.friendCards.1.desc',
+    descFallback: 'Manage connections and connection requests.',
     from: '#fb923c',
     to: '#fbbf24',
     href: '/connections',
   },
   {
-    title: 'Poveži se z novimi',
-    location: 'Prijatelji',
-    desc: 'Preveri predloge in razširi svojo mrežo.',
+    titleKey: 'profile.friendCards.2.title',
+    titleFallback: 'Connect with new people',
+    locationKey: 'profile.friendCards.location',
+    locationFallback: 'Friends',
+    descKey: 'profile.friendCards.2.desc',
+    descFallback: 'Check suggestions and expand your network.',
     from: '#f472b6',
     to: '#fb7185',
     href: '/community',
@@ -171,10 +192,10 @@ const DEFAULT_FORM: ProfileForm = {
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
-const MEETING_TYPES: Array<{ value: MeetingType; label: string }> = [
-  { value: 'both', label: 'Oboje' },
-  { value: 'in-person', label: 'V živo' },
-  { value: 'online', label: 'Spletno' },
+const MEETING_TYPES: Array<{ value: MeetingType; key: string; fallback: string }> = [
+  { value: 'both', key: 'personcard.meeting.both', fallback: 'Both' },
+  { value: 'in-person', key: 'personcard.meeting.inPerson', fallback: 'In person' },
+  { value: 'online', key: 'personcard.meeting.online', fallback: 'Online' },
 ];
 
 function profileImageValue(profile: UserProfile | null | undefined, key: 'profileImageUrl' | 'backgroundImageUrl') {
@@ -222,6 +243,7 @@ type RoleRequestState = 'idle' | 'submitting' | 'submitted' | 'error';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const t = useT();
   const user = useStoredUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [form, setForm] = useState<ProfileForm>(DEFAULT_FORM);
@@ -246,9 +268,14 @@ export default function ProfilePage() {
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
   const token = user?.idToken;
-  const displayName = profile?.displayName ?? user?.displayName ?? 'Udeleženec';
+  const displayName = profile?.displayName ?? user?.displayName ?? t('shell.participant', 'Participant');
   const email = profile?.email ?? user?.email ?? '';
-  const bio = profile?.bio || 'Udeleženec konference Confera 2026. Dopolnite profil za boljša priporočila srečanj in povežite se z udeleženci iz vaše branže.';
+  const bio =
+    profile?.bio ||
+    t(
+      'profile.bio.fallback',
+      'Confera 2026 participant. Complete your profile for better meeting recommendations and networking.',
+    );
   const profileImageUrl = form.profileImageUrl || profileImageValue(profile, 'profileImageUrl');
   const backgroundImageUrl = form.backgroundImageUrl || profileImageValue(profile, 'backgroundImageUrl');
   const profileImagePosition = `${form.profileImagePositionX}% ${form.profileImagePositionY}%`;
@@ -277,7 +304,7 @@ export default function ProfilePage() {
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-          throw new Error(msg ?? 'Profila ni bilo mogoče naložiti');
+          throw new Error(msg ?? t('profile.error.load', 'Failed to load profile'));
         }
 
         const data = (await res.json()) as UserProfile;
@@ -292,7 +319,7 @@ export default function ProfilePage() {
           profileImageUrl: profileImageValue(data, 'profileImageUrl'),
         });
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Prišlo je do napake');
+        setError(err instanceof Error ? err.message : t('common.error.generic', 'An error occurred'));
       } finally {
         setLoading(false);
       }
@@ -418,12 +445,12 @@ export default function ProfilePage() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setError('Izberite slikovno datoteko.');
+      setError(t('profile.error.selectImageFile', 'Select an image file.'));
       return;
     }
 
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setError('Slika je prevelika. Izberite sliko manjšo od 5 MB.');
+      setError(t('profile.error.imageTooLarge', 'Image is too large. Select an image under 5 MB.'));
       return;
     }
 
@@ -492,9 +519,9 @@ export default function ProfilePage() {
 
       if (cropDraft.file) URL.revokeObjectURL(cropDraft.imageUrl);
       setCropDraft(null);
-      setSuccess('Slika je naložena. Za trajno shranjevanje pritisnite Shrani profil.');
+      setSuccess(t('profile.image.uploaded', 'Image uploaded. Click Save profile to keep changes permanently.'));
     } catch (err) {
-      setImageUploadError(err instanceof Error ? err.message : 'Slike ni bilo mogoče naložiti.');
+      setImageUploadError(err instanceof Error ? err.message : t('profile.error.imageUpload', 'Failed to upload image.'));
     } finally {
       setUploadingImage(false);
     }
@@ -503,7 +530,7 @@ export default function ProfilePage() {
   async function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!token) {
-      setError('Prijavna seja nima veljavnega žetona. Ponovno se prijavite.');
+      setError(t('profile.error.invalidSession', 'Your session token is invalid. Please sign in again.'));
       return;
     }
 
@@ -546,7 +573,7 @@ export default function ProfilePage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Shranjevanje profila ni uspelo');
+        throw new Error(msg ?? t('profile.error.save', 'Failed to save profile'));
       }
 
       setProfile((prev) => ({
@@ -564,10 +591,10 @@ export default function ProfilePage() {
           profileImageUrl: form.profileImageUrl,
         });
       }
-      setSuccess('Profil je shranjen.');
+      setSuccess(t('profile.saved', 'Profile saved.'));
       setEditMode(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Prišlo je do napake');
+      setError(err instanceof Error ? err.message : t('common.error.generic', 'An error occurred'));
     } finally {
       setSaving(false);
     }
@@ -576,7 +603,7 @@ export default function ProfilePage() {
   async function handleRoleRequest(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!token) {
-      setRoleRequestError('Niste prijavljeni. Odjavite se in se znova prijavite.');
+      setRoleRequestError(t('profile.roleRequest.notSignedIn', 'You are not signed in. Please sign out and sign in again.'));
       setRoleRequestState('error');
       return;
     }
@@ -591,11 +618,11 @@ export default function ProfilePage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Zahteva ni bila poslana');
+        throw new Error(msg ?? t('profile.roleRequest.error', 'Request was not sent'));
       }
       setRoleRequestState('submitted');
     } catch (err) {
-      setRoleRequestError(err instanceof Error ? err.message : 'Prišlo je do napake');
+      setRoleRequestError(err instanceof Error ? err.message : t('common.error.generic', 'An error occurred'));
       setRoleRequestState('error');
     }
   }
@@ -654,11 +681,11 @@ export default function ProfilePage() {
           <div className="flex-1 flex flex-row gap-6">
             <div className="text-center">
               <span className="text-base font-bold">{meetingCount} </span>
-              <span className="text-[13px] text-[#8e8e93]">Srečanj</span>
+              <span className="text-[13px] text-[#8e8e93]">{t('profile.count.meetings', 'Meetings')}</span>
             </div>
             <div className="text-center">
               <span className="text-base font-bold">{connectionCount} </span>
-              <span className="text-[13px] text-[#8e8e93]">Povezav</span>
+              <span className="text-[13px] text-[#8e8e93]">{t('profile.count.connections', 'Connections')}</span>
             </div>
           </div>
           <div className="flex-1 flex justify-end">
@@ -677,7 +704,7 @@ export default function ProfilePage() {
               }}
               className="px-[18px] py-[6px] rounded-full text-[13px] font-semibold text-white border-0 cursor-pointer font-sans" style={{ background: '#7fa8c8' }}
             >
-              {editMode ? 'Zapri urejanje' : 'Uredi profil'}
+              {editMode ? t('profile.edit.close', 'Close editor') : t('profile.edit.open', 'Edit profile')}
             </button>
           </div>
         </div>
@@ -702,23 +729,26 @@ export default function ProfilePage() {
       {currentRole === 'participant' && !editMode && (
         <div className="mb-[18px] rounded-[18px] border border-[#f0f0f0] bg-white p-5">
           <div className="mb-4">
-            <h3 className="text-base font-bold text-[#1d1d1f]">Zahteva za spremembo vloge</h3>
+            <h3 className="text-base font-bold text-[#1d1d1f]">{t('profile.roleRequest.title', 'Role change request')}</h3>
             <p className="text-sm text-[#8e8e93] mt-1">
-              Zaprosili boste administratorja za spremembo vaše vloge na platformi.
+              {t('profile.roleRequest.desc', 'You will ask an administrator to change your platform role.')}
             </p>
           </div>
 
           {roleRequestState === 'submitted' ? (
             <div className="rounded-[14px] bg-[#f0faf4] border border-[#a7f3d0] px-4 py-3 text-sm text-[#16803c]">
-              Vaša zahteva je bila poslana. Administrator jo bo pregledal.
+              {t('profile.roleRequest.submitted', 'Your request was submitted. An administrator will review it.')}
             </div>
           ) : (
             <form onSubmit={handleRoleRequest} className="grid gap-4">
               <div>
-                <p className="text-xs font-semibold text-[#6e6e73] mb-2">Zahtevana vloga</p>
+                <p className="text-xs font-semibold text-[#6e6e73] mb-2">{t('profile.roleRequest.requestedRole', 'Requested role')}</p>
                 <div className="flex gap-2">
                   {(['organizer', 'industry'] as const).map((role) => {
-                    const label = role === 'organizer' ? 'Organizator' : 'Industrija';
+                    const label =
+                      role === 'organizer'
+                        ? t('profile.role.organizer', 'Organizer')
+                        : t('profile.role.industry', 'Industry');
                     const selected = roleRequestedRole === role;
                     return (
                       <button
@@ -740,12 +770,12 @@ export default function ProfilePage() {
 
               <div>
                 <label className="block text-xs font-semibold text-[#6e6e73] mb-1.5">
-                  Razlog (neobvezno)
+                  {t('profile.roleRequest.reason', 'Reason (optional)')}
                 </label>
                 <textarea
                   value={roleRequestReason}
                   onChange={(e) => setRoleRequestReason(e.target.value)}
-                  placeholder="Kratko opišite, zakaj zaprošate za to vlogo..."
+                  placeholder={t('profile.roleRequest.reasonPlaceholder', 'Briefly explain why you are requesting this role...')}
                   rows={3}
                   className="profile-input resize-none"
                 />
@@ -761,7 +791,7 @@ export default function ProfilePage() {
                   disabled={roleRequestState === 'submitting'}
                   className="px-[18px] py-[8px] rounded-full text-[13px] font-semibold bg-[#0d0d0d] text-white border-0 cursor-pointer font-sans disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {roleRequestState === 'submitting' ? 'Pošiljanje...' : 'Pošlji zahtevo'}
+                  {roleRequestState === 'submitting' ? t('common.sending', 'Sending...') : t('profile.roleRequest.submit', 'Submit request')}
                 </button>
               </div>
             </form>
@@ -771,7 +801,7 @@ export default function ProfilePage() {
 
       {loading && (
         <div className="mb-[18px] rounded-[16px] bg-[#f7f7f7] px-4 py-3 text-sm text-[#6e6e73]">
-          Nalaganje profila...
+          {t('profile.loading', 'Loading profile...')}
         </div>
       )}
 
@@ -779,14 +809,14 @@ export default function ProfilePage() {
         <form onSubmit={handleSubmit} className="mb-[18px] rounded-[18px] border border-[#f0f0f0] bg-white p-5">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
-              <h3 className="text-lg font-bold">Urejanje profila</h3>
+              <h3 className="text-lg font-bold">{t('profile.edit.title', 'Edit profile')}</h3>
               <p className="text-sm text-[#8e8e93] mt-1">
-                Podatki bodo uporabljeni za priporočila in kasnejše AI ujemanje.
+                {t('profile.edit.subtitle', 'These fields are used for recommendations and AI matching.')}
               </p>
             </div>
             {!token && (
               <span className="rounded-full bg-[#fff8f0] px-3 py-1 text-xs font-semibold text-[#a15c1b]">
-                Manjka prijavni žeton
+                {t('profile.edit.missingToken', 'Missing auth token')}
               </span>
             )}
           </div>
@@ -794,8 +824,8 @@ export default function ProfilePage() {
           <div className="grid gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ImagePicker
-                label="Profilna slika"
-                description="Prikaže se v krogu ob vašem profilu."
+                label={t('profile.image.avatar.label', 'Profile image')}
+                description={t('profile.image.avatar.desc', 'Shown in the circular avatar on your profile.')}
                 imageUrl={form.profileImageUrl}
                 positionX={form.profileImagePositionX}
                 positionY={form.profileImagePositionY}
@@ -816,13 +846,13 @@ export default function ProfilePage() {
               />
 
               <ImagePicker
-                label="Slika ozadja"
-                description="Prikaže se kot naslovna slika profila."
+                label={t('profile.image.cover.label', 'Cover image')}
+                description={t('profile.image.cover.desc', 'Shown as your profile header image.')}
                 imageUrl={form.backgroundImageUrl}
                 positionX={form.backgroundImagePositionX}
                 positionY={form.backgroundImagePositionY}
                 zoom={form.backgroundImageZoom}
-                fallback="Privzeto ozadje"
+                fallback={t('profile.image.cover.fallback', 'Default cover')}
                 variant="cover"
                 onChange={(event) => handleImageChange('backgroundImageUrl', event)}
                 onEdit={() => openCropEditor('background')}
@@ -838,58 +868,58 @@ export default function ProfilePage() {
               />
             </div>
 
-            <FormField label="Organizacija / institucija">
+            <FormField label={t('profile.field.affiliation', 'Organization / institution')}>
               <input
                 value={form.affiliation}
                 onChange={field('affiliation')}
-                placeholder="npr. Univerza v Mariboru"
+                placeholder={t('profile.field.affiliationPlaceholder', 'e.g. University of Maribor')}
                 className="profile-input"
               />
             </FormField>
 
-            <FormField label="Kratek opis">
+            <FormField label={t('profile.field.bio', 'Short bio')}>
               <textarea
                 value={form.bio}
                 onChange={field('bio')}
-                placeholder="Kdo ste in s kom se želite povezati?"
+                placeholder={t('profile.field.bioPlaceholder', 'Who are you and who would you like to connect with?')}
                 rows={3}
                 className="profile-input resize-none"
               />
             </FormField>
 
             <MultiChoiceField
-              label="Področja interesa"
-              description="Izberite teme, ki vas najbolj zanimajo."
+              label={t('profile.field.interests', 'Areas of interest')}
+              description={t('profile.field.interestsDesc', 'Choose topics that interest you most.')}
               groups={INTEREST_GROUPS}
               value={form.interests}
               onToggle={(value) => toggleListField('interests', value)}
             />
 
             <MultiChoiceField
-              label="Cilji mreženja"
-              description="Izberite, kaj želite doseči na konferenci."
+              label={t('profile.field.goals', 'Networking goals')}
+              description={t('profile.field.goalsDesc', 'Select what you want to achieve at the conference.')}
               groups={GOAL_GROUPS}
               value={form.goals}
               onToggle={(value) => toggleListField('goals', value)}
             />
 
             <MultiChoiceField
-              label="Kompetence"
-              description="Izberite znanja, izkušnje ali vloge, ki vas dobro opišejo."
+              label={t('profile.field.competencies', 'Competencies')}
+              description={t('profile.field.competenciesDesc', 'Select skills, experience, or roles that describe you well.')}
               groups={COMPETENCY_GROUPS}
               value={form.competencies}
               onToggle={(value) => toggleListField('competencies', value)}
             />
 
             <MultiChoiceField
-              label="Ključne besede"
-              description="Izberite konkretne izraze, ki bodo kasneje pomagali pri AI ujemanju."
+              label={t('profile.field.keywords', 'Keywords')}
+              description={t('profile.field.keywordsDesc', 'Select specific terms that help AI matching later.')}
               groups={KEYWORD_GROUPS}
               value={form.researchKeywords}
               onToggle={(value) => toggleListField('researchKeywords', value)}
             />
 
-            <FormField label="Oznake">
+            <FormField label={t('profile.field.tags', 'Tags')}>
               <TagPicker
                 token={token ?? ''}
                 value={form.tags}
@@ -900,11 +930,11 @@ export default function ProfilePage() {
               />
             </FormField>
 
-            <FormField label="Način srečanja">
+            <FormField label={t('profile.field.meetingType', 'Meeting type')}>
               <select value={form.meetingType} onChange={field('meetingType')} className="profile-input">
                 {MEETING_TYPES.map((type) => (
                   <option key={type.value} value={type.value}>
-                    {type.label}
+                    {t(type.key, type.fallback)}
                   </option>
                 ))}
               </select>
@@ -920,14 +950,14 @@ export default function ProfilePage() {
               onClick={closeEditMode}
               className="px-[18px] py-[8px] rounded-full text-[13px] font-semibold bg-[#f3f4f6] text-[#3d3d3d] border-0 cursor-pointer font-sans"
             >
-              Prekliči
+              {t('common.cancel', 'Cancel')}
             </button>
             <button
               type="submit"
               disabled={saving || !token}
               className="px-[18px] py-[8px] rounded-full text-[13px] font-semibold bg-[#0d0d0d] text-white border-0 cursor-pointer font-sans disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Shranjevanje...' : 'Shrani profil'}
+              {saving ? t('profile.saving', 'Saving...') : t('profile.save', 'Save profile')}
             </button>
           </div>
         </form>
@@ -935,9 +965,9 @@ export default function ProfilePage() {
 
       {/* Tab bar */}
       <div className="flex bg-[#f0f0f0] rounded-[13px] p-1 gap-0.5 mb-[18px]">
-        {TABS.map((tab, i) => (
+        {TAB_KEYS.map((tabKey, i) => (
           <button
-            key={tab}
+            key={tabKey}
             onClick={() => setActiveTab(i)}
             className={`flex-1 py-2 text-[13px] rounded-[9px] border-0 cursor-pointer font-sans transition-all ${
               activeTab === i
@@ -945,7 +975,7 @@ export default function ProfilePage() {
                 : 'bg-transparent text-[#8e8e93] font-normal'
             }`}
           >
-            {tab}
+            {t(tabKey)}
           </button>
         ))}
       </div>
@@ -954,7 +984,7 @@ export default function ProfilePage() {
       <div className="grid grid-cols-2 gap-3">
         {activeTab === 1 && loadingRecommendations && (
           <div className="col-span-2 rounded-2xl border border-[#f0f0f0] bg-white px-4 py-5 text-sm text-[#8e8e93]">
-            Nalaganje priporočil dogodkov...
+            {t('profile.recommendations.loading', 'Loading event recommendations...')}
           </div>
         )}
 
@@ -962,7 +992,7 @@ export default function ProfilePage() {
           !loadingRecommendations &&
           recommendedEvents.length === 0 && (
             <div className="col-span-2 rounded-2xl border border-[#f0f0f0] bg-white px-4 py-5 text-sm text-[#8e8e93]">
-              Trenutno ni novih priporočil dogodkov.
+              {t('profile.recommendations.empty', 'There are currently no new event recommendations.')}
             </div>
           )}
 
@@ -1066,14 +1096,14 @@ export default function ProfilePage() {
                 </button>
               </div>
               <div className="px-[14px] py-3">
-                <p className="text-sm font-semibold mb-1">{card.title}</p>
+                <p className="text-sm font-semibold mb-1">{t(card.titleKey, card.titleFallback)}</p>
                 <p className="text-xs text-[#8e8e93] flex items-center gap-1 mb-[3px]">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
                   </svg>
-                  {card.location}
+                  {t(card.locationKey, card.locationFallback)}
                 </p>
-                <p className="text-xs text-[#b0b0b0]">{card.desc}</p>
+                <p className="text-xs text-[#b0b0b0]">{t(card.descKey, card.descFallback)}</p>
               </div>
             </div>
           ))}
@@ -1131,6 +1161,7 @@ function ImagePicker({
   onEdit: () => void;
   onRemove: () => void;
 }) {
+  const t = useT();
   const isAvatar = variant === 'avatar';
 
   return (
@@ -1166,7 +1197,7 @@ function ImagePicker({
 
         <div className="flex flex-wrap gap-2">
           <label className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#4b5563] transition-colors hover:bg-[#f7f7f7] cursor-pointer">
-            Izberi sliko
+            {t('profile.image.pick', 'Choose image')}
             <input type="file" accept="image/*" onChange={onChange} className="sr-only" />
           </label>
           {imageUrl && (
@@ -1176,21 +1207,21 @@ function ImagePicker({
                 onClick={onEdit}
                 className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#4b5563] transition-colors hover:bg-[#f7f7f7]"
               >
-                Uredi prikaz
+                {t('profile.image.editView', 'Edit view')}
               </button>
               <button
                 type="button"
                 onClick={onRemove}
                 className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#8e3d3d] transition-colors hover:bg-[#fff5f5]"
               >
-                Odstrani
+                {t('common.delete', 'Delete')}
               </button>
             </>
           )}
         </div>
       </div>
       <p className="mt-3 text-[11px] text-[#a1a1aa]">
-        Podprte so slike do 5 MB. Po potrditvi se naložijo v Supabase.
+        {t('profile.image.supported', 'Images up to 5 MB are supported. After confirmation they are uploaded to Supabase.')}
       </p>
     </div>
   );
@@ -1211,8 +1242,11 @@ function ImageCropModal({
   onCancel: () => void;
   onApply: () => void | Promise<void>;
 }) {
+  const t = useT();
   const isAvatar = draft.target === 'profile';
-  const title = isAvatar ? 'Uredi profilno sliko' : 'Uredi sliko ozadja';
+  const title = isAvatar
+    ? t('profile.image.cropAvatar', 'Edit profile image')
+    : t('profile.image.cropCover', 'Edit cover image');
 
   function updatePosition(event: React.PointerEvent<HTMLDivElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -1238,7 +1272,7 @@ function ImageCropModal({
           <div>
             <h3 className="text-lg font-bold text-[#1d1d1f]">{title}</h3>
             <p className="mt-1 text-sm text-[#8e8e93]">
-              Povlecite sliko in nastavite povečavo pred potrditvijo.
+              {t('profile.image.cropHelp', 'Drag image and set zoom before confirming.')}
             </p>
           </div>
           <button
@@ -1247,7 +1281,7 @@ function ImageCropModal({
             disabled={uploading}
             className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#4b5563] hover:bg-[#f7f7f7]"
           >
-            Zapri
+            {t('common.close', 'Close')}
           </button>
         </div>
 
@@ -1275,7 +1309,7 @@ function ImageCropModal({
 
         <label className="mt-5 block">
           <div className="mb-2 flex items-center justify-between text-[13px] font-semibold text-[#6e6e73]">
-            <span>Povečava</span>
+            <span>{t('profile.image.zoom', 'Zoom')}</span>
             <span>{draft.zoom}%</span>
           </div>
           <input
@@ -1301,7 +1335,7 @@ function ImageCropModal({
             disabled={uploading}
             className="rounded-full border-0 bg-[#f3f4f6] px-[18px] py-[8px] text-[13px] font-semibold text-[#3d3d3d]"
           >
-            Prekliči
+            {t('common.cancel', 'Cancel')}
           </button>
           <button
             type="button"
@@ -1309,7 +1343,7 @@ function ImageCropModal({
             disabled={uploading}
             className="rounded-full border-0 bg-[#0d0d0d] px-[18px] py-[8px] text-[13px] font-semibold text-white disabled:opacity-50"
           >
-            {uploading ? 'Nalaganje...' : 'Potrdi prikaz'}
+            {uploading ? t('common.loading', 'Loading...') : t('profile.image.confirmView', 'Confirm view')}
           </button>
         </div>
       </div>
@@ -1330,6 +1364,7 @@ function MultiChoiceField({
   value: string[];
   onToggle: (value: string) => void;
 }) {
+  const t = useT();
   const [query, setQuery] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [customInput, setCustomInput] = useState('');
@@ -1377,12 +1412,12 @@ function MultiChoiceField({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Poišči možnost..."
+              placeholder={t('profile.options.search', 'Search options...')}
               className="min-w-[180px] max-w-[260px] flex-1 rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[12px] text-[#1d1d1f] outline-none transition-colors placeholder:text-[#a1a1aa] focus:border-[#0d0d0d]"
             />
             {value.length > 0 && (
               <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#6e6e73] border border-[#eceff3]">
-                {value.length} izbrano
+                {t('profile.options.selected', '{{count}} selected').replace('{{count}}', String(value.length))}
               </span>
             )}
           </div>
@@ -1426,7 +1461,9 @@ function MultiChoiceField({
                     onClick={() => toggleGroup(group.title)}
                     className="rounded-full border border-[#e5e7eb] bg-[#f7f7f7] px-3 py-1.5 text-[13px] font-semibold text-[#4b5563] transition-colors hover:bg-[#eef2f7]"
                   >
-                    {expanded ? 'Prikaži manj' : `Prikaži več (${hiddenCount})`}
+                    {expanded
+                      ? t('profile.options.showLess', 'Show less')
+                      : t('profile.options.showMore', 'Show more ({{count}})').replace('{{count}}', String(hiddenCount))}
                   </button>
                 )}
               </div>
@@ -1435,7 +1472,7 @@ function MultiChoiceField({
         })}
         <div>
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#a1a1aa]">
-            Drugo
+            {t('profile.options.other', 'Other')}
           </p>
           <div className="flex max-w-[520px] gap-2">
             <input
@@ -1448,7 +1485,7 @@ function MultiChoiceField({
                   addCustomOption();
                 }
               }}
-              placeholder="Dodaj svojo možnost..."
+              placeholder={t('profile.options.addOwn', 'Add your own option...')}
               className="min-w-0 flex-1 rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] text-[#1d1d1f] outline-none transition-colors placeholder:text-[#a1a1aa] focus:border-[#0d0d0d]"
             />
             <button
@@ -1456,13 +1493,13 @@ function MultiChoiceField({
               onClick={addCustomOption}
               className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#4b5563] transition-colors hover:bg-[#f7f7f7]"
             >
-              Dodaj
+              {t('common.add', 'Add')}
             </button>
           </div>
         </div>
         {filteredGroups.length === 0 && (
           <p className="rounded-[12px] bg-white px-3 py-2 text-[13px] text-[#8e8e93] border border-[#eceff3]">
-            Ni zadetkov za ta iskalni izraz.
+            {t('profile.options.noResults', 'No results for this search term.')}
           </p>
         )}
       </div>

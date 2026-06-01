@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { saveStoredUser } from '../lib/auth';
 import { firebaseSignIn } from '../lib/firebase';
+import { saveStoredLocale, useT } from '../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -13,17 +14,18 @@ function passwordStrength(pw: string) {
   if (!pw) return null;
   const score = [pw.length >= 12, /[A-Z]/.test(pw), /\d/.test(pw), /[^A-Za-z0-9]/.test(pw)].filter(Boolean).length;
   const levels = [
-    { label: 'Šibko', color: '#d14242' },
-    { label: 'Šibko', color: '#d14242' },
-    { label: 'Srednje', color: '#c4a87d' },
-    { label: 'Dobro', color: '#7fa8c8' },
-    { label: 'Močno', color: '#16803c' },
+    { key: 'auth.register.passwordStrength.weak', fallback: 'Weak', color: '#d14242' },
+    { key: 'auth.register.passwordStrength.weak', fallback: 'Weak', color: '#d14242' },
+    { key: 'auth.register.passwordStrength.medium', fallback: 'Medium', color: '#c4a87d' },
+    { key: 'auth.register.passwordStrength.good', fallback: 'Good', color: '#7fa8c8' },
+    { key: 'auth.register.passwordStrength.strong', fallback: 'Strong', color: '#16803c' },
   ];
   return { score, ...levels[score] };
 }
 
 export default function RegisterPage() {
   const router = useRouter();
+  const t = useT();
   const [form, setForm] = useState({ displayName: '', email: '', password: '', inviteToken: '' });
   const [showPw, setShowPw] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -58,11 +60,12 @@ export default function RegisterPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Registracija ni uspela');
+        throw new Error(msg ?? t('auth.error.registerFailed', 'Registration failed'));
       }
 
       const data = await res.json().catch(() => ({}));
       const { idToken, uid } = await firebaseSignIn(form.email, form.password);
+      saveStoredLocale('sl');
 
       saveStoredUser({
         displayName: form.displayName,
@@ -73,7 +76,7 @@ export default function RegisterPage() {
       });
       router.push('/home');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Prišlo je do napake');
+      setError(err instanceof Error ? err.message : t('common.error.generic', 'An error occurred'));
     } finally {
       setLoading(false);
     }
@@ -99,15 +102,19 @@ export default function RegisterPage() {
         </Link>
 
         <div className="relative">
-          <p className="text-[11px] font-semibold text-[#7fa8c8] tracking-[0.18em] uppercase mb-4">Nova registracija</p>
+          <p className="text-[11px] font-semibold text-[#7fa8c8] tracking-[0.18em] uppercase mb-4">
+            {t('auth.register.hero.badge', 'New registration')}
+          </p>
           <h2 className="text-[2.4rem] font-bold leading-tight text-[#0d0d0d] mb-5">
-            Pametno<br />
-            <span className="text-[#7fa8c8]">mreženje</span><br />
-            se začne tukaj.
+            {t('auth.register.hero.line1', 'Smart')}<br />
+            <span className="text-[#7fa8c8]">{t('auth.register.hero.line2', 'networking')}</span><br />
+            {t('auth.register.hero.line3', 'starts here.')}
           </h2>
           <p className="text-[14px] text-[#6e6e73] leading-relaxed max-w-[260px]">
-            Pridružite se sistemu za ciljno usmerjeno mreženje med udeleženci
-            konference — akademija, industrija, javna uprava.
+            {t(
+              'auth.register.hero.desc',
+              'Join focused networking between conference participants — academia, industry, and public sector.',
+            )}
           </p>
 
           {/* Network decoration */}
@@ -127,7 +134,7 @@ export default function RegisterPage() {
           </svg>
         </div>
 
-        <p className="relative text-[12px] text-[#8e8e93]">Konferenca 2026</p>
+          <p className="relative text-[12px] text-[#8e8e93]">{t('auth.register.hero.footer', 'Confera 2026')}</p>
       </div>
 
       {/* ── Right panel (form) ── */}
@@ -145,16 +152,16 @@ export default function RegisterPage() {
           </Link>
 
           <div className="mb-8">
-            <h2 className="text-[28px] font-bold text-[#0d0d0d] mb-1">Dobrodošli</h2>
+            <h2 className="text-[28px] font-bold text-[#0d0d0d] mb-1">{t('auth.register.title')}</h2>
             <p className="text-[14px] text-[#8e8e93]">
-              Že imate račun?{' '}
-              <Link href="/login" className="text-[#7fa8c8] hover:underline">Prijavite se</Link>
+              {t('auth.register.hasAccount')}{' '}
+              <Link href="/login" className="text-[#7fa8c8] hover:underline">{t('auth.register.signIn')}</Link>
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="displayName" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">Polno ime</label>
+              <label htmlFor="displayName" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">{t('auth.register.fullName')}</label>
               <input
                 id="displayName"
                 type="text"
@@ -167,7 +174,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">E-pošta</label>
+              <label htmlFor="email" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">{t('auth.register.email')}</label>
               <input
                 id="email"
                 type="email"
@@ -180,14 +187,14 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">Geslo</label>
+              <label htmlFor="password" className="block text-xs font-semibold text-[#6e6e73] mb-1.5">{t('auth.register.password')}</label>
               <div className="relative">
                 <input
                   id="password"
                   type={showPw ? 'text' : 'password'}
                   value={form.password}
                   onChange={field('password')}
-                  placeholder="Min. 12 znakov"
+                  placeholder={t('auth.register.passwordPlaceholder', 'Min. 12 characters')}
                   required
                   className="profile-input pr-12"
                 />
@@ -210,11 +217,16 @@ export default function RegisterPage() {
                       />
                     ))}
                   </div>
-                  <span className="text-[12px]" style={{ color: strength.color }}>{strength.label}</span>
+                  <span className="text-[12px]" style={{ color: strength.color }}>
+                    {t(strength.key, strength.fallback)}
+                  </span>
                 </div>
               )}
               <p className="mt-1.5 text-[12px] text-[#8e8e93]">
-                Vsaj 12 znakov, 1 velika črka, 1 številka, 1 poseben znak.
+                {t(
+                  'auth.register.passwordHint',
+                  'At least 12 characters, 1 uppercase letter, 1 number, 1 special character.',
+                )}
               </p>
             </div>
 
@@ -227,7 +239,7 @@ export default function RegisterPage() {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d={showInvite ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'} />
                 </svg>
-                Imam povabilno kodo (neobvezno)
+                {t('auth.register.inviteToggle', 'I have an invite code (optional)')}
               </button>
               {showInvite && (
                 <motion.div
@@ -267,11 +279,11 @@ export default function RegisterPage() {
                   <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                   </svg>
-                  Registracija...
+                  {t('auth.register.submitting')}
                 </>
               ) : (
                 <>
-                  Ustvari račun
+                  {t('auth.register.submit')}
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
@@ -281,10 +293,10 @@ export default function RegisterPage() {
           </form>
 
           <p className="mt-6 text-[12px] text-center text-[#8e8e93]">
-            Z registracijo se strinjate s{' '}
-            <span className="text-[#7fa8c8] cursor-pointer hover:underline">pogoji uporabe</span>
+            {t('auth.register.terms.prefix', 'By registering, you agree to the')}{' '}
+            <span className="text-[#7fa8c8] cursor-pointer hover:underline">{t('auth.register.terms.terms', 'terms of use')}</span>
             {' '}in{' '}
-            <span className="text-[#7fa8c8] cursor-pointer hover:underline">politiko zasebnosti</span>.
+            <span className="text-[#7fa8c8] cursor-pointer hover:underline">{t('auth.register.terms.privacy', 'privacy policy')}</span>.
           </p>
         </motion.div>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLocale, useT } from '../lib/i18n';
 
 type Props = {
   startDate: string;
@@ -13,7 +14,12 @@ const MONTHS_SL = [
   'Januar','Februar','Marec','April','Maj','Junij',
   'Julij','Avgust','September','Oktober','November','December',
 ];
+const MONTHS_EN = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
+];
 const WEEKDAYS = ['Pon','Tor','Sre','Čet','Pet','Sob','Ned'];
+const WEEKDAYS_EN = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 function pad(n: number) { return String(n).padStart(2, '0'); }
 function toStr(y: number, m: number, d: number) { return `${y}-${pad(m + 1)}-${pad(d)}`; }
@@ -22,13 +28,9 @@ function parseLocal(s: string): Date | null {
   const d = new Date(`${s}T00:00:00`);
   return isNaN(d.getTime()) ? null : d;
 }
-function fmtShort(s: string) {
-  const d = parseLocal(s);
-  if (!d) return '—';
-  return d.toLocaleDateString('sl-SI', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
 export default function DateRangePicker({ startDate, endDate, onChange, onClose }: Props) {
+  const t = useT();
+  const locale = useLocale();
   const init = parseLocal(startDate) ?? new Date();
   const [year, setYear] = useState(init.getFullYear());
   const [month, setMonth] = useState(init.getMonth());
@@ -70,6 +72,19 @@ export default function DateRangePicker({ startDate, endDate, onChange, onClose 
     return 'text-[#374151] hover:bg-[#f3f4f6] rounded-full';
   }
 
+  const months = locale === 'en' ? MONTHS_EN : MONTHS_SL;
+  const weekdays = locale === 'en' ? WEEKDAYS_EN : WEEKDAYS;
+
+  function fmtShortLocalized(s: string) {
+    const d = parseLocal(s);
+    if (!d) return '—';
+    return d.toLocaleDateString(locale === 'en' ? 'en-US' : 'sl-SI', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
@@ -80,13 +95,15 @@ export default function DateRangePicker({ startDate, endDate, onChange, onClose 
         onClick={(e) => e.stopPropagation()}
       >
         <p className="text-[10px] font-bold text-[#8e8e93] uppercase tracking-wide">
-          {step === 'start' ? 'Izberite datum začetka' : 'Izberite datum konca'}
+          {step === 'start'
+            ? t('dateRange.selectStart', 'Select start date')
+            : t('dateRange.selectEnd', 'Select end date')}
         </p>
 
         <div className="flex items-center gap-2 text-[14px] font-semibold">
-          <span className={step === 'start' ? 'text-[#0d0d0d]' : 'text-[#9ca3af]'}>{fmtShort(start)}</span>
+          <span className={step === 'start' ? 'text-[#0d0d0d]' : 'text-[#9ca3af]'}>{fmtShortLocalized(start)}</span>
           <span className="text-[#d1d5db]">→</span>
-          <span className={step === 'end' ? 'text-[#0d0d0d]' : 'text-[#9ca3af]'}>{fmtShort(end)}</span>
+          <span className={step === 'end' ? 'text-[#0d0d0d]' : 'text-[#9ca3af]'}>{fmtShortLocalized(end)}</span>
         </div>
 
         <div className="flex items-center justify-between">
@@ -94,7 +111,7 @@ export default function DateRangePicker({ startDate, endDate, onChange, onClose 
             className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#f3f4f6] bg-transparent border-0 cursor-pointer font-sans text-[16px] text-[#6b7280]">
             ‹
           </button>
-          <span className="text-[13px] font-semibold">{MONTHS_SL[month]} {year}</span>
+          <span className="text-[13px] font-semibold">{months[month]} {year}</span>
           <button type="button" onClick={nextMonth}
             className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[#f3f4f6] bg-transparent border-0 cursor-pointer font-sans text-[16px] text-[#6b7280]">
             ›
@@ -102,7 +119,7 @@ export default function DateRangePicker({ startDate, endDate, onChange, onClose 
         </div>
 
         <div className="grid grid-cols-7 gap-y-1">
-          {WEEKDAYS.map(d => (
+          {weekdays.map(d => (
             <div key={d} className="text-center text-[10px] font-semibold text-[#9ca3af] py-1">{d}</div>
           ))}
           {Array.from({ length: firstDayOfWeek }).map((_, i) => <div key={`e${i}`} />)}
@@ -121,12 +138,12 @@ export default function DateRangePicker({ startDate, endDate, onChange, onClose 
         <div className="flex justify-between pt-1">
           <button type="button" onClick={onClose}
             className="text-[12px] text-[#6b7280] hover:text-[#0d0d0d] bg-transparent border-0 cursor-pointer font-sans">
-            Prekliči
+            {t('common.cancel', 'Cancel')}
           </button>
           {step === 'end' && (
             <button type="button" onClick={() => { setStep('start'); setEnd(''); }}
               className="text-[12px] text-[#6b7280] hover:text-[#0d0d0d] bg-transparent border-0 cursor-pointer font-sans">
-              ← Nazaj
+              ← {t('common.back', 'Back')}
             </button>
           )}
         </div>

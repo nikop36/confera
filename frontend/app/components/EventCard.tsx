@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { TagPills } from './TagPicker';
+import { useLocale, useT } from '../lib/i18n';
 
 const AVATAR_COLOURS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
 
@@ -49,12 +50,13 @@ type EventCardProps = {
   onDelete: () => void;
 };
 
-function formatTimeRange(startAt: string, endAt: string): string {
+function formatTimeRange(startAt: string, endAt: string, locale: 'sl' | 'en'): string {
   const opts: Intl.DateTimeFormatOptions = {
     hour: '2-digit',
     minute: '2-digit',
   };
-  return `${new Date(startAt).toLocaleTimeString('sl-SI', opts)} – ${new Date(endAt).toLocaleTimeString('sl-SI', opts)}`;
+  const localeCode = locale === 'en' ? 'en-GB' : 'sl-SI';
+  return `${new Date(startAt).toLocaleTimeString(localeCode, opts)} – ${new Date(endAt).toLocaleTimeString(localeCode, opts)}`;
 }
 
 export default function EventCard({
@@ -71,6 +73,8 @@ export default function EventCard({
   onDelete,
 }: EventCardProps) {
   const router = useRouter();
+  const t = useT();
+  const locale = useLocale();
   const isFull = event.registeredCount >= event.capacity;
   const spotsLeft = event.capacity - event.registeredCount;
 
@@ -103,21 +107,21 @@ export default function EventCard({
             {event.title}
           </p>
           <p className="text-[11px] text-[#8e8e93] truncate">
-            {formatTimeRange(event.startAt, event.endAt)}
+            {formatTimeRange(event.startAt, event.endAt, locale)}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {event.isRegistered ? (
+            {event.isRegistered ? (
             <span className="bg-[#ecfdf3] text-[#166534] text-[10px] font-semibold px-[7px] py-[2px] rounded-[5px]">
-              ✓ Prijavljen/a
+              ✓ {t('eventDetail.registered', 'Registered')}
             </span>
           ) : isFull ? (
             <span className="bg-[#f3f4f6] text-[#6b7280] text-[10px] font-semibold px-[7px] py-[2px] rounded-[5px]">
-              Razprodano
+              {t('events.soldOut', 'Sold out')}
             </span>
           ) : (
             <span className="text-[11px] text-[#6e6e73]">
-              {spotsLeft} mest
+              {spotsLeft} {t('eventDetail.seats', 'seats')}
             </span>
           )}
           <span className="bg-[#eff6ff] text-[#1d4ed8] text-[10px] font-medium px-[7px] py-[2px] rounded-[5px]">
@@ -155,8 +159,8 @@ export default function EventCard({
           </div>
           <span className="text-[11px] text-[#6366f1] font-semibold">
             {(event.friendsGoing ?? []).length === 1
-              ? '1 prijatelj gre'
-              : `${(event.friendsGoing ?? []).length} prijatelji gredo`}
+              ? t('events.friendGoing.one', '1 friend is going')
+              : t('events.friendGoing.many', '{{count}} friends are going').replace('{{count}}', String((event.friendsGoing ?? []).length))}
           </span>
         </div>
       )}
@@ -177,10 +181,10 @@ export default function EventCard({
               {/* Time + capacity */}
               <div className="flex items-center justify-between mb-[8px]">
                 <span className="text-[11px] text-[#6e6e73]">
-                  {formatTimeRange(event.startAt, event.endAt)}
+                  {formatTimeRange(event.startAt, event.endAt, locale)}
                 </span>
                 <span className="text-[11px] text-[#6e6e73]">
-                  {event.registeredCount} / {event.capacity} mest
+                  {event.registeredCount} / {event.capacity} {t('eventDetail.seats', 'seats')}
                 </span>
               </div>
 
@@ -208,7 +212,9 @@ export default function EventCard({
                     }}
                     className="flex-1 py-[7px] rounded-[8px] text-[11px] font-semibold bg-[#ecfdf3] text-[#166534] hover:bg-[#d1fae5] transition-colors disabled:opacity-50 border-0 cursor-pointer font-sans"
                   >
-                    {isRegistering ? 'Preklicujem...' : 'Odjavi se'}
+                    {isRegistering
+                      ? t('events.cancelling', 'Cancelling...')
+                      : t('events.unregister', 'Unregister')}
                   </button>
                 ) : (
                   <button
@@ -221,10 +227,10 @@ export default function EventCard({
                     className="flex-1 py-[7px] rounded-[8px] text-[11px] font-semibold bg-[#0d0d0d] text-white hover:bg-[#1f1f1f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-0 cursor-pointer font-sans"
                   >
                     {isRegistering
-                      ? 'Prijavljujem...'
+                      ? t('events.registering', 'Registering...')
                       : isFull
-                        ? 'Razprodano'
-                        : 'Prijavi se'}
+                        ? t('events.soldOut', 'Sold out')
+                        : t('events.register', 'Register')}
                   </button>
                 )}
 
@@ -236,7 +242,7 @@ export default function EventCard({
                   }}
                   className="px-3 py-[7px] rounded-[8px] text-[11px] font-semibold bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#dbeafe] transition-colors border-0 cursor-pointer font-sans"
                 >
-                  Program →
+                  {t('eventDetail.program', 'Program')} →
                 </button>
 
                 {isAdminOrOrganizer && (
@@ -249,7 +255,7 @@ export default function EventCard({
                       }}
                       className="px-3 py-[7px] rounded-[8px] text-[11px] font-semibold bg-[#f3f4f6] text-[#374151] hover:bg-[#e5e7eb] transition-colors border-0 cursor-pointer font-sans"
                     >
-                      Uredi
+                      {t('common.edit', 'Edit')}
                     </button>
                     <button
                       type="button"
@@ -259,7 +265,7 @@ export default function EventCard({
                       }}
                       className="px-3 py-[7px] rounded-[8px] text-[11px] font-semibold bg-[#fff1f2] text-[#dc2626] hover:bg-[#fee2e2] transition-colors border-0 cursor-pointer font-sans"
                     >
-                      Izbriši
+                      {t('common.delete', 'Delete')}
                     </button>
                   </>
                 )}
