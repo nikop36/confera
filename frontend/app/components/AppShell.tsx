@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { clearStoredUser, useStoredUser } from '../lib/auth';
@@ -331,10 +332,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               />
               {user?.profileImageUrl ? (
                 <div className="relative w-14 h-14 rounded-full z-10 border-[3px] border-white shadow-md overflow-hidden bg-[#f3f4f6]">
-                  <img
+                  <Image
                     src={user.profileImageUrl}
                     alt={user.displayName ?? 'Profilna slika'}
                     className="w-full h-full object-cover"
+                    fill
+                    sizes="56px"
                   />
                 </div>
               ) : (

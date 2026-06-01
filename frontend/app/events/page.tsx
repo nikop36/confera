@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import AppShell from '../components/AppShell';
 import EventCard, { type EventItem } from '../components/EventCard';
 import EventFormModal, { type EventFormValues } from '../components/EventFormModal';
@@ -57,13 +57,7 @@ export default function EventsPage() {
     undefined,
   );
 
-  useEffect(() => {
-    if (!user?.idToken) return;
-    void loadEvents(user.idToken);
-    void loadTags(user.idToken);
-  }, [user?.idToken]);
-
-  async function loadTags(token: string) {
+  const loadTags = useCallback(async (token: string) => {
     try {
       const res = await fetch(`${API}/tags`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -75,9 +69,9 @@ export default function EventsPage() {
     } catch {
       // non-fatal
     }
-  }
+  }, []);
 
-  async function loadEvents(token: string) {
+  const loadEvents = useCallback(async (token: string) => {
     setLoading(true);
     setError('');
     try {
@@ -92,7 +86,13 @@ export default function EventsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [t]);
+
+  useEffect(() => {
+    if (!user?.idToken) return;
+    void loadEvents(user.idToken);
+    void loadTags(user.idToken);
+  }, [user?.idToken, loadEvents, loadTags]);
 
   async function handleRegister(eventId: string) {
     if (!user?.idToken) return;
