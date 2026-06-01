@@ -140,6 +140,7 @@ export default function AdminStatisticsPage() {
   useEffect(() => {
     if (!user?.idToken) return;
     const idToken = user.idToken;
+    const controller = new AbortController();
 
     async function load() {
       setLoading(true);
@@ -160,10 +161,12 @@ export default function AdminStatisticsPage() {
           fetch(occupancyUrl.toString(), {
             headers: { Authorization: `Bearer ${idToken}` },
             cache: 'no-store',
+            signal: controller.signal,
           }),
           fetch(confirmedUrl.toString(), {
             headers: { Authorization: `Bearer ${idToken}` },
             cache: 'no-store',
+            signal: controller.signal,
           }),
         ]);
 
@@ -189,13 +192,17 @@ export default function AdminStatisticsPage() {
         setOccupancy(occupancyPayload);
         setConfirmed(confirmedPayload);
       } catch (err) {
+        if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : 'Failed to load statistics');
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
 
     void load();
+    return () => controller.abort();
   }, [user?.idToken, range.from, range.to, refreshKey]);
 
   useEffect(() => {
