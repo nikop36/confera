@@ -121,6 +121,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }))
     : SUGGESTIONS.map((entry) => ({ ...entry, uid: '' }));
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
