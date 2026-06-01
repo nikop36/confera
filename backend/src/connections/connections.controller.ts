@@ -20,6 +20,7 @@ import { ConnectionsService } from './connections.service';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { FirebaseUser } from '../common/interfaces/firebase-user.interface';
+import { GraphResponseDto } from './dto/graph-response.dto';
 import { CreateConnectionRequestDto } from './dto/create-connection-request.dto';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -81,6 +82,17 @@ export class ConnectionsController {
   })
   async getAcceptedPairs() {
     return this.connectionsService.listAcceptedPairs();
+  }
+
+  @Get('graph/me')
+  @ApiOperation({ summary: 'Get ego network graph for current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Graph nodes and edges returned',
+    type: GraphResponseDto,
+  })
+  async getGraph(@CurrentUser() user: FirebaseUser) {
+    return this.connectionsService.getGraph(user);
   }
 
   @Delete(':id')

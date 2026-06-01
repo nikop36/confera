@@ -241,6 +241,18 @@ export class SchedulingRepository {
     );
   }
 
+  async listMeetingsByParticipant(uid: string): Promise<Meeting[]> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db
+      .collection('meetings')
+      .where('participantUids', 'array-contains', uid)
+      .limit(500)
+      .get();
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() }) as Meeting,
+    );
+  }
+
   async findMeetingById(id: string): Promise<Meeting | null> {
     const db = this.firebaseService.getFirestore();
     const doc = await db.collection('meetings').doc(id).get();

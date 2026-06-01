@@ -111,6 +111,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [connectingUids, setConnectingUids] = useState<Record<string, boolean>>({});
   const [connectedUids, setConnectedUids] = useState<Set<string>>(new Set());
   const [pendingSentUids, setPendingSentUids] = useState<Set<string>>(new Set());
+  const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState<SidebarNotification[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const unreadNotificationsCount = notifications.filter(
@@ -130,6 +131,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       hue: [200, 280, 155][index] ?? 210,
     }))
     : SUGGESTIONS.map((entry) => ({ ...entry, uid: '' }));
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setMounted(true); }, []);
 
   const loadMatches = useCallback(async (idToken: string) => {
     try {
@@ -492,8 +496,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </section>
 
-          {/* Suggestions */}
-          <section>
+          {/* Suggestions — client-only to avoid disabled-attr hydration mismatch */}
+          {mounted && <section>
             <div className="flex justify-between items-center mb-[14px]">
               <h3 className="text-lg font-bold">{t('shell.suggestions')}</h3>
               <button className="text-xs text-[#007AFF] bg-transparent border-0 cursor-pointer font-sans">{t('shell.seeAll')}</button>
@@ -537,7 +541,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               ))}
             </div>
-          </section>
+          </section>}
 
           {/* Recommendations */}
           <section>

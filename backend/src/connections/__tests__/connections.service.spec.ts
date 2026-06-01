@@ -9,6 +9,8 @@ import { ConnectionsRepository } from '../connections.repository';
 import { UsersRepository } from '../../users/users.repository';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { NotificationTypeEnum } from '../../common/enums/notification-type.enum';
+import { MatchingIndexService } from '../../matching/matching-index.service';
+import { SchedulingRepository } from '../../scheduling/scheduling.repository';
 
 describe('ConnectionsService', () => {
   let service: ConnectionsService;
@@ -37,6 +39,8 @@ describe('ConnectionsService', () => {
             findPendingBetweenUsers: mockFindPendingBetweenUsers,
             findAcceptedBetweenUsers: mockFindAcceptedBetweenUsers,
             createRequest: mockCreateRequest,
+            listAcceptedConnectionUids: jest.fn().mockResolvedValue([]),
+            listAccepted: jest.fn().mockResolvedValue([]),
           },
         },
         {
@@ -50,6 +54,14 @@ describe('ConnectionsService', () => {
           useValue: {
             createNotification: mockCreateNotification,
           },
+        },
+        {
+          provide: MatchingIndexService,
+          useValue: { enabled: false, findMatches: jest.fn() },
+        },
+        {
+          provide: SchedulingRepository,
+          useValue: { listMeetingsByParticipant: jest.fn() },
         },
       ],
     }).compile();

@@ -30,8 +30,8 @@ describe('profile search document helpers', () => {
     expect(result).toContain(
       'Področja interesa: Umetna inteligenca, Strojno učenje',
     );
-    expect(result).toContain('Cilji mreženja: Zaposlitev');
     expect(result).toContain('Ključne besede: LLM');
+    expect(result).toContain('Oznake: Ni navedeno');
   });
 
   it('should use fallback text for missing optional values', () => {
