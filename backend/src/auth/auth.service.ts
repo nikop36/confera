@@ -122,7 +122,12 @@ export class AuthService {
 
     const data = (await res.json()) as FirebaseLoginResponse;
 
-    console.log('Firebase login status:', res.status, 'error:', data.error?.message ?? 'none');
+    console.log(
+      'Firebase login status:',
+      res.status,
+      'error:',
+      data.error?.message ?? 'none',
+    );
 
     if (!res.ok) {
       throw new UnauthorizedException('Invalid credentials');
