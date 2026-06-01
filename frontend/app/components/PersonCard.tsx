@@ -116,11 +116,6 @@ export default function PersonCard({
             </p>
           )}
         </div>
-        {person.score !== undefined && (
-          <span className="bg-[#ecfdf3] text-[#166534] text-[9px] font-bold px-[5px] py-[2px] rounded-[5px] flex-shrink-0">
-            {Math.round(person.score * 100)}%
-          </span>
-        )}
       </div>
 
       {/* Bio snippet — always visible */}
