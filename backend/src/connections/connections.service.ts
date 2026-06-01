@@ -11,8 +11,11 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationTypeEnum } from '../common/enums/notification-type.enum';
 import { MatchingIndexService } from '../matching/matching-index.service';
 import { SchedulingRepository } from '../scheduling/scheduling.repository';
-import { GraphResponseDto, GraphNodeDto, GraphEdgeDto } from './dto/graph-response.dto';
-import type { SearchableProfile } from '../matching/profile-search-document';
+import {
+  GraphResponseDto,
+  GraphNodeDto,
+  GraphEdgeDto,
+} from './dto/graph-response.dto';
 
 @Injectable()
 export class ConnectionsService {
@@ -190,7 +193,10 @@ export class ConnectionsService {
     }));
   }
 
-  async getGraph(user: { uid: string; email: string }): Promise<GraphResponseDto> {
+  async getGraph(user: {
+    uid: string;
+    email: string;
+  }): Promise<GraphResponseDto> {
     const profile = await this.usersRepository.findByUid(user.uid);
     if (!profile) {
       return { nodes: [], edges: [] };
@@ -207,7 +213,7 @@ export class ConnectionsService {
       await Promise.allSettled([
         Promise.all(peerUids.map((uid) => this.usersRepository.findByUid(uid))),
         this.matchingIndexService.enabled
-          ? this.matchingIndexService.findMatches(profile as SearchableProfile)
+          ? this.matchingIndexService.findMatches(profile)
           : Promise.resolve([]),
         this.schedulingRepository.listMeetingsByParticipant(user.uid),
         // For each peer, fetch their accepted connection UIDs to find peer↔peer edges
@@ -222,7 +228,9 @@ export class ConnectionsService {
 
     const peers =
       peersResult.status === 'fulfilled'
-        ? peersResult.value.filter((p): p is NonNullable<typeof p> => Boolean(p))
+        ? peersResult.value.filter((p): p is NonNullable<typeof p> =>
+            Boolean(p),
+          )
         : [];
 
     const selfNode: GraphNodeDto = {
@@ -324,8 +332,13 @@ export class ConnectionsService {
     );
     const fofNodes: GraphNodeDto[] = fofProfiles
       .filter(
-        (r): r is PromiseFulfilledResult<NonNullable<Awaited<ReturnType<typeof this.usersRepository.findByUid>>>> =>
-          r.status === 'fulfilled' && Boolean(r.value),
+        (
+          r,
+        ): r is PromiseFulfilledResult<
+          NonNullable<
+            Awaited<ReturnType<typeof this.usersRepository.findByUid>>
+          >
+        > => r.status === 'fulfilled' && Boolean(r.value),
       )
       .map((r) => ({
         id: r.value.uid,
@@ -339,7 +352,10 @@ export class ConnectionsService {
     const fofNodeIds = new Set(fofNodes.map((n) => n.id));
     if (peerConnectionsResult.status === 'fulfilled') {
       const seen = new Set<string>();
-      for (const { uid: peerUid, connectedUids } of peerConnectionsResult.value) {
+      for (const {
+        uid: peerUid,
+        connectedUids,
+      } of peerConnectionsResult.value) {
         for (const fofUid of connectedUids) {
           if (!fofNodeIds.has(fofUid)) continue;
           const key = [peerUid, fofUid].sort().join('|');

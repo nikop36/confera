@@ -86,7 +86,11 @@ export class ConnectionsController {
 
   @Get('graph/me')
   @ApiOperation({ summary: 'Get ego network graph for current user' })
-  @ApiResponse({ status: 200, description: 'Graph nodes and edges returned', type: GraphResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Graph nodes and edges returned',
+    type: GraphResponseDto,
+  })
   async getGraph(@CurrentUser() user: FirebaseUser) {
     return this.connectionsService.getGraph(user);
   }

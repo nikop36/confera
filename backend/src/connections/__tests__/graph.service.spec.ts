@@ -70,7 +70,9 @@ describe('ConnectionsService - getGraph()', () => {
         },
         {
           provide: SchedulingRepository,
-          useValue: { listMeetingsByParticipant: mockListMeetingsByParticipant },
+          useValue: {
+            listMeetingsByParticipant: mockListMeetingsByParticipant,
+          },
         },
       ],
     }).compile();
@@ -82,7 +84,13 @@ describe('ConnectionsService - getGraph()', () => {
 
   it('returns self node and peer connection node', async () => {
     mockListByUser.mockResolvedValue([
-      { id: 'conn-1', requesterUid: 'self-1', recipientUid: 'peer-1', status: 'accepted', createdAt: new Date() },
+      {
+        id: 'conn-1',
+        requesterUid: 'self-1',
+        recipientUid: 'peer-1',
+        status: 'accepted',
+        createdAt: new Date(),
+      },
     ]);
     mockFindUserByUid.mockImplementation((uid: string) =>
       Promise.resolve(uid === 'self-1' ? selfProfile : peerProfile),
@@ -94,12 +102,20 @@ describe('ConnectionsService - getGraph()', () => {
 
     expect(result.nodes).toHaveLength(2);
     expect(result.nodes.find((n) => n.type === 'self')?.id).toBe('self-1');
-    expect(result.nodes.find((n) => n.type === 'connection')?.id).toBe('peer-1');
+    expect(result.nodes.find((n) => n.type === 'connection')?.id).toBe(
+      'peer-1',
+    );
   });
 
   it('emits a connection edge for each accepted peer', async () => {
     mockListByUser.mockResolvedValue([
-      { id: 'conn-1', requesterUid: 'self-1', recipientUid: 'peer-1', status: 'accepted', createdAt: new Date() },
+      {
+        id: 'conn-1',
+        requesterUid: 'self-1',
+        recipientUid: 'peer-1',
+        status: 'accepted',
+        createdAt: new Date(),
+      },
     ]);
     mockFindUserByUid.mockImplementation((uid: string) =>
       Promise.resolve(uid === 'self-1' ? selfProfile : peerProfile),
@@ -109,12 +125,22 @@ describe('ConnectionsService - getGraph()', () => {
 
     const result = await service.getGraph(selfUser);
 
-    expect(result.edges.some((e) => e.edgeType === 'connection' && e.target === 'peer-1')).toBe(true);
+    expect(
+      result.edges.some(
+        (e) => e.edgeType === 'connection' && e.target === 'peer-1',
+      ),
+    ).toBe(true);
   });
 
   it('emits match edge when peer appears in AI results', async () => {
     mockListByUser.mockResolvedValue([
-      { id: 'conn-1', requesterUid: 'self-1', recipientUid: 'peer-1', status: 'accepted', createdAt: new Date() },
+      {
+        id: 'conn-1',
+        requesterUid: 'self-1',
+        recipientUid: 'peer-1',
+        status: 'accepted',
+        createdAt: new Date(),
+      },
     ]);
     mockFindUserByUid.mockImplementation((uid: string) =>
       Promise.resolve(uid === 'self-1' ? selfProfile : peerProfile),
@@ -134,26 +160,58 @@ describe('ConnectionsService - getGraph()', () => {
 
   it('emits interaction edge with count when peer shares meetings', async () => {
     mockListByUser.mockResolvedValue([
-      { id: 'conn-1', requesterUid: 'self-1', recipientUid: 'peer-1', status: 'accepted', createdAt: new Date() },
+      {
+        id: 'conn-1',
+        requesterUid: 'self-1',
+        recipientUid: 'peer-1',
+        status: 'accepted',
+        createdAt: new Date(),
+      },
     ]);
     mockFindUserByUid.mockImplementation((uid: string) =>
       Promise.resolve(uid === 'self-1' ? selfProfile : peerProfile),
     );
     mockFindMatches.mockResolvedValue([]);
     mockListMeetingsByParticipant.mockResolvedValue([
-      { id: 'm1', participantUids: ['self-1', 'peer-1'], slotId: 's1', roomId: 'r1', requestedByUids: [], requestedToUids: [], status: 'scheduled', createdAt: new Date() },
-      { id: 'm2', participantUids: ['self-1', 'peer-1'], slotId: 's2', roomId: 'r1', requestedByUids: [], requestedToUids: [], status: 'completed', createdAt: new Date() },
+      {
+        id: 'm1',
+        participantUids: ['self-1', 'peer-1'],
+        slotId: 's1',
+        roomId: 'r1',
+        requestedByUids: [],
+        requestedToUids: [],
+        status: 'scheduled',
+        createdAt: new Date(),
+      },
+      {
+        id: 'm2',
+        participantUids: ['self-1', 'peer-1'],
+        slotId: 's2',
+        roomId: 'r1',
+        requestedByUids: [],
+        requestedToUids: [],
+        status: 'completed',
+        createdAt: new Date(),
+      },
     ]);
 
     const result = await service.getGraph(selfUser);
 
-    const interactionEdge = result.edges.find((e) => e.edgeType === 'interaction' && e.target === 'peer-1');
+    const interactionEdge = result.edges.find(
+      (e) => e.edgeType === 'interaction' && e.target === 'peer-1',
+    );
     expect(interactionEdge?.count).toBe(2);
   });
 
   it('omits match edges gracefully when matching throws', async () => {
     mockListByUser.mockResolvedValue([
-      { id: 'conn-1', requesterUid: 'self-1', recipientUid: 'peer-1', status: 'accepted', createdAt: new Date() },
+      {
+        id: 'conn-1',
+        requesterUid: 'self-1',
+        recipientUid: 'peer-1',
+        status: 'accepted',
+        createdAt: new Date(),
+      },
     ]);
     mockFindUserByUid.mockImplementation((uid: string) =>
       Promise.resolve(uid === 'self-1' ? selfProfile : peerProfile),
@@ -169,7 +227,13 @@ describe('ConnectionsService - getGraph()', () => {
 
   it('filters out pending connections from the graph', async () => {
     mockListByUser.mockResolvedValue([
-      { id: 'conn-1', requesterUid: 'self-1', recipientUid: 'peer-1', status: 'pending', createdAt: new Date() },
+      {
+        id: 'conn-1',
+        requesterUid: 'self-1',
+        recipientUid: 'peer-1',
+        status: 'pending',
+        createdAt: new Date(),
+      },
     ]);
     mockFindUserByUid.mockResolvedValue(selfProfile);
     mockFindMatches.mockResolvedValue([]);
