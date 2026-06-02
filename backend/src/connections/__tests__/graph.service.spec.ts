@@ -27,6 +27,7 @@ describe('ConnectionsService - getGraph()', () => {
     goals: [],
     competencies: [],
     researchKeywords: [],
+    tags: ['AI', 'SaaS'],
   };
   const peerProfile = {
     uid: 'peer-1',
@@ -36,6 +37,7 @@ describe('ConnectionsService - getGraph()', () => {
     affiliation: 'Acme',
     profileStatus: 'complete' as const,
     createdAt: new Date(),
+    tags: ['B2B', 'SaaS'],
   };
 
   beforeEach(async () => {
@@ -243,5 +245,55 @@ describe('ConnectionsService - getGraph()', () => {
 
     expect(result.nodes).toHaveLength(1); // only self
     expect(result.edges).toHaveLength(0);
+  });
+
+  it('includes tags on self and peer nodes', async () => {
+    mockListByUser.mockResolvedValue([
+      {
+        id: 'conn-1',
+        requesterUid: 'self-1',
+        recipientUid: 'peer-1',
+        status: 'accepted',
+        createdAt: new Date(),
+      },
+    ]);
+    mockFindUserByUid.mockImplementation((uid: string) =>
+      Promise.resolve(uid === 'self-1' ? selfProfile : peerProfile),
+    );
+    mockFindMatches.mockResolvedValue([]);
+    mockListMeetingsByParticipant.mockResolvedValue([]);
+
+    const result = await service.getGraph(selfUser);
+
+    const self = result.nodes.find((n) => n.type === 'self');
+    const peer = result.nodes.find((n) => n.type === 'connection');
+    expect(self?.tags).toEqual(['AI', 'SaaS']);
+    expect(peer?.tags).toEqual(['B2B', 'SaaS']);
+  });
+
+  it('produces empty tags array when profile has no tags field', async () => {
+    const profileWithoutTags = { ...selfProfile, tags: undefined };
+    const peerWithoutTags = { ...peerProfile, tags: undefined };
+    mockListByUser.mockResolvedValue([
+      {
+        id: 'conn-1',
+        requesterUid: 'self-1',
+        recipientUid: 'peer-1',
+        status: 'accepted',
+        createdAt: new Date(),
+      },
+    ]);
+    mockFindUserByUid.mockImplementation((uid: string) =>
+      Promise.resolve(uid === 'self-1' ? profileWithoutTags : peerWithoutTags),
+    );
+    mockFindMatches.mockResolvedValue([]);
+    mockListMeetingsByParticipant.mockResolvedValue([]);
+
+    const result = await service.getGraph(selfUser);
+
+    const self = result.nodes.find((n) => n.type === 'self');
+    const peer = result.nodes.find((n) => n.type === 'connection');
+    expect(self?.tags).toEqual([]);
+    expect(peer?.tags).toEqual([]);
   });
 });

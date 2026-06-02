@@ -2,7 +2,7 @@
 
 import '@xyflow/react/dist/style.css';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -82,6 +82,17 @@ export function ConnectionGraph({ idToken, connectedUids, pendingUids, onConnect
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<GraphEdgeData>>([]);
   const [selectedNode, setSelectedNode] = useState<(GraphNodeData & { id: string }) | null>(null);
   const [connectingUids, setConnectingUids] = useState<Record<string, boolean>>({});
+  const [activeTags, setActiveTags] = useState<Set<string>>(new Set());
+
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const n of rawNodes) {
+      for (const tag of (n.data as GraphNodeData).tags ?? []) {
+        set.add(tag);
+      }
+    }
+    return [...set].sort();
+  }, [rawNodes]);
 
   // Apply d3-force layout once when data arrives
   useEffect(() => {
@@ -90,6 +101,30 @@ export function ConnectionGraph({ idToken, connectedUids, pendingUids, onConnect
     setNodes(laid);
     setEdges(rawEdges);
   }, [rawNodes, rawEdges, setNodes, setEdges]);
+
+  useEffect(() => {
+    const dimmedIds = new Set<string>();
+    setNodes((prev) => {
+      return prev.map((n) => {
+        const d = n.data as GraphNodeData;
+        if (activeTags.size === 0) return { ...n, data: { ...n.data, dimmed: false } };
+        if (d.nodeType === 'self') return n;
+        const matches = (d.tags ?? []).some((t) => activeTags.has(t));
+        const nextDimmed = !matches;
+        if (nextDimmed) dimmedIds.add(n.id);
+        return { ...n, data: { ...n.data, dimmed: nextDimmed } };
+      });
+    });
+    setEdges((prev) =>
+      prev.map((e) => ({
+        ...e,
+        style: {
+          ...e.style,
+          opacity: dimmedIds.has(e.source) || dimmedIds.has(e.target) ? 0.05 : undefined,
+        },
+      })),
+    );
+  }, [activeTags, setNodes, setEdges]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_evt, node) => {
     const d = node.data as GraphNodeData;
@@ -153,6 +188,77 @@ export function ConnectionGraph({ idToken, connectedUids, pendingUids, onConnect
           if (d.role === 'organizer') return '#9333ea';
           return '#2563eb';
         }} />
+
+        {!selectedNode && allTags.length > 0 && (
+          <Panel position="top-right">
+            <div
+              style={{
+                background: '#fff',
+                border: '1px solid #e5e7eb',
+                borderRadius: 10,
+                padding: '10px 12px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                minWidth: 140,
+                maxWidth: 200,
+                fontFamily: 'system-ui, sans-serif',
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#0d0d0d', marginBottom: 6 }}>
+                Filtriraj po tagih
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {allTags.map((tag) => {
+                  const active = activeTags.has(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() =>
+                        setActiveTags((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(tag)) next.delete(tag);
+                          else next.add(tag);
+                          return next;
+                        })
+                      }
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: 99,
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        background: active ? '#0071e3' : '#f0f0f0',
+                        color: active ? '#fff' : '#3d3d3d',
+                        transition: 'background 0.15s, color 0.15s',
+                      }}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+              {activeTags.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTags(new Set())}
+                  style={{
+                    marginTop: 8,
+                    fontSize: 10,
+                    color: '#8e8e93',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Počisti filter
+                </button>
+              )}
+            </div>
+          </Panel>
+        )}
 
         {selectedNode && (
           <Panel position="top-right">
