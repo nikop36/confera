@@ -57,28 +57,6 @@
 
 ---
 
-## Tok podatkov
-
-### Registracija in prijava
-1. Uporabnik se prijavi prek spletnega vmesnika (Next.js)
-2. Frontend pošlje zahtevo na NestJS REST API
-3. Backend validira podatke prek `ValidationPipe` (whitelist, strict mode)
-4. `AuthGuard` preveri Firebase ID žeton in vrne JWT za nadaljnje zahteve
-
-### AI matching — predlog udeležencev in dogodkov
-1. Supabase matching servis pobere profile udeležencev iz Firebasa
-2. Profile pretvori v vektorske reprezentacije (embeddings)
-3. Z vektorskim iskanjem (kosinusna podobnost, pgvector) poišče relevantne udeležence in dogodke
-4. Backend obogati rezultate z dodatnimi kriteriji (vloga, razpoložljivost, cilji) in jih vrne frontendu
-
-### Razporejanje srečanj
-1. Udeleženec sprejme priporočilo za srečanje
-2. Backend preveri razpoložljivost obeh udeležencev ter prostih terminov in prostorov
-3. Sistem optimizacijsko dodeli termin in prostor ter shrani srečanje v Firebase
-4. Oba udeleženca prejmeta e-mail obvestilo prek **Resend**
-
----
-
 ## Ključne arhitekturne odločitve
 
 ### Global Pipes in Filters

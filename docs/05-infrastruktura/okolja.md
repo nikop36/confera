@@ -35,11 +35,7 @@ Sistem Confera uporablja ločena okolja za razvoj, testiranje in produkcijo. Pro
 ## 4. Konfiguracija okolij (.env datoteke)
 
 ### Root `.env`
-Uporablja se za Docker Compose in Playwright.
-
 - `PLAYWRIGHT_BASE_URL`
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 ### Backend `.env`
 - `FIREBASE_PROJECT_ID`
@@ -58,7 +54,7 @@ Uporablja se za Docker Compose in Playwright.
 - `FIREBASE_API_KEY`
 
 ### Frontend `.env.local`
-- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_API_URL` (opcijsko)
 - `NEXT_PUBLIC_FIREBASE_API_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`

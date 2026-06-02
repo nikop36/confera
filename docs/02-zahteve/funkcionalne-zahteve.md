@@ -19,7 +19,6 @@
 ### 2.1 Uvoz udeležencev (NUJNO)
 - Organizator lahko uvozi udeležence prek standardizirane CSV/Excel predloge.
 - Sistem preveri skladnost predloge in zavrne napačno oblikovane datoteke.
-- Po uvozu sistem generira povzetek uspešnosti uvoza.
 
 ### 2.2 Upravljanje interesnih področij (NUJNO)
 - Organizator lahko definira seznam interesnih področij in kompetenc.
