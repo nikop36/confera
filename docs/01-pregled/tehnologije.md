@@ -1,170 +1,91 @@
-# Tehnološki stack
+# Tehnologije
 
-## Pregled
-
-Sistem Confera uporablja sodoben tehnološki nabor, zasnovan za skalabilnost, modularnost in hitro obdelavo podatkov. Arhitektura temelji na ločenih sklopih za frontend, backend in podatkovni sloj, vse komponente pa tečejo v Docker kontejnerjih.
-
-## Tehnologije po slojih
-
-| Sloj | Tehnologija | Gostovanje |
-|---|---|---|
-| Frontend | Next.js (React) | Vercel |
-| Backend | NestJS (Node.js, TypeScript) | Render |
-| Kontejnerizacija | Docker / Docker Compose | Lokalno |
-| Glavna baza podatkov | Firebase (Firestore) | Google Cloud |
-| AI matching | Supabase (PostgreSQL + pgvector) | Supabase Cloud |
-| Avtentikacija | Firebase Auth | Google Cloud |
-| Shranjevanje slik | Supabase Storage | Supabase Cloud |
-| E‑mail obvestila | Resend | Resend Cloud |
-| API dokumentacija | Swagger / OpenAPI | `/api` (backend) |
-| CI/CD | GitHub Actions + SonarQube | GitHub |
-| Upravljanje nalog | GitHub Projects | GitHub |
-| Funkcionalno testiranje | Playwright + Bruno | Lokalno / CI |
-| Unit / integracijski testi | Jest + SuperTest | Lokalno / CI |
+Pregled vseh tehnologij v sistemu Confera in razlogi za njihovo izbiro.
 
 ---
 
-## Frontend — Next.js
+## Frontend
 
-**Gostovanje:** Vercel
-**Konfiguracija:** `frontend/.env.local`
+### Next.js → Vercel
 
-Next.js je izbran zaradi server-side renderinga (SSR), vgrajenega routinga in brezhibne integracije z Vercelom. Frontend komunicira izključno prek REST API klicev na NestJS backend.
-
-**Ključne odgovornosti:**
-- Spletni UI za udeležence (profil, priporočila, sejem, razgovori)
-- Administratorski vmesnik za organizatorje
-- Nalaganje slik v Supabase Storage 
-- Upravljanje avtentikacijskega stanja (Firebase Auth SDK)
+Next.js je izbran kot React framework z vgrajenim usmerjanjem, podporo za server-side rendering in statično generacijo strani. Vercel je naravno okolje za Next.js — zagotavlja avtomatsko skaliranje, globalni CDN in enostavno integracijo z GitHub za CI/CD brez dodatne konfiguracije.
 
 ---
 
-## Backend — NestJS
+## Backend
 
-**Gostovanje:** Render (Docker kontejner)
-**Konfiguracija:** `backend/.env`
+### NestJS → Render
 
-NestJS je izbran zaradi strogo tipiziranega TypeScript okolja in modularne arhitekture. Backend izpostavlja REST API in komunicira s Firebase kot primarno podatkovno shrambo ter s Supabase za AI matching.
+NestJS prinaša modularna, opinionated strukturo nad Node.js, ki sili k urejenemu razredu kode (kontroler–servis–repozitorij na modul). TypeScript je prvovrstno podprt, kar skupaj z dekoratorji omogoča berljivo in vzdržljivo kodo. Render ponuja enostavno namestitev Docker kontejnerjev brez upravljanja infrastrukture.
 
-**Ključne odgovornosti:**
-- Poslovna logika  
-- AI matching integracija (Supabase)  
-- Upravljanje terminov, srečanj, sejma in razgovorov  
-- Pošiljanje e‑mail obvestil prek Resend  
-- Generiranje Swagger dokumentacije  
+### Swagger
+
+API dokumentacija je samodejno generirana iz NestJS dekoratorjev in dostopna na `/api`. Razvijalci in testeri imajo vedno aktualen pregled nad vsemi endpointi brez ročnega vzdrževanja dokumentacije.
 
 ---
 
-## Firebase (Firestore + Auth)
+## Podatkovne baze
 
-Firebase je primarna operativna platforma sistema.
+### Firebase (Firestore + Auth)
 
-**Firestore (NoSQL):**
-- Hrani ključne podatke: uporabniki, dogodki, termini, prostori, srečanja, sejem, razgovori  
-- Omogoča hitro branje/pisanje in fleksibilno strukturo dokumentov  
-- Primeren za real‑time posodobitve in nizko latenco
+Firebase pokriva vse operativne podatke sistema (profile, srečanja, termine, obvestila itd.) ter avtentikacijo. Firestore je oblačna NoSQL baza z realtime zmogljivostmi in SDK-ji za vse platforme. Firebase Auth eliminira potrebo po lastni implementaciji avtentikacije — podpira e-pošto, OAuth in žetonsko avtentikacijo brez dodatne infrastrukture.
 
-**Firebase Auth:**
-- Upravljanje identitet (udeleženci, organizatorji, zaposlovalci)  
-- Podpora za e‑mail prijavo in integracijo z backendom prek Firebase Admin SDK  
-- Varnostno preverjanje JWT žetonov na backendu
+Aktivni Firestore indeksi: `notifications` (archived, uid, createdAt), `roleRequests` (status, createdAt).
+
+### Supabase (PostgreSQL + pgvector)
+
+Supabase je izbran izključno za AI matching in profilne slike. Razlog je pgvector — PostgreSQL razširitev za vektorsko iskanje, ki omogoča učinkovito iskanje najbližjih sosedov (kosinusna podobnost) neposredno v bazi brez ločenega vektorskega servisa. PostgreSQL je preizkušena relacijska baza z vsemi potrebnimi garancijami za konsistentnost embeddingov.
 
 ---
 
-## Supabase (PostgreSQL + pgvector)
+## AI matching
 
-Supabase je ločen podatkovni sloj, namenjen izključno AI matchingu.
+### Embeddingi + kosinusna podobnost (pgvector)
 
-**Zakaj Supabase:**
-- PostgreSQL omogoča strukturirane podatke in napredne poizvedbe  
-- pgvector razširitev omogoča učinkovito vektorsko iskanje  
-- Podpora za HNSW/IVFFlat indekse za hitro podobnostno iskanje  
-- Ločitev AI obdelave od operativnih podatkov izboljša zmogljivost in skalabilnost
-
-**Shranjeni podatki:**
-- embeddings profilov  
-- rezultati ujemanj  
-- metapodatki o podobnosti
+Profili udeležencev se pretvorijo v vektorske reprezentacije z jezikovnim modelom. Podobnost med profili se izračuna s kosinusno metriko neposredno v Supabase (pgvector). Rezultat se kombinira z dodatnimi kriteriji (vloga, razpoložljivost, cilji) in prikaže z razlago ujemanja — kar povečuje transparentnost in zaupanje uporabnikov v priporočila.
 
 ---
 
-## Docker
+## Obvestila
 
-Docker zagotavlja enotna razvojna in produkcijska okolja.
+### Resend (free tier)
 
-**Prednosti:**
-- isti runtime na lokalnem razvoju, stagingu in produkciji  
-- enostavno poganjanje več storitev (backend, frontend, lokalne baze)  
-- hitrejši onboarding novih razvijalcev  
-- izolacija od sistemskih odvisnosti
-
-**Docker Compose:**
-- omogoča lokalno orkestracijo vseh komponent  
-- poenostavi razvoj in testiranje
+Resend je transakcijska e-poštna storitev z enostavnim API-jem. Uporablja se za vse e-poštne notifikacije (vloge, srečanja, karierni razgovori, dogodki, povabila). Sistemska obvestila znotraj aplikacije se shranjujejo neposredno v Firebase.
 
 ---
 
-## Resend
+## Kontejnerizacija
 
-Resend se uporablja za pošiljanje ključnih e‑mail obvestil.
+### Docker + Docker Compose
 
-**Uporaba:**
-- potrditev srečanja  
-- sprememba ali odpoved termina  
-- potrditev kariernega razgovora
-
-**Prednosti:**
-- visoka dostavljivost  
-- enostavna integracija z NestJS  
-- predloge e‑mailov in sledenje dostavi
+Docker zagotavlja konsistentno razvojno okolje ne glede na platformo razvijalca. Docker Compose orkestrira lokalno poganjanje vseh storitev skupaj: `pgvector/pgvector:pg16` (lokalni Supabase nadomestek), backend (NestJS na portu 3000) in frontend (Next.js na portu 3001). Volumni zagotavljajo persistenco podatkov in hot-reload med razvojem.
 
 ---
 
-## Swagger / OpenAPI
+## CI/CD in razvojna orodja
 
-Backend avtomatsko generira API dokumentacijo na `/api`.
+### GitHub Actions
 
-**Prednosti:**
-- enotna specifikacija endpointov  
-- pregled nad DTO objekti  
-- vključena Bearer Auth shema  
-- uporabno za testiranje in razvoj frontenda
+Ločena pipeline za frontend in backend:
+- **Backend**: lint → test → build → SonarQube Cloud scan → deploy na Render
+- **Frontend**: lint → test → build → deploy na Vercel
 
----
+### SonarQube Cloud
 
-## CI/CD — GitHub Actions + SonarQube
+Statična analiza kode je vključena v backend pipeline in zagotavlja pregled kakovosti kode pri vsakem pushu.
 
-CI/CD pipeline skrbi za kakovost in avtomatiziran deploy.
-- Ločena workflowa za frontend in backend  
-- Backend vključuje SonarQube analizo  
+### Bruno
 
-**Vključuje:**
-- linting  
-- unit teste  
-- statično analizo kode (SonarQube)  
-- avtomatski deploy na Render in Vercel
+Funkcionalno testiranje REST API-ja (API–DB sloj). Bruno zahteva lokalno nameščen GUI in datoteko `local.bru` (po predlogi `local.bru.example`).
 
----
+### Playwright
 
-## Testiranje
+End-to-end testiranje celotnega toka (frontend → backend → API → DB) s scenariji. Zahteva `.env` z `PLAYWRIGHT_BASE_URL`.
 
-### Playwright + Bruno (funkcionalno testiranje)
-- preverjanje celotnih uporabniških tokov  
-- API testiranje neodvisno od frontenda  
-- simulacija realnih scenarijev
+### Jest + Supertest
 
-### Jest + SuperTest (unit + integracijski testi)
-- testiranje poslovne logike  
-- preverjanje integracije med backend moduli  
-- hitra povratna informacija pri razvoju
+Unit in integracijski testi živijo v vsakem modulu pod `__tests__`. Zagon: `npm run test`.
 
----
+### GitHub Projects
 
-## GitHub Projects
-
-Projekt uporablja GitHub Projects za:
-
-- Kanban board  
-- Roadmap  
-- Issue & task spremljanje  
-- Sprint planiranje  
+Sledenje napredku prek Kanban table, roadmapa in board pogleda.

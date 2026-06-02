@@ -1,93 +1,107 @@
-# Okolja sistema
+# Okolja
 
-## Pregled
-
-Sistem Confera uporablja ločena okolja za razvoj, testiranje in produkcijo. Projekt je organiziran kot monorepo (`frontend/` + `backend/`), konfiguracija pa je razdeljena med več `.env` datotek.
+Sistem Confera pozna tri okolja: **development** (lokalno), **staging** (neobvezno, pred produkcijo) in **production** (Vercel + Render). Vsa okolja delijo enako arhitekturo, razlikujejo se v konfiguraciji storitev in načinu poganjanja.
 
 ---
 
-## 1. Lokalno okolje (development)
+## Development (lokalno)
 
-- Frontend in backend tečeta prek Docker Compose ali lokalno (`npm run dev`)
-- Supabase Storage in API ključi so nastavljeni v `.env.local`
-- Playwright uporablja `PLAYWRIGHT_BASE_URL` v root `.env`
+Lokalno okolje temelji na Docker Compose, ki zažene vse potrebne storitve z enim ukazom.
+
+### Storitve (docker-compose.yml)
+
+| Storitev | Slika / Build | Port |
+|---|---|---|
+| postgres | `pgvector/pgvector:pg16` | 5432 |
+| backend | `./backend` (Dockerfile) | 3000 |
+| frontend | `./frontend` (Dockerfile) | 3001 |
+
+Postgres služi kot lokalni nadomestek za Supabase (pgvector je vgrajen v sliko). Backend in frontend se poganjata z `start:dev` oz. `dev` ukazom z volumni za hot-reload. Storitev `backend` čaka na `postgres`, `frontend` čaka na `backend` (`depends_on`).
+
+### Dockerfile — Backend
+
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+CMD ["npm", "run", "start:dev"]
+```
+
+### Dockerfile — Frontend
+
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+CMD ["npm", "run", "dev"]
+```
 
 ---
 
-## 2. Testno okolje (staging)
+## Konfiguracija okolij (.env datoteke)
 
-- Ločeni Firebase in Supabase ključi
-- Backend uporablja `backend/.env.test`
-- Playwright E2E testi se izvajajo proti stagingu
-
----
-
-## 3. Produkcijsko okolje
-
-- Frontend → Vercel  
-- Backend → Render (Docker)  
-- Firebase → Firestore + Auth  
-- Supabase → PostgreSQL + pgvector + Storage  
-- Resend → e‑mail obvestila  
-
----
-
-## 4. Konfiguracija okolij (.env datoteke)
+Skrivnosti se nikoli ne commitajo v repozitorij. Vsak razvijalec ustvari datoteke lokalno po predlogah.
 
 ### Root `.env`
-- `PLAYWRIGHT_BASE_URL`
+
+| Spremenljivka | Namen |
+|---|---|
+| `PLAYWRIGHT_BASE_URL` | URL frontenda za Playwright e2e teste |
 
 ### Backend `.env`
-- `FIREBASE_PROJECT_ID`
-- `FIREBASE_CLIENT_EMAIL`
-- `FIREBASE_PRIVATE_KEY`
-- `FIREBASE_API_KEY`
-- `RESEND_API_KEY`
-- `EMAIL_FROM`
-- `DATABASE_URL`
-- `DATABASE_SSL`
-- `PORT` (opcijsko)
+
+| Spremenljivka | Namen |
+|---|---|
+| `FIREBASE_PROJECT_ID` | Firebase projekt |
+| `FIREBASE_CLIENT_EMAIL` | Service account e-pošta |
+| `FIREBASE_PRIVATE_KEY` | Service account zasebni ključ |
+| `FIREBASE_API_KEY` | Firebase Web API ključ |
+| `RESEND_API_KEY` | Resend API ključ za e-pošto |
+| `EMAIL_FROM` | Pošiljatelj e-pošte |
+| `DATABASE_URL` | Supabase PostgreSQL connection string |
+| `DATABASE_SSL` | SSL za Supabase povezavo |
+| `PORT` | (opcijsko) Vrata backenda, privzeto 3000 |
 
 ### Backend `.env.test`
-- `TEST_USER_EMAIL`
-- `TEST_USER_PASSWORD`
-- `FIREBASE_API_KEY`
+
+| Spremenljivka | Namen |
+|---|---|
+| `TEST_USER_EMAIL` | Testni uporabnik za integracijske teste |
+| `TEST_USER_PASSWORD` | Geslo testnega uporabnika |
+| `FIREBASE_API_KEY` | Firebase Web API ključ za testno okolje |
 
 ### Frontend `.env.local`
-- `NEXT_PUBLIC_API_URL` (opcijsko)
-- `NEXT_PUBLIC_FIREBASE_API_KEY`
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_SUPABASE_PROFILE_BUCKET`
+
+| Spremenljivka | Namen |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | (opcijsko) URL backenda, privzeto `http://localhost:3000` |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase Web API ključ |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase projekt URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon ključ |
+| `NEXT_PUBLIC_SUPABASE_PROFILE_BUCKET` | Ime Supabase bucketa za profilne slike (privzeto: `pplProfilePics`) |
+
+> **Opomba:** Spremenljivke z `NEXT_PUBLIC_` predpono so izpostavljene odjemalcu (browser) — ne smejo vsebovati skrivnosti z administrativnimi pravicami.
 
 ---
 
-## 5. CI/CD pipeline
+## Production
 
-Projekt uporablja dva ločena GitHub Actions workflowa:
+| Komponenta | Platforma | Opomba |
+|---|---|---|
+| Frontend | Vercel | Samodejni deploy ob pushu na `main` |
+| Backend | Render | Samodejni deploy prek GitHub Actions |
+| Baza (operativna) | Firebase (Firestore) | Oblačna storitev, ni lokalne instance |
+| Baza (AI / slike) | Supabase | Oblačna storitev, ni lokalne instance |
+| E-pošta | Resend | Oblačna storitev |
 
-### Frontend pipeline
-- Linting  
-- Build  
-- Deploy na Vercel  
-
-### Backend pipeline
-- Linting  
-- Unit testi  
-- SonarQube analiza  
-- Build  
-- Deploy na Render (deploy hook)  
-
-### GitHub Secrets
-- `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
-- `SONAR_TOKEN`, `SONAR_PROJECT_KEY`, `SONAR_ORGANIZATION`
-- `RENDER_DEPLOY_HOOK_URL`
+V produkciji se Docker ne uporablja za poganjanje storitev — Vercel in Render imata lastno infrastrukturo. Docker ostaja orodje za lokalni razvoj in morebitni staging.
 
 ---
 
-## 6. Docker
+## Staging
 
-- Lokalno se uporablja Docker Compose za poganjanje frontenda in backenda
-- Backend v produkciji teče kot Docker kontejner na Renderju
-- Frontend v produkciji ne uporablja Dockerja (Vercel build)
-
+Staging okolje ni obvezno definirano. Ob potrebi se vzpostavi z enako Docker Compose konfiguracijo, usmerje na testne instance Firebase in Supabase ter konfigurira prek ločenih `.env` datotek.

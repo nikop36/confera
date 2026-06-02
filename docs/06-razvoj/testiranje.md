@@ -1,23 +1,96 @@
 # Testiranje
 
-## Zaganjanje testov
+Confera pokriva tri ravni testiranja: unit/integracijski testi z Jest, API testi z Bruno in end-to-end testi z Playwright.
 
-### Zaženi vse teste enkrat
+---
+
+## Unit in integracijski testi — Jest + Supertest
+
+Testi živijo v vsakem backend modulu pod `__tests__/`. Supertest se uporablja za integracijske teste HTTP endpointov.
+
 ```bash
-npm test
+cd backend
+npm run test
 ```
 
-### Način spremljanja med razvojem
-```bash
-npm test -- --watch
+---
+
+## API testi — Bruno
+
+Bruno pokriva sloj API → baza (backend + Firebase/Supabase). Testi živijo v `tests/bruno/`.
+
+### Vzpostavitev
+
+1. Namesti [Bruno GUI](https://www.usebruno.com/)
+2. Ustvari `tests/bruno/environments/local.bru` po predlogi `local.bru.example`:
+
+```
+vars {
+  baseUrl: http://localhost:3000
+  # Admin token — pridobi z: npm run get-token (admin credentials)
+  adminToken: PASTE_ADMIN_TOKEN_HERE
+  # Organizer token
+  organizerToken: PASTE_ORGANIZER_TOKEN_HERE
+  # Participant token
+  participantToken: PASTE_PARTICIPANT_TOKEN_HERE
+  # Firebase Console → Authentication → Users
+  organizerUid: PASTE_ORGANIZER_UID_HERE
+  participantUid: PASTE_PARTICIPANT_UID_HERE
+  # Nastavi samodejno prek script:post-response — pusti prazno
+  connectionRequestId:
+  roomId:
+  slotId:
+  interviewId:
+}
 ```
 
-### Generiraj poročilo o pokritosti
+Tokene pridobi s skriptom:
 ```bash
-npm test -- --coverage
+cd backend
+npx ts-node scripts/get-token.ts
 ```
 
-HTML poročilo o pokritosti se ustvari v mapi `coverage/lcov-report/index.html`.
+UID-je najdeš v Firebase Console → Authentication → Users.
+
+### Zagon
+
+```bash
+# Vsi testi
+npm run test:api
+
+# Samo auth testi
+npm run test:api:auth
+
+# Tok kariernih razgovorov
+npm run test:api:flow
+```
+
+---
+
+## End-to-end testi — Playwright
+
+Playwright pokriva celoten tok (frontend → backend → API → baza) z uporabniškimi scenariji. Testi živijo v `tests/playwright/`.
+
+### Vzpostavitev
+
+Zagotovi, da je v root `.env` nastavljena spremenljivka:
+
+```
+PLAYWRIGHT_BASE_URL=http://localhost:3001
+```
+
+### Zagon
+
+```bash
+# Vsi e2e testi
+npm run test:e2e
+
+# Interaktivni UI način
+npm run test:e2e:ui
+
+# Prikaz poročila zadnjega zagona
+npm run test:e2e:report
+```
 
 ---
 

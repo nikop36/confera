@@ -8,14 +8,6 @@
 
 **Confera** je spletna platforma, ki povezuje udeležence konference iz akademske sfere, industrije in javne uprave. Sistem avtomatizira razporejanje srečanj na podlagi interesov in razpoložljivosti ter vključuje AI modul za večkriterijsko ujemanje udeležencev (multi-objective matching).
 
-| | |
-|---|---|
-| **Frontend** | Next.js → Vercel |
-| **Backend** | NestJS → Render  |
-| **Glavna podatkovna baza** | Firebase (NoSQL) |
-| **AI matching** | Supabase (PostgreSQL + pgvector) |
-| **Kontainerizacija** | Docker |
-
 ---
 
 ## Kazalo dokumentacije
@@ -71,8 +63,7 @@ Docker, deployment, baze podatkov in okolja.
 | Datoteka | Vsebina |
 |---|---|
 | [deployment.md](./05-infrastruktura/deployment.md) | Render (backend), Vercel (frontend), CI/CD pipeline |
-| [baze-podatkov.md](./05-infrastruktura/baze-podatkov.md) | Firebase in Supabase — namena, konfiguracija |
-| [okolja.md](./05-infrastruktura/okolja.md) | Development, staging in production okolja, secrets, docker |
+| [okolja.md](./05-infrastruktura/okolja.md) | Development, staging in production okolja, secrets, docker, Firebase in Supabase — namena, konfiguracija |
 
 ---
 
@@ -81,9 +72,20 @@ Navodila za razvijalce: vzpostavitev, konvencije in testiranje.
 
 | Datoteka | Vsebina |
 |---|---|
-| [zacetek.md](./06-razvoj/zacetek.md) | Kako zagnati projekt lokalno (onboarding) |
-| [konvencije.md](./06-razvoj/konvencije.md) | Coding style, git workflow, commit sporočila |
+| [zacetek.md](./06-razvoj/zacetek.md) | Kako zagnati projekt lokalno (onboarding), konvencije |
 | [testiranje.md](./06-razvoj/testiranje.md) | Unit, integracijski in funkcijski testi |
 
+---
 
-
+### 🏃 [07 — Sprinti](./07-sprinti/)
+Načrt in rezultati posameznih razvojnih sprintov (Scrum, 5 × 1 teden).
+ 
+| Sprint | Fokus |
+|---|---|
+| [sprint-1.md](./07-sprinti/sprint-1.md) | Infrastruktura, CI/CD, osnova API in UI |
+| [sprint-2.md](./07-sprinti/sprint-2.md) | Profili udeležencev, uvoz CSV/Excel, AI matching v1 |
+| [sprint-3.md](./07-sprinti/sprint-3.md) | Razporejanje srečanj, sejem, karierni razgovori |
+| [sprint-4.md](./07-sprinti/sprint-4.md) | AI matching v2, vizualizacija grafa, UI/UX izboljšave |
+| [sprint-5.md](./07-sprinti/sprint-5.md) | Testiranje, optimizacija zmogljivosti, skaliranje |
+ 
+---

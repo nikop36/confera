@@ -1,54 +1,52 @@
-# Deployment in CI/CD
+# Deployment
 
-## Pregled
-
-Sistem Confera uporablja avtomatiziran CI/CD proces, ki zagotavlja stabilne deploye, preverjanje kakovosti kode in varno uvajanje sprememb.
+Confera uporablja ločena pipeline za frontend in backend. Vsak push na `main` sproži samodejni deploy prek GitHub Actions.
 
 ---
 
-## 1. CI/CD pipeline (GitHub Actions)
+## Frontend — Vercel
 
-Pipeline se sproži ob vsakem push na `main`.
+Next.js aplikacija se namesti neposredno na Vercel. GitHub Actions izvede lint, teste in build pred deployem.
 
-### Koraki:
-1. **Linting** (ESLint, Prettier)
-2. **Unit testi** (Jest)
-3. **Integracijski testi** (SuperTest)
-4. **Statična analiza kode** (SonarQube cloud)
-5. **Build** frontenda in backenda
-6. **Deploy**:
-   - Backend → Render
-   - Frontend → Vercel
+**Pipeline koraki:**
+1. Lint
+2. Test
+3. Build
+4. Deploy na Vercel
+
+Okoljske spremenljivke se konfigurirajo v Vercel nadzorni plošči (Settings → Environment Variables). Vrednosti ustrezajo spremenljivkam iz `frontend/.env.local`.
 
 ---
 
-## 2. Deployment backenda (Render)
+## Backend — Render
 
-- Render poganja NestJS kot Docker kontejner.
-- Render samodejno ponovno zažene storitev ob novem deployu.
-- Okoljske spremenljivke se upravljajo prek Render nadzorne plošče.
+NestJS aplikacija se namesti na Render prek Docker kontejnerja. Pipeline pred deployem vključuje tudi SonarQube Cloud analizo kode.
 
----
+**Pipeline koraki:**
+1. Lint
+2. Test
+3. Build
+4. SonarQube Cloud scan
+5. Deploy na Render
 
-## 3. Deployment frontenda (Vercel)
-
-- Vercel samodejno gradi Next.js projekt.
-- Uporablja `NEXT_PUBLIC_*` spremenljivke.
-- Podpira predogledne deploye (preview deployments).
-
----
-
-## 4. Monitoring
-
-- Render dashboard za spremljanje API odzivnosti.
-- Firebase dashboard za spremljanje obremenitev.
-- Supabase dashboard za spremljanje vektorskih poizvedb.
-- KPI metrike v administratorskem panelu.
+Okoljske spremenljivke se konfigurirajo v Render nadzorni plošči (Environment). Vrednosti ustrezajo spremenljivkam iz `backend/.env`.
 
 ---
 
-## 5. Priporočila
+## CI/CD — GitHub Actions
 
-- Uporabljaj ločene API ključe za staging in produkcijo.
-- Uporabljaj health‑check endpoint za Render.
-- Pred vsakim deployem zaženi Playwright E2E teste.
+Datoteke workflow živijo v `.github/workflows/`. Oba pipeline sta neodvisna — napaka na enem ne blokira drugega.
+
+Render deploy se sproži z Render deploy hook URL-jem, ki se shrani kot GitHub Actions secret.
+
+---
+
+## Zunanje storitve
+
+Naslednje storitve nimajo lastnega deployment procesa — upravljajo se prek njihovih oblačnih konzol:
+
+| Storitev | Konzola |
+|---|---|
+| Firebase (Firestore + Auth) | [console.firebase.google.com](https://console.firebase.google.com) |
+| Supabase (PostgreSQL + pgvector) | [supabase.com/dashboard](https://supabase.com/dashboard) |
+| Resend | [resend.com](https://resend.com) |
