@@ -3,35 +3,29 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStoredUser } from '../../../lib/auth';
 import { useT } from '../../../lib/i18n';
+import { StatisticsRangeFilter } from '../range-filter';
+import { datesForPreset, toIsoRange, type RangePreset } from '../range';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 export default function AdminStatisticsReportsPage() {
   const t = useT();
   const user = useStoredUser();
-  const [preset, setPreset] = useState<'all' | '7d' | '30d'>('30d');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [preset, setPreset] = useState<RangePreset>('30d');
+  const initialDates = datesForPreset('30d');
+  const [from, setFrom] = useState(initialDates.from);
+  const [to, setTo] = useState(initialDates.to);
   const [volumes, setVolumes] = useState<Array<{ label: string; value: number }>>([]);
   const [error, setError] = useState('');
-  const [refreshTick, setRefreshTick] = useState(0);
 
-  const range = useMemo(() => {
-    const now = new Date();
-    let baseFrom = '';
-    let baseTo = '';
-    if (preset === '7d') {
-      baseFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      baseTo = now.toISOString();
-    } else if (preset === '30d') {
-      baseFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      baseTo = now.toISOString();
-    }
-    return {
-      from: from ? new Date(`${from}T00:00:00`).toISOString() : baseFrom,
-      to: to ? new Date(`${to}T23:59:59.999`).toISOString() : baseTo,
-    };
-  }, [preset, from, to]);
+  const range = useMemo(() => toIsoRange(from, to), [from, to]);
+
+  function applyPreset(nextPreset: RangePreset) {
+    setPreset(nextPreset);
+    const dates = datesForPreset(nextPreset);
+    setFrom(dates.from);
+    setTo(dates.to);
+  }
 
   useEffect(() => {
     if (!user?.idToken) return;
@@ -53,7 +47,7 @@ export default function AdminStatisticsReportsPage() {
           fetch(buildUrl('/analytics/engagement'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store', signal: controller.signal }),
         ]);
         if (!overviewRes.ok || !usageRes.ok || !matchingRes.ok || !engagementRes.ok) {
-          setError('Failed to load report volumes');
+          setError(t('admin.stats.reports.errorLoad', 'Failed to load report volumes'));
           return;
         }
 
@@ -62,73 +56,93 @@ export default function AdminStatisticsReportsPage() {
           roleBreakdown: Array<unknown>;
         };
         setVolumes([
-          { label: 'Overview', value: 1 },
-          { label: 'Usage trend rows', value: usage.series.length },
-          { label: 'Usage role rows', value: usage.roleBreakdown.length },
-          { label: 'Matching', value: 1 },
-          { label: 'Engagement', value: 1 },
+          { label: t('admin.nav.stats.overview', 'Overview'), value: 1 },
+          { label: t('admin.stats.reports.usageTrendRows', 'Usage trend rows'), value: usage.series.length },
+          { label: t('admin.stats.reports.usageRoleRows', 'Usage role rows'), value: usage.roleBreakdown.length },
+          { label: t('admin.nav.stats.matching', 'Matching'), value: 1 },
+          { label: t('admin.nav.stats.engagement', 'Engagement'), value: 1 },
         ]);
       } catch (err) {
         if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : 'Failed to load report volumes');
+        setError(err instanceof Error ? err.message : t('admin.stats.reports.errorLoad', 'Failed to load report volumes'));
       }
     }
     void load();
     return () => controller.abort();
-  }, [range.from, range.to, refreshTick, user?.idToken]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshTick((value) => value + 1);
-    }, 10_000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [range.from, range.to, t, user?.idToken]);
 
   return (
     <div>
-      <h1 className="text-[32px] font-bold tracking-tight">Reports</h1>
+      <h1 className="text-[32px] font-bold tracking-tight">{t('admin.nav.stats.reports', 'Reports')}</h1>
       <p className="text-sm text-[#8e8e93] mt-1 mb-5">
         {t('admin.stats.reports.subtitle', 'Export consolidated statistical reports for admin analysis.')}
       </p>
       {error && <div className="mb-4 rounded-[12px] bg-[#fff1f2] px-4 py-3 text-sm text-[#dc2626]">{error}</div>}
 
-      <div className="rounded-[12px] border border-[#ececec] bg-white p-4 mb-5 flex flex-wrap items-end gap-3">
-        <PresetButton active={preset === 'all'} label="All" onClick={() => setPreset('all')} />
-        <PresetButton active={preset === '7d'} label="Last 7d" onClick={() => setPreset('7d')} />
-        <PresetButton active={preset === '30d'} label="Last 30d" onClick={() => setPreset('30d')} />
-        <div className="ml-auto flex gap-2">
-        <label className="text-xs text-[#6b7280]">
-          From
-          <input
-            type="date"
-            value={from}
-            onChange={(event) => setFrom(event.target.value)}
-            className="ml-1 rounded-[8px] border border-[#d1d5db] px-2 py-1.5 text-sm"
-          />
-        </label>
-        <label className="text-xs text-[#6b7280]">
-          To
-          <input
-            type="date"
-            value={to}
-            onChange={(event) => setTo(event.target.value)}
-            className="ml-1 rounded-[8px] border border-[#d1d5db] px-2 py-1.5 text-sm"
-          />
-        </label>
-        </div>
-      </div>
+      <StatisticsRangeFilter
+        preset={preset}
+        from={from}
+        to={to}
+        onPresetChange={applyPreset}
+        onFromChange={setFrom}
+        onToChange={setTo}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        <ExportLink href={buildExportHref('json', 'all', range)} label="JSON / All" />
-        <ExportLink href={buildExportHref('csv', 'all', range)} label="CSV / All" />
-        <ExportLink href={buildExportHref('csv', 'overview', range)} label="CSV / Overview" />
-        <ExportLink href={buildExportHref('csv', 'usage', range)} label="CSV / Usage" />
-        <ExportLink href={buildExportHref('csv', 'matching', range)} label="CSV / Matching" />
-        <ExportLink href={buildExportHref('csv', 'engagement', range)} label="CSV / Engagement" />
+        <ExportButton
+          idToken={user?.idToken}
+          href={buildExportHref('json', 'all', range)}
+          filename="analytics-all-report.json"
+          label={`JSON / ${t('admin.filter.all', 'All')}`}
+          onError={setError}
+        />
+        <ExportButton
+          idToken={user?.idToken}
+          href={buildExportHref('csv', 'all', range)}
+          filename="analytics-all-report.csv"
+          label={`CSV / ${t('admin.filter.all', 'All')}`}
+          onError={setError}
+        />
+        <ExportButton
+          idToken={user?.idToken}
+          href={buildExportHref('csv', 'overview', range)}
+          filename="analytics-overview-report.csv"
+          label={`CSV / ${t('admin.nav.stats.overview', 'Overview')}`}
+          onError={setError}
+        />
+        <ExportButton
+          idToken={user?.idToken}
+          href={buildExportHref('csv', 'usage', range)}
+          filename="analytics-usage-report.csv"
+          label={`CSV / ${t('admin.nav.stats.usage', 'Usage')}`}
+          onError={setError}
+        />
+        <ExportButton
+          idToken={user?.idToken}
+          href={buildExportHref('csv', 'matching', range)}
+          filename="analytics-matching-report.csv"
+          label={`CSV / ${t('admin.nav.stats.matching', 'Matching')}`}
+          onError={setError}
+        />
+        <ExportButton
+          idToken={user?.idToken}
+          href={buildExportHref('csv', 'engagement', range)}
+          filename="analytics-engagement-report.csv"
+          label={`CSV / ${t('admin.nav.stats.engagement', 'Engagement')}`}
+          onError={setError}
+        />
       </div>
 
       <section className="mt-5 rounded-[12px] border border-[#ececec] bg-white p-4">
-        <h2 className="text-[16px] font-semibold mb-3">Estimated Report Rows by Section</h2>
+        <h2 className="text-[16px] font-semibold mb-1">
+          {t('admin.stats.reports.estimatedRows', 'Estimated Report Rows by Section')}
+        </h2>
+        <p className="text-xs text-[#8e8e93] mb-3">
+          {t(
+            'admin.stats.reports.estimatedRowsDesc',
+            'Shows the estimated number of rows included in exports by report section.',
+          )}
+        </p>
         <VolumeChartXY items={volumes} />
       </section>
     </div>
@@ -148,16 +162,62 @@ function buildExportHref(
   return url.toString();
 }
 
-function ExportLink({ href, label }: { href: string; label: string }) {
+function ExportButton({
+  idToken,
+  href,
+  filename,
+  label,
+  onError,
+}: {
+  idToken?: string;
+  href: string;
+  filename: string;
+  label: string;
+  onError: (message: string) => void;
+}) {
+  const t = useT();
+  const [loading, setLoading] = useState(false);
+
+  async function download() {
+    if (!idToken) {
+      onError(t('admin.stats.reports.errorAuth', 'You must be signed in to export reports.'));
+      return;
+    }
+    setLoading(true);
+    onError('');
+    try {
+      const response = await fetch(href, {
+        headers: { Authorization: `Bearer ${idToken}` },
+        cache: 'no-store',
+      });
+      if (!response.ok) {
+        throw new Error(t('admin.stats.reports.errorExport', 'Report export failed.'));
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : t('admin.stats.reports.errorExport', 'Report export failed.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="rounded-[10px] border border-[#ececec] bg-white px-4 py-3 no-underline text-[#111827] hover:bg-[#fafafa]"
+    <button
+      type="button"
+      onClick={() => void download()}
+      disabled={loading}
+      className="rounded-[10px] border border-[#ececec] bg-white px-4 py-3 text-left text-[#111827] hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {label}
-    </a>
+      {loading ? t('admin.stats.reports.downloading', 'Downloading...') : label}
+    </button>
   );
 }
 
@@ -194,8 +254,12 @@ function VolumeChartXY({ items }: { items: Array<{ label: string; value: number 
             </g>
           );
         })}
-        <text x={12} y={14} fontSize={10} fill="#6b7280">rows</text>
-        <text x={width - 54} y={height - 8} fontSize={10} fill="#6b7280">section</text>
+        <text x={12} y={14} fontSize={10} fill="#6b7280">
+          {t('admin.stats.reports.rows', 'rows')}
+        </text>
+        <text x={width - 54} y={height - 8} fontSize={10} fill="#6b7280">
+          {t('admin.stats.reports.section', 'section')}
+        </text>
         {items.map((item, index) => {
           const x = padding.left + index * (plotWidth / items.length) + 10;
           const h = (item.value / max) * plotHeight;
@@ -227,29 +291,5 @@ function VolumeChartXY({ items }: { items: Array<{ label: string; value: number 
         </div>
       )}
     </div>
-  );
-}
-
-function PresetButton({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-[8px] px-3 py-1.5 text-sm border ${
-        active
-          ? 'bg-[#111827] text-white border-[#111827]'
-          : 'bg-white text-[#374151] border-[#d1d5db] hover:bg-[#f9fafb]'
-      }`}
-    >
-      {label}
-    </button>
   );
 }

@@ -140,6 +140,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const unreadNotificationsCount = notifications.filter(
     (item) => item.unread,
   ).length;
+  const isAdmin = user?.role === 'admin';
 
   const initials = user?.displayName
     .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() ?? '??';
@@ -537,6 +538,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <p className="text-[11px] text-[#6e6e73] leading-relaxed relative">{t('shell.brandTagline', 'Smart networking at conferences')}</p>
           </div>
 
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="mt-3 flex items-center justify-center rounded-xl border border-[#e5e5ea] bg-white px-4 py-2 text-sm font-semibold text-[#3d3d3d] transition-colors hover:bg-[#f5f5f5] font-sans no-underline"
+            >
+              {t('common.adminPanel', 'Admin panel')}
+            </Link>
+          )}
+
           <button
             type="button"
             onClick={handleLogout}
@@ -790,6 +800,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               ))}
             </div>
             <div className="px-4 pb-6 pt-2">
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setIsMobileMoreOpen(false)}
+                  className="mb-2 flex w-full items-center justify-center rounded-xl border border-[#e5e5ea] bg-white px-4 py-3 text-[14px] font-semibold text-[#3d3d3d] no-underline font-sans"
+                >
+                  {t('common.adminPanel', 'Admin panel')}
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => { setIsMobileMoreOpen(false); handleLogout(); }}

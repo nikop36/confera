@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useStoredUser } from '../../lib/auth';
 import { tagColour } from '../../components/TagPicker';
+import { useT } from '../../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -20,6 +21,7 @@ function slugify(label: string): string {
 }
 
 export default function TagsAdminPage() {
+  const t = useT();
   const user = useStoredUser();
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,27 +33,28 @@ export default function TagsAdminPage() {
   const [saveError, setSaveError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user?.idToken) return;
-    void loadTags(user.idToken);
-  }, [user?.idToken]);
-
-  async function loadTags(token: string) {
+  const loadTags = useCallback(async (token: string) => {
     setLoading(true);
     setError('');
     try {
       const res = await fetch(`${API}/tags`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Failed to load tags');
+      if (!res.ok) throw new Error(t('admin.tags.errorLoad', 'Failed to load tags'));
       const data = (await res.json()) as Tag[];
       setTags(data);
     } catch {
-      setError('Could not load tags.');
+      setError(t('admin.tags.errorLoad', 'Could not load tags.'));
     } finally {
       setLoading(false);
     }
-  }
+  }, [t]);
+
+  useEffect(() => {
+    if (!user?.idToken) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadTags(user.idToken);
+  }, [loadTags, user?.idToken]);
 
   function handleLabelChange(val: string) {
     setLabel(val);
@@ -75,14 +78,14 @@ export default function TagsAdminPage() {
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { message?: string | string[] };
         const msg = Array.isArray(body.message) ? body.message[0] : body.message;
-        throw new Error(msg ?? 'Failed to create tag');
+        throw new Error(msg ?? t('admin.tags.errorCreate', 'Failed to create tag'));
       }
       setLabel('');
       setSlug('');
       setSlugTouched(false);
       void loadTags(user.idToken);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Error creating tag');
+      setSaveError(err instanceof Error ? err.message : t('admin.tags.errorCreate', 'Error creating tag'));
     } finally {
       setSaving(false);
     }
@@ -108,31 +111,31 @@ export default function TagsAdminPage() {
   return (
     <div className="max-w-[600px]">
       <div className="mb-6">
-        <h1 className="text-[22px] font-bold">Tags</h1>
+        <h1 className="text-[22px] font-bold">{t('admin.nav.tags', 'Tags')}</h1>
         <p className="text-[13px] text-[#8e8e93] mt-1">
-          Shared tag pool used across events, sessions, and profiles.
+          {t('admin.tags.subtitle', 'Shared tag pool used across events, sessions, and profiles.')}
         </p>
       </div>
 
       {/* Create form */}
       <form onSubmit={(e) => void handleCreate(e)} className="bg-white border border-[#e5e7eb] rounded-[16px] p-5 mb-6">
-        <p className="text-[12px] font-bold text-[#6e6e73] uppercase tracking-[0.06em] mb-4">Add tag</p>
+        <p className="text-[12px] font-bold text-[#6e6e73] uppercase tracking-[0.06em] mb-4">{t('admin.tags.addTag', 'Add tag')}</p>
         <div className="flex gap-3 mb-3">
           <div className="flex-1">
             <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">
-              Label
+              {t('admin.tags.label', 'Label')}
             </label>
             <input
               className={`${inputCls} w-full`}
               value={label}
               onChange={(e) => handleLabelChange(e.target.value)}
-              placeholder="e.g. Artificial Intelligence"
+              placeholder={t('admin.tags.labelPlaceholder', 'e.g. Artificial Intelligence')}
               required
             />
           </div>
           <div className="flex-1">
             <label className="block text-[11px] font-semibold text-[#6e6e73] mb-1 uppercase tracking-[0.06em]">
-              Slug
+              {t('admin.tags.slug', 'Slug')}
             </label>
             <input
               className={`${inputCls} w-full font-mono`}
@@ -141,7 +144,7 @@ export default function TagsAdminPage() {
                 setSlugTouched(true);
                 setSlug(e.target.value);
               }}
-              placeholder="e.g. artificial-intelligence"
+              placeholder={t('admin.tags.slugPlaceholder', 'e.g. artificial-intelligence')}
               pattern="[a-z0-9]+(-[a-z0-9]+)*"
               required
             />
@@ -150,7 +153,7 @@ export default function TagsAdminPage() {
 
         {slug && (
           <div className="mb-3">
-            <span className="text-[11px] text-[#6e6e73]">Preview: </span>
+            <span className="text-[11px] text-[#6e6e73]">{t('admin.tags.preview', 'Preview')}: </span>
             {(() => {
               const { bg, text } = tagColour(slug);
               return (
@@ -174,7 +177,7 @@ export default function TagsAdminPage() {
           disabled={saving || !label.trim() || !slug.trim()}
           className="px-5 py-[8px] bg-[#0d0d0d] text-white text-[13px] font-semibold rounded-full hover:bg-[#1f1f1f] disabled:opacity-50 transition-colors border-0 cursor-pointer font-sans"
         >
-          {saving ? 'Adding…' : 'Add tag'}
+          {saving ? t('admin.tags.adding', 'Adding...') : t('admin.tags.addTag', 'Add tag')}
         </button>
       </form>
 
@@ -182,7 +185,7 @@ export default function TagsAdminPage() {
       <div className="bg-white border border-[#e5e7eb] rounded-[16px] overflow-hidden">
         <div className="px-5 py-4 border-b border-[#f0f0f0]">
           <p className="text-[12px] font-bold text-[#6e6e73] uppercase tracking-[0.06em]">
-            All tags {!loading && `· ${tags.length}`}
+            {t('admin.tags.allTags', 'All tags')} {!loading && `· ${tags.length}`}
           </p>
         </div>
 
@@ -198,7 +201,7 @@ export default function TagsAdminPage() {
           </div>
         ) : tags.length === 0 ? (
           <div className="px-5 py-8 text-center text-[13px] text-[#8e8e93]">
-            No tags yet. Add one above.
+            {t('admin.tags.empty', 'No tags yet. Add one above.')}
           </div>
         ) : (
           <div className="divide-y divide-[#f0f0f0]">
@@ -221,7 +224,7 @@ export default function TagsAdminPage() {
                     onClick={() => void handleDelete(tag.id)}
                     className="text-[11px] font-semibold text-[#dc2626] hover:text-[#b91c1c] disabled:opacity-50 bg-transparent border-0 cursor-pointer font-sans"
                   >
-                    {deletingId === tag.id ? '…' : 'Delete'}
+                    {deletingId === tag.id ? '…' : t('common.delete', 'Delete')}
                   </button>
                 </div>
               );

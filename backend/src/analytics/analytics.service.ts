@@ -36,6 +36,7 @@ type UsagePayload = {
     date: string;
     usersCreated: number;
     profilesCompleted: number;
+    activeUsers: number;
   }>;
   roleBreakdown: Array<{ role: string; count: number }>;
 };
@@ -145,20 +146,28 @@ export class AnalyticsService {
 
     const byDay = new Map<
       string,
-      { date: string; usersCreated: number; profilesCompleted: number }
+      {
+        date: string;
+        usersCreated: number;
+        profilesCompleted: number;
+        activeUsers: number;
+      }
     >();
     for (const user of usersInRange) {
       const createdAt = toDate(user.createdAt);
       if (!createdAt) continue;
       const date = createdAt.toISOString().slice(0, 10);
-      const entry = byDay.get(date) ?? {
-        date,
-        usersCreated: 0,
-        profilesCompleted: 0,
-      };
+      const entry = ensureUsageDay(byDay, date);
       entry.usersCreated += 1;
       if (user.profileStatus === 'complete') entry.profilesCompleted += 1;
       byDay.set(date, entry);
+    }
+
+    for (const user of users) {
+      const activeAt = getUserActivityDate(user);
+      if (!isWithinRange(activeAt, range) || !activeAt) continue;
+      const date = activeAt.toISOString().slice(0, 10);
+      ensureUsageDay(byDay, date).activeUsers += 1;
     }
 
     const payload: UsagePayload = {
@@ -306,16 +315,32 @@ export class AnalyticsService {
         generatedAt: new Date().toISOString(),
         metricsVersion: 'v1',
         section,
+        range: overview.range,
       },
-      overview,
-      usage,
-      matching,
-      engagement,
+      sections: {
+        overview: {
+          summary: overview.summary,
+        },
+        usage: {
+          series: usage.series,
+          roleBreakdown: usage.roleBreakdown,
+        },
+        matching: {
+          summary: matching.summary,
+          notes: matching.notes,
+        },
+        engagement: {
+          summary: engagement.summary,
+          notes: engagement.notes,
+        },
+      },
     };
     if (section === 'all') return report;
     return {
       metadata: report.metadata,
-      [section]: report[section],
+      sections: {
+        [section]: report.sections[section],
+      },
     };
   }
 
@@ -331,76 +356,193 @@ export class AnalyticsService {
       this.getEngagement(from, to),
     ]);
 
-    const rows: string[] = ['section,metric,value'];
+    const rows: string[][] = [['section', 'group', 'metric', 'date', 'value']];
 
     if (section === 'all' || section === 'overview') {
-      rows.push(`overview,users_total,${overview.summary.usersTotal}`);
-      rows.push(
-        `overview,users_created_in_range,${overview.summary.usersCreatedInRange}`,
-      );
-      rows.push(
-        `overview,profile_completion_rate_percent,${overview.summary.profileCompletionRatePercent}`,
-      );
-      rows.push(
-        `overview,confirmed_meetings,${overview.summary.confirmedMeetings}`,
-      );
-      rows.push(
-        `overview,confirmed_career_interviews,${overview.summary.confirmedCareerInterviews}`,
-      );
-      rows.push(
-        `overview,accepted_connections_total,${overview.summary.acceptedConnectionsTotal}`,
-      );
+      rows.push([
+        'overview',
+        'summary',
+        'users_total',
+        '',
+        String(overview.summary.usersTotal),
+      ]);
+      rows.push([
+        'overview',
+        'summary',
+        'users_created_in_range',
+        '',
+        String(overview.summary.usersCreatedInRange),
+      ]);
+      rows.push([
+        'overview',
+        'summary',
+        'profiles_completed_in_range',
+        '',
+        String(overview.summary.profilesCompletedInRange),
+      ]);
+      rows.push([
+        'overview',
+        'summary',
+        'profile_completion_rate_percent',
+        '',
+        String(overview.summary.profileCompletionRatePercent),
+      ]);
+      rows.push([
+        'overview',
+        'summary',
+        'confirmed_meetings',
+        '',
+        String(overview.summary.confirmedMeetings),
+      ]);
+      rows.push([
+        'overview',
+        'summary',
+        'confirmed_career_interviews',
+        '',
+        String(overview.summary.confirmedCareerInterviews),
+      ]);
+      rows.push([
+        'overview',
+        'summary',
+        'accepted_connections_total',
+        '',
+        String(overview.summary.acceptedConnectionsTotal),
+      ]);
     }
 
     if (section === 'all' || section === 'matching') {
-      rows.push(
-        `matching,accepted_connections_in_range,${matching.summary.acceptedConnectionsInRange}`,
-      );
-      rows.push(
-        `matching,meeting_conversions,${matching.summary.meetingConversions}`,
-      );
-      rows.push(
-        `matching,interview_conversions,${matching.summary.interviewConversions}`,
-      );
-      rows.push(
-        `matching,conversion_rate_percent,${matching.summary.connectionToConversionRatePercent}`,
-      );
+      rows.push([
+        'matching',
+        'summary',
+        'accepted_connections_in_range',
+        '',
+        String(matching.summary.acceptedConnectionsInRange),
+      ]);
+      rows.push([
+        'matching',
+        'summary',
+        'meeting_conversions',
+        '',
+        String(matching.summary.meetingConversions),
+      ]);
+      rows.push([
+        'matching',
+        'summary',
+        'interview_conversions',
+        '',
+        String(matching.summary.interviewConversions),
+      ]);
+      rows.push([
+        'matching',
+        'summary',
+        'total_conversions',
+        '',
+        String(matching.summary.totalConversions),
+      ]);
+      rows.push([
+        'matching',
+        'summary',
+        'conversion_rate_percent',
+        '',
+        String(matching.summary.connectionToConversionRatePercent),
+      ]);
     }
 
     if (section === 'all' || section === 'engagement') {
-      rows.push(
-        `engagement,accepted_connections_total,${engagement.summary.acceptedConnectionsTotal}`,
-      );
-      rows.push(
-        `engagement,notifications_in_range,${engagement.summary.notificationsInRange}`,
-      );
-      rows.push(
-        `engagement,unread_notifications_in_range,${engagement.summary.unreadNotificationsInRange}`,
-      );
-      rows.push(
-        `engagement,read_rate_percent,${engagement.summary.readRatePercent}`,
-      );
-      rows.push(
-        `engagement,accepted_interview_invites,${engagement.summary.acceptedInterviewInvites}`,
-      );
-      rows.push(
-        `engagement,rejected_interview_invites,${engagement.summary.rejectedInterviewInvites}`,
-      );
+      rows.push([
+        'engagement',
+        'summary',
+        'accepted_connections_total',
+        '',
+        String(engagement.summary.acceptedConnectionsTotal),
+      ]);
+      rows.push([
+        'engagement',
+        'summary',
+        'notifications_in_range',
+        '',
+        String(engagement.summary.notificationsInRange),
+      ]);
+      rows.push([
+        'engagement',
+        'summary',
+        'unread_notifications_in_range',
+        '',
+        String(engagement.summary.unreadNotificationsInRange),
+      ]);
+      rows.push([
+        'engagement',
+        'summary',
+        'read_rate_percent',
+        '',
+        String(engagement.summary.readRatePercent),
+      ]);
+      rows.push([
+        'engagement',
+        'summary',
+        'accepted_interview_invites',
+        '',
+        String(engagement.summary.acceptedInterviewInvites),
+      ]);
+      rows.push([
+        'engagement',
+        'summary',
+        'rejected_interview_invites',
+        '',
+        String(engagement.summary.rejectedInterviewInvites),
+      ]);
+      rows.push([
+        'engagement',
+        'summary',
+        'invite_decision_count',
+        '',
+        String(engagement.summary.inviteDecisionCount),
+      ]);
     }
 
     if (section === 'all' || section === 'usage') {
-      rows.push(`usage,series_points,${usage.series.length}`);
+      rows.push([
+        'usage',
+        'summary',
+        'series_points',
+        '',
+        String(usage.series.length),
+      ]);
       for (const point of usage.series) {
-        rows.push(
-          `usage_daily,${point.date}_users_created,${point.usersCreated}`,
-        );
-        rows.push(
-          `usage_daily,${point.date}_profiles_completed,${point.profilesCompleted}`,
-        );
+        rows.push([
+          'usage',
+          'daily',
+          'users_created',
+          point.date,
+          String(point.usersCreated),
+        ]);
+        rows.push([
+          'usage',
+          'daily',
+          'profiles_completed',
+          point.date,
+          String(point.profilesCompleted),
+        ]);
+        rows.push([
+          'usage',
+          'daily',
+          'active_users',
+          point.date,
+          String(point.activeUsers),
+        ]);
+      }
+      for (const role of usage.roleBreakdown) {
+        rows.push([
+          'usage',
+          'role_breakdown',
+          role.role,
+          '',
+          String(role.count),
+        ]);
       }
     }
 
-    return `${rows.join('\n')}\n`;
+    return `${rows.map(toCsvRow).join('\n')}\n`;
   }
 
   private readCache<T>(key: string): T | null {
@@ -471,7 +613,57 @@ function buildRoleBreakdown(roles: UserRoleEnum[]) {
   for (const role of roles) {
     totals.set(role, (totals.get(role) ?? 0) + 1);
   }
-  return [...totals.entries()]
+  const roleRows = [...totals.entries()]
     .map(([role, count]) => ({ role, count }))
     .sort((a, b) => b.count - a.count);
+  return [{ role: 'total', count: roles.length }, ...roleRows];
+}
+
+function ensureUsageDay(
+  byDay: Map<
+    string,
+    {
+      date: string;
+      usersCreated: number;
+      profilesCompleted: number;
+      activeUsers: number;
+    }
+  >,
+  date: string,
+) {
+  const entry = byDay.get(date) ?? {
+    date,
+    usersCreated: 0,
+    profilesCompleted: 0,
+    activeUsers: 0,
+  };
+  byDay.set(date, entry);
+  return entry;
+}
+
+function getUserActivityDate(user: {
+  createdAt?: unknown;
+  lastActiveAt?: unknown;
+  lastLoginAt?: unknown;
+  lastSeenAt?: unknown;
+  updatedAt?: unknown;
+  profileUpdatedAt?: unknown;
+}) {
+  return (
+    toDate(user.lastActiveAt) ??
+    toDate(user.lastLoginAt) ??
+    toDate(user.lastSeenAt) ??
+    toDate(user.updatedAt) ??
+    toDate(user.profileUpdatedAt) ??
+    toDate(user.createdAt)
+  );
+}
+
+function toCsvRow(row: string[]) {
+  return row
+    .map((value) => {
+      if (!/[",\n\r]/.test(value)) return value;
+      return `"${value.replaceAll('"', '""')}"`;
+    })
+    .join(',');
 }

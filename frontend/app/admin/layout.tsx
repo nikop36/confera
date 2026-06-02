@@ -6,14 +6,16 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getStoredUser, useHydrated, useStoredUser } from '../lib/auth';
+import { useT } from '../lib/i18n';
 
 type AdminNavItem = {
-  label: string;
+  labelKey: string;
+  labelFallback: string;
   href: string;
   icon: ReactNode;
   badge?: number;
   disabled?: boolean;
-  children?: Array<{ label: string; href: string }>;
+  children?: Array<{ labelKey: string; labelFallback: string; href: string }>;
 };
 
 function CheckIcon() {
@@ -84,28 +86,30 @@ function TagIcon() {
 }
 
 const ADMIN_NAV: AdminNavItem[] = [
-  { label: 'Role Requests', href: '/admin/role-requests', icon: <CheckIcon /> },
-  { label: 'Tags', href: '/admin/tags', icon: <TagIcon /> },
-  { label: 'Scheduling', href: '/admin/scheduling', icon: <CalendarIcon /> },
-  { label: 'Meetings', href: '/admin/meetings', icon: <ClipboardIcon /> },
-  { label: 'Career Interviews', href: '/admin/career-interviews', icon: <BriefcaseIcon /> },
+  { labelKey: 'admin.nav.roleRequests', labelFallback: 'Role Requests', href: '/admin/role-requests', icon: <CheckIcon /> },
+  { labelKey: 'admin.nav.tags', labelFallback: 'Tags', href: '/admin/tags', icon: <TagIcon /> },
+  { labelKey: 'admin.nav.scheduling', labelFallback: 'Scheduling', href: '/admin/scheduling', icon: <CalendarIcon /> },
+  { labelKey: 'admin.nav.meetings', labelFallback: 'Meetings', href: '/admin/meetings', icon: <ClipboardIcon /> },
+  { labelKey: 'admin.nav.careerInterviews', labelFallback: 'Career Interviews', href: '/admin/career-interviews', icon: <BriefcaseIcon /> },
   {
-    label: 'Statistics',
+    labelKey: 'admin.nav.statistics',
+    labelFallback: 'Statistics',
     href: '/admin/statistics',
     icon: <BarChartIcon />,
     children: [
-      { label: 'Overview', href: '/admin/statistics' },
-      { label: 'Operations', href: '/admin/statistics/operations' },
-      { label: 'Usage', href: '/admin/statistics/usage' },
-      { label: 'Matching', href: '/admin/statistics/matching' },
-      { label: 'Engagement', href: '/admin/statistics/engagement' },
-      { label: 'Reports', href: '/admin/statistics/reports' },
+      { labelKey: 'admin.nav.stats.overview', labelFallback: 'Overview', href: '/admin/statistics' },
+      { labelKey: 'admin.nav.stats.operations', labelFallback: 'Operations', href: '/admin/statistics/operations' },
+      { labelKey: 'admin.nav.stats.usage', labelFallback: 'Usage', href: '/admin/statistics/usage' },
+      { labelKey: 'admin.nav.stats.matching', labelFallback: 'Matching', href: '/admin/statistics/matching' },
+      { labelKey: 'admin.nav.stats.engagement', labelFallback: 'Engagement', href: '/admin/statistics/engagement' },
+      { labelKey: 'admin.nav.stats.reports', labelFallback: 'Reports', href: '/admin/statistics/reports' },
     ],
   },
-  { label: 'Users', href: '/admin/users', icon: <UsersIcon />, disabled: true },
+  { labelKey: 'admin.nav.users', labelFallback: 'Users', href: '/admin/users', icon: <UsersIcon />, disabled: true },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
+  const t = useT();
   const hydrated = useHydrated();
   const user = useStoredUser();
   const currentUser = hydrated ? user ?? getStoredUser() : null;
@@ -127,7 +131,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   if (!currentUser || currentUser.role !== 'admin') {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-sm text-[#8e8e93]">Preverjanje dostopa...</p>
+        <p className="text-sm text-[#8e8e93]">{t('admin.access.checking', 'Checking access...')}</p>
       </div>
     );
   }
@@ -157,8 +161,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
         {/* Nav */}
         <nav className="flex flex-col gap-1 flex-1">
-          {ADMIN_NAV.map(({ label, href, icon, badge, disabled, children }) => {
+          {ADMIN_NAV.map(({ labelKey, labelFallback, href, icon, badge, disabled, children }) => {
             const active = pathname === href || pathname.startsWith(href + '/');
+            const label = t(labelKey, labelFallback);
             if (disabled) {
               return (
                 <div
@@ -167,7 +172,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 >
                   {icon}
                   <span className="flex-1">{label}</span>
-                  <span className="text-[10px] bg-[#e5e7eb] text-[#9ca3af] rounded-full px-2 py-0.5 font-semibold">soon</span>
+                  <span className="text-[10px] bg-[#e5e7eb] text-[#9ca3af] rounded-full px-2 py-0.5 font-semibold">{t('admin.nav.soon', 'soon')}</span>
                 </div>
               );
             }
@@ -231,7 +236,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                               : 'text-[#4b5563] hover:bg-[#ececec]'
                           }`}
                         >
-                          {child.label}
+                          {t(child.labelKey, child.labelFallback)}
                         </Link>
                       );
                     })}
@@ -251,7 +256,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
               <polyline points="15 18 9 12 15 6" />
             </svg>
-            Back to app
+            {t('common.backToApp', 'Back to app')}
           </Link>
           <div>
             <div className="flex items-center gap-2">

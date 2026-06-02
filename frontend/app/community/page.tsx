@@ -185,7 +185,7 @@ export default function CommunityPage() {
       }
       return true;
     });
-  }, [users, activeFilter, search]);
+  }, [users, activeFilter, search, connectedUids]);
 
   const visible = filtered.slice(0, visibleCount);
   const hasMore = visibleCount < filtered.length;

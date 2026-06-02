@@ -43,6 +43,14 @@ export class UsersService {
     return this.usersRepository.findByEmail(email);
   }
 
+  async markLoginActivity(uid: string): Promise<void> {
+    const now = new Date();
+    return this.usersRepository.updateUserActivity(uid, {
+      lastLoginAt: now,
+      lastActiveAt: now,
+    });
+  }
+
   async upgradeGuestToParticipant(
     email: string,
     realUid: string,

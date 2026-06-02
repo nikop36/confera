@@ -46,6 +46,14 @@ export class UsersRepository {
     await db.collection('users').doc(uid).update({ role });
   }
 
+  async updateUserActivity(
+    uid: string,
+    data: { lastLoginAt?: Date; lastActiveAt?: Date },
+  ): Promise<void> {
+    const db = this.firebaseService.getFirestore();
+    await db.collection('users').doc(uid).update(data);
+  }
+
   async listUsers(limit = 200): Promise<Array<User & UserProfile>> {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db

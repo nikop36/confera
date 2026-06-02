@@ -104,6 +104,11 @@ export class AnalyticsController {
       );
       return csv;
     }
+    response.setHeader('Content-Type', 'application/json; charset=utf-8');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="analytics-${section ?? 'all'}-report.json"`,
+    );
     return this.analyticsService.getReportJson(from, to, section);
   }
 }

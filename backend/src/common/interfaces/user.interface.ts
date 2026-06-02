@@ -10,6 +10,8 @@ export interface User {
   role: UserRoleEnum;
   profileStatus: ProfileStatus;
   createdAt: Date;
+  lastLoginAt?: Date;
+  lastActiveAt?: Date;
   guestStatus?: GuestStatus;
 }
 

@@ -122,6 +122,52 @@ describe('AnalyticsService', () => {
     );
   });
 
+  it('computes usage trend with active users and total role row', async () => {
+    (usersRepository.listUsers as jest.Mock).mockResolvedValue([
+      {
+        uid: 'u1',
+        role: 'participant',
+        profileStatus: 'complete',
+        createdAt: new Date('2026-05-20T10:00:00.000Z'),
+        lastActiveAt: new Date('2026-05-21T10:00:00.000Z'),
+      },
+      {
+        uid: 'u2',
+        role: 'organizer',
+        profileStatus: 'incomplete',
+        createdAt: new Date('2026-05-21T11:00:00.000Z'),
+      },
+      {
+        uid: 'u3',
+        role: 'participant',
+        profileStatus: 'complete',
+        createdAt: new Date('2026-04-01T10:00:00.000Z'),
+        lastActiveAt: new Date('2026-04-02T10:00:00.000Z'),
+      },
+    ]);
+
+    const result = await service.getUsageTrend(
+      '2026-05-20T00:00:00.000Z',
+      '2026-05-22T00:00:00.000Z',
+    );
+
+    expect(result.roleBreakdown[0]).toEqual({ role: 'total', count: 2 });
+    expect(result.series).toEqual([
+      {
+        date: '2026-05-20',
+        usersCreated: 1,
+        profilesCompleted: 1,
+        activeUsers: 0,
+      },
+      {
+        date: '2026-05-21',
+        usersCreated: 1,
+        profilesCompleted: 0,
+        activeUsers: 2,
+      },
+    ]);
+  });
+
   it('computes engagement metrics correctly', async () => {
     (connectionsRepository.listAccepted as jest.Mock).mockResolvedValue([
       { id: 'c1' },

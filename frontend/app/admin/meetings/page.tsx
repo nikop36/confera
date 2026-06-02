@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useStoredUser } from '../../lib/auth';
+import { useT } from '../../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -35,6 +36,7 @@ type UserLite = {
 };
 
 export default function MeetingsPage() {
+  const t = useT();
   const user = useStoredUser();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -78,7 +80,7 @@ export default function MeetingsPage() {
         if (firstError) {
           const data = await firstError.json().catch(() => ({}));
           const message = Array.isArray(data.message) ? data.message[0] : data.message;
-          throw new Error(message ?? 'Failed to load meetings data');
+          throw new Error(message ?? t('admin.meetings.errorLoad', 'Failed to load meetings data'));
         }
 
         setMeetings((await meetingsRes.json()) as Meeting[]);
@@ -86,14 +88,14 @@ export default function MeetingsPage() {
         setSlots((await slotsRes.json()) as Slot[]);
         setUsers((await usersRes.json()) as UserLite[]);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load meetings data');
+        setError(err instanceof Error ? err.message : t('admin.meetings.errorLoad', 'Failed to load meetings data'));
       } finally {
         setLoading(false);
       }
     }
 
     void load();
-  }, [user]);
+  }, [t, user?.idToken]);
 
   const roomsById = useMemo(
     () => new Map(rooms.map((room) => [room.id, room])),
@@ -148,7 +150,7 @@ export default function MeetingsPage() {
   async function handleDeleteMeeting(id: string) {
     const token = user?.idToken;
     if (!token) return;
-    const confirmed = window.confirm('Delete this meeting? This action cannot be undone.');
+    const confirmed = window.confirm(t('admin.meetings.confirmDelete', 'Delete this meeting? This action cannot be undone.'));
     if (!confirmed) return;
 
     setActingId(id);
@@ -161,11 +163,11 @@ export default function MeetingsPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const message = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(message ?? 'Failed to delete meeting');
+        throw new Error(message ?? t('admin.meetings.errorDelete', 'Failed to delete meeting'));
       }
       setMeetings((prev) => prev.filter((meeting) => meeting.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete meeting');
+      setError(err instanceof Error ? err.message : t('admin.meetings.errorDelete', 'Failed to delete meeting'));
     } finally {
       setActingId(null);
     }
@@ -189,13 +191,13 @@ export default function MeetingsPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const message = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(message ?? 'Failed to update meeting status');
+        throw new Error(message ?? t('admin.meetings.errorStatus', 'Failed to update meeting status'));
       }
       setMeetings((prev) =>
         prev.map((meeting) => (meeting.id === id ? { ...meeting, status } : meeting)),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update meeting status');
+      setError(err instanceof Error ? err.message : t('admin.meetings.errorStatus', 'Failed to update meeting status'));
     } finally {
       setActingId(null);
     }
@@ -204,8 +206,8 @@ export default function MeetingsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-[20px] font-bold text-[#0d0d0d] mb-1">Meetings</h1>
-        <p className="text-[13px] text-[#8e8e93]">All scheduled meetings and participant assignments.</p>
+        <h1 className="text-[20px] font-bold text-[#0d0d0d] mb-1">{t('admin.nav.meetings', 'Meetings')}</h1>
+        <p className="text-[13px] text-[#8e8e93]">{t('admin.meetings.subtitle', 'All scheduled meetings and participant assignments.')}</p>
       </div>
 
       <div className="mb-5 grid gap-3 md:grid-cols-4">
@@ -217,10 +219,10 @@ export default function MeetingsPage() {
           }}
           className="profile-input"
         >
-          <option value="all">All statuses</option>
-          <option value="scheduled">Scheduled</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="all">{t('admin.filter.allStatuses', 'All statuses')}</option>
+          <option value="scheduled">{t('admin.status.scheduled', 'Scheduled')}</option>
+          <option value="completed">{t('admin.status.completed', 'Completed')}</option>
+          <option value="cancelled">{t('admin.status.cancelled', 'Cancelled')}</option>
         </select>
 
         <select
@@ -231,7 +233,7 @@ export default function MeetingsPage() {
           }}
           className="profile-input"
         >
-          <option value="all">All rooms</option>
+          <option value="all">{t('admin.filter.allRooms', 'All rooms')}</option>
           {rooms.map((room) => (
             <option key={room.id} value={room.id}>
               {room.name}
@@ -246,7 +248,7 @@ export default function MeetingsPage() {
             setSearch(event.target.value);
             setPage(1);
           }}
-          placeholder="Search meeting, room, participant..."
+          placeholder={t('admin.meetings.searchPlaceholder', 'Search meeting, room, participant...')}
           className="profile-input"
         />
 
@@ -255,8 +257,8 @@ export default function MeetingsPage() {
           onChange={(event) => setSortDirection(event.target.value as typeof sortDirection)}
           className="profile-input"
         >
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
+          <option value="newest">{t('admin.sort.newest', 'Newest first')}</option>
+          <option value="oldest">{t('admin.sort.oldest', 'Oldest first')}</option>
         </select>
       </div>
 
@@ -268,14 +270,14 @@ export default function MeetingsPage() {
 
       {loading && (
         <div className="rounded-[14px] bg-[#f7f7f7] px-5 py-4 text-sm text-[#8e8e93]">
-          Loading meetings...
+          {t('admin.meetings.loading', 'Loading meetings...')}
         </div>
       )}
 
       {!loading && filteredMeetings.length === 0 && (
         <div className="rounded-[14px] border border-[#f0f0f0] px-6 py-10 text-center">
-          <p className="text-[15px] font-semibold text-[#0d0d0d] mb-1">No meetings yet</p>
-          <p className="text-[13px] text-[#8e8e93]">Create meetings from the Scheduling section.</p>
+          <p className="text-[15px] font-semibold text-[#0d0d0d] mb-1">{t('admin.meetings.emptyTitle', 'No meetings yet')}</p>
+          <p className="text-[13px] text-[#8e8e93]">{t('admin.meetings.emptyDesc', 'Create meetings from the Scheduling section.')}</p>
         </div>
       )}
 
@@ -306,9 +308,9 @@ export default function MeetingsPage() {
                     disabled={actingId === meeting.id}
                     className="text-[12px] px-2 py-1 rounded-[8px] border border-[#dbeafe] bg-[#eef2ff] text-[#3730a3]"
                   >
-                    <option value="scheduled">scheduled</option>
-                    <option value="completed">completed</option>
-                    <option value="cancelled">cancelled</option>
+                    <option value="scheduled">{t('admin.status.scheduled', 'Scheduled')}</option>
+                    <option value="completed">{t('admin.status.completed', 'Completed')}</option>
+                    <option value="cancelled">{t('admin.status.cancelled', 'Cancelled')}</option>
                   </select>
                   <button
                     type="button"
@@ -316,19 +318,19 @@ export default function MeetingsPage() {
                     disabled={actingId === meeting.id}
                     className="ml-auto px-3 py-1.5 rounded-[8px] border border-[#fecaca] bg-[#fff1f2] text-[12px] text-[#b91c1c] font-semibold disabled:opacity-50 cursor-pointer"
                   >
-                    {actingId === meeting.id ? 'Deleting...' : 'Delete'}
+                    {actingId === meeting.id ? t('admin.action.deleting', 'Deleting...') : t('common.delete', 'Delete')}
                   </button>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2 text-[13px]">
                   <div>
-                    <p className="text-[#8e8e93] mb-1">Room</p>
+                    <p className="text-[#8e8e93] mb-1">{t('admin.common.room', 'Room')}</p>
                     <p className="font-medium text-[#111827]">
                       {room ? `${room.name}${room.location ? ` • ${room.location}` : ''}` : meeting.roomId}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[#8e8e93] mb-1">Time Slot</p>
+                    <p className="text-[#8e8e93] mb-1">{t('admin.common.timeSlot', 'Time Slot')}</p>
                     <p className="font-medium text-[#111827]">
                       {slot
                         ? `${formatDateTime(slot.startAt)} - ${formatDateTime(slot.endAt)}`
@@ -339,7 +341,7 @@ export default function MeetingsPage() {
 
                 <div className="grid gap-3 md:grid-cols-2 mt-4 text-[13px]">
                   <div>
-                    <p className="text-[#8e8e93] mb-1">Requested by</p>
+                    <p className="text-[#8e8e93] mb-1">{t('admin.common.requestedBy', 'Requested by')}</p>
                     <ul className="space-y-1">
                       {requestedByUids.map((uid) => (
                         <li key={uid} className="text-[#111827]">
@@ -350,7 +352,7 @@ export default function MeetingsPage() {
                     </ul>
                   </div>
                   <div>
-                    <p className="text-[#8e8e93] mb-1">Requested to</p>
+                    <p className="text-[#8e8e93] mb-1">{t('admin.common.requestedTo', 'Requested to')}</p>
                     <ul className="space-y-1">
                       {requestedToUids.map((uid) => (
                         <li key={uid} className="text-[#111827]">
@@ -363,7 +365,7 @@ export default function MeetingsPage() {
                 </div>
 
                 <div className="mt-4 text-[12px] text-[#6b7280]">
-                  Total participants: <span className="font-semibold text-[#111827]">{participants.length}</span>
+                  {t('admin.meetings.totalParticipants', 'Total participants')}: <span className="font-semibold text-[#111827]">{participants.length}</span>
                 </div>
               </article>
             );
@@ -374,8 +376,8 @@ export default function MeetingsPage() {
       {!loading && filteredMeetings.length > 0 && (
         <div className="mt-5 flex items-center justify-between">
           <p className="text-[12px] text-[#6b7280]">
-            Showing {(currentPage - 1) * pageSize + 1}-
-            {Math.min(currentPage * pageSize, filteredMeetings.length)} of {filteredMeetings.length}
+            {t('admin.pagination.showing', 'Showing')} {(currentPage - 1) * pageSize + 1}-
+            {Math.min(currentPage * pageSize, filteredMeetings.length)} {t('admin.pagination.of', 'of')} {filteredMeetings.length}
           </p>
           <div className="flex gap-2">
             <button
@@ -384,7 +386,7 @@ export default function MeetingsPage() {
               disabled={currentPage === 1}
               className="px-3 py-1.5 rounded-[8px] border border-[#e5e7eb] bg-white text-[12px] disabled:opacity-40"
             >
-              Previous
+              {t('admin.pagination.previous', 'Previous')}
             </button>
             <button
               type="button"
@@ -392,7 +394,7 @@ export default function MeetingsPage() {
               disabled={currentPage === totalPages}
               className="px-3 py-1.5 rounded-[8px] border border-[#e5e7eb] bg-white text-[12px] disabled:opacity-40"
             >
-              Next
+              {t('admin.pagination.next', 'Next')}
             </button>
           </div>
         </div>

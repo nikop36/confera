@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useStoredUser } from '../../../lib/auth';
+import { useT } from '../../../lib/i18n';
+import { StatisticsRangeFilter } from '../range-filter';
+import { datesForPreset, toIsoRange, type RangePreset } from '../range';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -92,7 +95,6 @@ type ConfirmedMeetingsPayload = {
   }>;
 };
 
-type RangePreset = 'all' | '7d' | '30d';
 type VisibleSeries = {
   total: boolean;
   meetings: boolean;
@@ -100,6 +102,7 @@ type VisibleSeries = {
 };
 
 export default function AdminStatisticsPage() {
+  const t = useT();
   const user = useStoredUser();
   const [occupancy, setOccupancy] = useState<RoomOccupancyPayload | null>(null);
   const [confirmed, setConfirmed] = useState<ConfirmedMeetingsPayload | null>(null);
@@ -108,34 +111,22 @@ export default function AdminStatisticsPage() {
   const [preset, setPreset] = useState<RangePreset>('all');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
-  const [autoRefresh, setAutoRefresh] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
-  const [refreshTick, setRefreshTick] = useState(0);
   const [visibleSeries, setVisibleSeries] = useState<VisibleSeries>({
     total: true,
     meetings: true,
     interviews: true,
   });
 
-  const range = useMemo(() => {
-    const now = new Date();
-    let baseFrom = '';
-    let baseTo = '';
+  const range = useMemo(() => toIsoRange(customFrom, customTo), [customFrom, customTo]);
 
-    if (preset === '7d') {
-      baseFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      baseTo = now.toISOString();
-    } else if (preset === '30d') {
-      baseFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      baseTo = now.toISOString();
-    }
-
-    const fromIso = customFrom ? new Date(`${customFrom}T00:00:00`).toISOString() : baseFrom;
-    const toIso = customTo ? new Date(`${customTo}T23:59:59.999`).toISOString() : '';
-    return { from: fromIso, to: toIso || baseTo };
-  }, [preset, customFrom, customTo]);
-  const refreshKey = `${range.from}_${range.to}_${refreshTick}`;
+  function applyPreset(nextPreset: RangePreset) {
+    setPreset(nextPreset);
+    const dates = datesForPreset(nextPreset);
+    setCustomFrom(dates.from);
+    setCustomTo(dates.to);
+  }
 
   useEffect(() => {
     if (!user?.idToken) return;
@@ -203,15 +194,7 @@ export default function AdminStatisticsPage() {
 
     void load();
     return () => controller.abort();
-  }, [user?.idToken, range.from, range.to, refreshKey]);
-
-  useEffect(() => {
-    if (!autoRefresh || !user?.idToken) return;
-    const interval = setInterval(() => {
-      setRefreshTick((value) => value + 1);
-    }, 10_000);
-    return () => clearInterval(interval);
-  }, [autoRefresh, user?.idToken]);
+  }, [user?.idToken, range.from, range.to]);
 
   const sortedRooms = useMemo(
     () =>
@@ -251,50 +234,20 @@ export default function AdminStatisticsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-[32px] font-bold tracking-tight">Statistics</h1>
+        <h1 className="text-[32px] font-bold tracking-tight">{t('admin.stats.title', 'Statistics')}</h1>
         <p className="text-sm text-[#8e8e93] mt-1">
-          Room occupancy and confirmed meeting trends for organizers.
+          {t('admin.stats.operations.subtitle', 'Room occupancy and confirmed meeting trends for organizers.')}
         </p>
       </div>
 
-      <section className="rounded-[12px] border border-[#ececec] bg-white p-4 mb-4">
-        <div className="grid grid-cols-1 xl:grid-cols-[auto,1fr] gap-3 items-center">
-          <div className="flex gap-2">
-            <PresetButton active={preset === 'all'} label="All" onClick={() => setPreset('all')} />
-            <PresetButton active={preset === '7d'} label="Last 7d" onClick={() => setPreset('7d')} />
-            <PresetButton active={preset === '30d'} label="Last 30d" onClick={() => setPreset('30d')} />
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <label className="inline-flex items-center gap-2 text-xs text-[#6b7280]">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(event) => setAutoRefresh(event.target.checked)}
-                className="h-4 w-4 rounded border-[#d1d5db]"
-              />
-              Auto refresh (60s)
-            </label>
-            <label className="text-xs text-[#6b7280] inline-flex items-center gap-1">
-              From
-              <input
-                type="date"
-                value={customFrom}
-                onChange={(event) => setCustomFrom(event.target.value)}
-                className="ml-1 rounded-[8px] border border-[#d1d5db] px-2 py-1.5 text-sm"
-              />
-            </label>
-            <label className="text-xs text-[#6b7280] inline-flex items-center gap-1">
-              To
-              <input
-                type="date"
-                value={customTo}
-                onChange={(event) => setCustomTo(event.target.value)}
-                className="ml-1 rounded-[8px] border border-[#d1d5db] px-2 py-1.5 text-sm"
-              />
-            </label>
-          </div>
-        </div>
-      </section>
+      <StatisticsRangeFilter
+        preset={preset}
+        from={customFrom}
+        to={customTo}
+        onPresetChange={applyPreset}
+        onFromChange={setCustomFrom}
+        onToChange={setCustomTo}
+      />
 
       {error && (
         <div className="mb-4 rounded-[12px] bg-[#fff1f2] px-4 py-3 text-sm text-[#dc2626]">
@@ -304,74 +257,49 @@ export default function AdminStatisticsPage() {
 
       {isNoData && (
         <section className="rounded-[12px] border border-[#e5e7eb] bg-white p-4 mb-6">
-          <h2 className="text-[16px] font-semibold mb-1">No data in selected range</h2>
+          <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.noDataTitle', 'No data in selected range')}</h2>
           <p className="text-sm text-[#6b7280]">
-            Try <strong>All</strong> range, generate time slots, and confirm at least
-            one meeting/interview. Statistics are based on confirmed records tied to
-            existing slots.
+            {t('admin.stats.operations.noDataDesc', 'Try All range, generate time slots, and confirm at least one meeting/interview. Statistics are based on confirmed records tied to existing slots.')}
           </p>
         </section>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
         <StatCard
-          label="Confirmed total"
+          label={t('admin.stats.operations.confirmedTotal', 'Confirmed total')}
           value={confirmed?.summary.confirmedTotalCount ?? 0}
         />
         <StatCard
-          label="Meetings"
+          label={t('admin.stats.operations.meetings', 'Meetings')}
           value={confirmed?.summary.confirmedMeetingsCount ?? 0}
         />
         <StatCard
-          label="Interviews"
+          label={t('admin.stats.operations.interviews', 'Interviews')}
           value={confirmed?.summary.confirmedCareerInterviewsCount ?? 0}
         />
         <StatCard
-          label="Avg occupancy"
+          label={t('admin.stats.operations.avgOccupancy', 'Avg occupancy')}
           value={`${occupancy?.summary.averageOccupancyPercent ?? 0}%`}
         />
         <StatCard
-          label="Seat utilization"
+          label={t('admin.stats.operations.seatUtilization', 'Seat utilization')}
           value={`${occupancy?.summary.averageCapacityUtilizationPercent ?? 0}%`}
         />
         <StatCard
-          label="Invite acceptance"
+          label={t('admin.stats.operations.inviteAcceptance', 'Invite acceptance')}
           value={`${confirmed?.summary.inviteAcceptanceRatePercent ?? 0}%`}
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mb-6">
-        <StatCard
-          label="Prev period total"
-          value={confirmed?.summary.previousPeriod?.confirmedTotalCount ?? 0}
-        />
-        <StatCard
-          label="Total Δ vs prev"
-          value={`${confirmed?.summary.previousPeriod?.deltaTotalPercent ?? 0}%`}
-        />
-        <StatCard
-          label="Room conflicts"
-          value={confirmed?.summary.conflictMetrics?.roomSlotConflicts ?? 0}
-        />
-        <StatCard
-          label="Participant conflicts"
-          value={confirmed?.summary.conflictMetrics?.participantConflicts ?? 0}
-        />
-        <StatCard
-          label="Interviewer conflicts"
-          value={confirmed?.summary.conflictMetrics?.interviewerConflicts ?? 0}
-        />
-      </div>
-
       <section className="rounded-[12px] border border-[#ececec] bg-white p-4 mb-5">
-        <h2 className="text-[16px] font-semibold mb-1">Anomaly Flags</h2>
+        <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.anomalyFlags', 'Anomaly Flags')}</h2>
         <p className="text-xs text-[#8e8e93] mb-3">
-          Large day-to-day changes in total confirmed volume.
+          {t('admin.stats.operations.anomalyDesc', 'Large day-to-day changes in total confirmed volume.')}
         </p>
         {loading ? (
-          <p className="text-sm text-[#8e8e93]">Checking anomalies...</p>
+          <p className="text-sm text-[#8e8e93]">{t('admin.stats.operations.checkingAnomalies', 'Checking anomalies...')}</p>
         ) : anomalies.length === 0 ? (
-          <p className="text-sm text-[#8e8e93]">No strong spikes or drops detected.</p>
+          <p className="text-sm text-[#8e8e93]">{t('admin.stats.operations.noAnomalies', 'No strong spikes or drops detected.')}</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {anomalies.slice(0, 8).map((item) => (
@@ -384,7 +312,10 @@ export default function AdminStatisticsPage() {
                 }`}
               >
                 <div className="font-medium">
-                  {item.type === 'spike' ? 'Spike' : 'Drop'} on {item.date}
+                  {item.type === 'spike'
+                    ? t('admin.stats.operations.spike', 'Spike')
+                    : t('admin.stats.operations.drop', 'Drop')}{' '}
+                  {t('admin.stats.operations.onDate', 'on')} {item.date}
                 </div>
                 <div className="text-xs">
                   {item.previousTotal} → {item.currentTotal} ({item.deltaPercent}%)
@@ -397,9 +328,12 @@ export default function AdminStatisticsPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
         <section className="rounded-[12px] border border-[#ececec] p-4 bg-white">
-          <h2 className="text-[16px] font-semibold mb-1">Confirmed Over Time</h2>
+          <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.confirmedOverTime', 'Confirmed Over Time')}</h2>
           <p className="text-xs text-[#8e8e93] mb-3">
-            X-axis: date, Y-axis: count (meetings/interviews/total).
+            {t(
+              'admin.stats.operations.confirmedOverTimeDesc',
+              'Shows confirmed meetings, interviews, and total confirmed items by day in the selected period.',
+            )}
           </p>
           <div className="mb-3 flex justify-end">
             <button
@@ -423,13 +357,13 @@ export default function AdminStatisticsPage() {
               }
               className="rounded-[8px] border border-[#d1d5db] px-2.5 py-1.5 text-xs text-[#374151] hover:bg-[#f9fafb]"
             >
-              Export CSV
+              {t('admin.stats.exportCsv', 'Export CSV')}
             </button>
           </div>
           {loading ? (
-            <p className="text-sm text-[#8e8e93]">Loading chart...</p>
+            <p className="text-sm text-[#8e8e93]">{t('admin.stats.loadingChart', 'Loading chart...')}</p>
           ) : series.length === 0 ? (
-            <EmptyChart message="No confirmed records in selected range." />
+            <EmptyChart message={t('admin.stats.operations.noConfirmedRecords', 'No confirmed records in selected range.')} />
           ) : (
             <MultiLineChart
               series={series.map((entry) => ({
@@ -448,16 +382,21 @@ export default function AdminStatisticsPage() {
           )}
           {selectedDaySeries && (
             <div className="mt-3 rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-xs text-[#334155]">
-              {selectedDaySeries.date}: total {selectedDaySeries.total} (meetings{' '}
-              {selectedDaySeries.meetings}, interviews {selectedDaySeries.interviews})
+              {selectedDaySeries.date}: {t('admin.stats.operations.total', 'total')}{' '}
+              {selectedDaySeries.total} ({t('admin.stats.operations.meetings', 'Meetings').toLowerCase()}{' '}
+              {selectedDaySeries.meetings}, {t('admin.stats.operations.interviews', 'Interviews').toLowerCase()}{' '}
+              {selectedDaySeries.interviews})
             </div>
           )}
         </section>
 
         <section className="rounded-[12px] border border-[#ececec] p-4 bg-white">
-          <h2 className="text-[16px] font-semibold mb-1">Room Occupancy (%)</h2>
+          <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.roomOccupancy', 'Room Occupancy (%)')}</h2>
           <p className="text-xs text-[#8e8e93] mb-3">
-            X-axis: room, Y-axis: occupancy percentage.
+            {t(
+              'admin.stats.operations.roomOccupancyDesc',
+              'Compares how much of each room schedule is booked in the selected period.',
+            )}
           </p>
           <div className="mb-3 flex justify-end">
             <button
@@ -491,13 +430,13 @@ export default function AdminStatisticsPage() {
               }
               className="rounded-[8px] border border-[#d1d5db] px-2.5 py-1.5 text-xs text-[#374151] hover:bg-[#f9fafb]"
             >
-              Export CSV
+              {t('admin.stats.exportCsv', 'Export CSV')}
             </button>
           </div>
           {loading ? (
-            <p className="text-sm text-[#8e8e93]">Loading chart...</p>
+            <p className="text-sm text-[#8e8e93]">{t('admin.stats.loadingChart', 'Loading chart...')}</p>
           ) : sortedRooms.length === 0 ? (
-            <EmptyChart message="No rooms available." />
+            <EmptyChart message={t('admin.stats.operations.noRooms', 'No rooms available.')} />
           ) : (
             <BarChart
               bars={sortedRooms.map((room) => ({
@@ -511,18 +450,18 @@ export default function AdminStatisticsPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
         <section className="rounded-[12px] border border-[#ececec] p-4 bg-white">
-          <h2 className="text-[16px] font-semibold mb-1">Interview Funnel</h2>
+          <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.interviewFunnel', 'Interview Funnel')}</h2>
           <p className="text-xs text-[#8e8e93] mb-3">
-            Pending, accepted, rejected, and confirmed totals.
+            {t('admin.stats.operations.interviewFunnelDesc', 'Pending, accepted, rejected, and confirmed totals.')}
           </p>
           {loading ? (
-            <p className="text-sm text-[#8e8e93]">Loading funnel...</p>
+            <p className="text-sm text-[#8e8e93]">{t('admin.stats.operations.loadingFunnel', 'Loading funnel...')}</p>
           ) : funnel.length === 0 ? (
-            <EmptyChart message="No funnel data." />
+            <EmptyChart message={t('admin.stats.operations.noFunnelData', 'No funnel data.')} />
           ) : (
             <FunnelBars
               items={funnel.map((entry) => ({
-                label: stageLabel(entry.stage),
+                label: stageLabel(entry.stage, t),
                 value: entry.value,
               }))}
             />
@@ -530,14 +469,17 @@ export default function AdminStatisticsPage() {
         </section>
 
         <section className="rounded-[12px] border border-[#ececec] p-4 bg-white">
-          <h2 className="text-[16px] font-semibold mb-1">Hourly Heatmap</h2>
+          <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.hourlyHeatmap', 'Hourly Heatmap')}</h2>
           <p className="text-xs text-[#8e8e93] mb-3">
-            X-axis: hour of day, intensity: confirmed volume.
+            {t(
+              'admin.stats.operations.hourlyHeatmapDesc',
+              'Highlights which hours contain the highest volume of confirmed meetings and interviews.',
+            )}
           </p>
           {loading ? (
-            <p className="text-sm text-[#8e8e93]">Loading heatmap...</p>
+            <p className="text-sm text-[#8e8e93]">{t('admin.stats.operations.loadingHeatmap', 'Loading heatmap...')}</p>
           ) : heatmap.length === 0 ? (
-            <EmptyChart message="No hourly data in selected range." />
+            <EmptyChart message={t('admin.stats.operations.noHourlyData', 'No hourly data in selected range.')} />
           ) : (
             <HourlyHeatmap
               data={heatmap}
@@ -547,34 +489,36 @@ export default function AdminStatisticsPage() {
           )}
           {selectedHourSeries && (
             <div className="mt-3 rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-xs text-[#334155]">
-              {String(selectedHourSeries.hour).padStart(2, '0')}:00: total{' '}
-              {selectedHourSeries.total} (meetings {selectedHourSeries.meetings},
-              interviews {selectedHourSeries.interviews})
+              {String(selectedHourSeries.hour).padStart(2, '0')}:00:{' '}
+              {t('admin.stats.operations.total', 'total')}{' '}
+              {selectedHourSeries.total} ({t('admin.stats.operations.meetings', 'Meetings').toLowerCase()}{' '}
+              {selectedHourSeries.meetings}, {t('admin.stats.operations.interviews', 'Interviews').toLowerCase()}{' '}
+              {selectedHourSeries.interviews})
             </div>
           )}
         </section>
       </div>
 
       <section className="rounded-[12px] border border-[#ececec] bg-white p-4">
-        <h2 className="text-[16px] font-semibold mb-3">Room Occupancy Details</h2>
+        <h2 className="text-[16px] font-semibold mb-3">{t('admin.stats.operations.roomDetails', 'Room Occupancy Details')}</h2>
         {loading ? (
-          <p className="text-sm text-[#8e8e93]">Loading room details...</p>
+          <p className="text-sm text-[#8e8e93]">{t('admin.stats.operations.loadingRoomDetails', 'Loading room details...')}</p>
         ) : sortedRooms.length === 0 ? (
-          <p className="text-sm text-[#8e8e93]">No room statistics available.</p>
+          <p className="text-sm text-[#8e8e93]">{t('admin.stats.operations.noRoomStats', 'No room statistics available.')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[#8e8e93] border-b border-[#f1f5f9]">
-                  <th className="py-2 pr-3">Room</th>
-                  <th className="py-2 pr-3">Active</th>
-                  <th className="py-2 pr-3">Capacity</th>
-                  <th className="py-2 pr-3">Booked Slots</th>
-                  <th className="py-2 pr-3">Total Slots</th>
-                  <th className="py-2 pr-3">Used Seats</th>
-                  <th className="py-2 pr-3">Total Seats</th>
-                  <th className="py-2">Occupancy %</th>
-                  <th className="py-2">Seat Utilization %</th>
+                  <th className="py-2 pr-3">{t('admin.stats.operations.room', 'Room')}</th>
+                  <th className="py-2 pr-3">{t('admin.stats.operations.active', 'Active')}</th>
+                  <th className="py-2 pr-3">{t('admin.stats.operations.capacity', 'Capacity')}</th>
+                  <th className="py-2 pr-3">{t('admin.stats.operations.bookedSlots', 'Booked Slots')}</th>
+                  <th className="py-2 pr-3">{t('admin.stats.operations.totalSlots', 'Total Slots')}</th>
+                  <th className="py-2 pr-3">{t('admin.stats.operations.usedSeats', 'Used Seats')}</th>
+                  <th className="py-2 pr-3">{t('admin.stats.operations.totalSeats', 'Total Seats')}</th>
+                  <th className="py-2">{t('admin.stats.operations.occupancyPercent', 'Occupancy %')}</th>
+                  <th className="py-2">{t('admin.stats.operations.seatUtilizationPercent', 'Seat Utilization %')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -583,9 +527,9 @@ export default function AdminStatisticsPage() {
                     <td className="py-2 pr-3 font-medium">{room.roomName}</td>
                     <td className="py-2 pr-3">
                       {room.active ? (
-                        <span className="text-[#166534]">Yes</span>
+                        <span className="text-[#166534]">{t('common.yes', 'Yes')}</span>
                       ) : (
-                        <span className="text-[#b91c1c]">No</span>
+                        <span className="text-[#b91c1c]">{t('common.no', 'No')}</span>
                       )}
                     </td>
                     <td className="py-2 pr-3">{room.capacity}</td>
@@ -608,14 +552,14 @@ export default function AdminStatisticsPage() {
       </section>
 
       <section className="rounded-[12px] border border-[#ececec] bg-white p-4 mt-5">
-        <h2 className="text-[16px] font-semibold mb-1">Drill-down Records</h2>
+        <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.drilldownRecords', 'Drill-down Records')}</h2>
         <p className="text-xs text-[#8e8e93] mb-3">
-          Click a day in the line chart or an hour in the heatmap to filter.
+          {t('admin.stats.operations.drilldownDesc', 'Click a day in the line chart or an hour in the heatmap to filter.')}
         </p>
         {loading ? (
-          <p className="text-sm text-[#8e8e93]">Loading records...</p>
+          <p className="text-sm text-[#8e8e93]">{t('admin.stats.operations.loadingRecords', 'Loading records...')}</p>
         ) : drilldownRows.length === 0 ? (
-          <p className="text-sm text-[#8e8e93]">No records for current selection.</p>
+          <p className="text-sm text-[#8e8e93]">{t('admin.stats.operations.noRecords', 'No records for current selection.')}</p>
         ) : (
           <div className="overflow-x-auto">
             <div className="mb-2 flex justify-end">
@@ -640,18 +584,18 @@ export default function AdminStatisticsPage() {
                 }
                 className="rounded-[8px] border border-[#d1d5db] px-2.5 py-1.5 text-xs text-[#374151] hover:bg-[#f9fafb]"
               >
-                Export filtered CSV
+                {t('admin.stats.operations.exportFilteredCsv', 'Export filtered CSV')}
               </button>
             </div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[#8e8e93] border-b border-[#f1f5f9]">
-                  <th className="py-2 pr-3">Type</th>
-                  <th className="py-2 pr-3">Date</th>
-                  <th className="py-2 pr-3">Time</th>
-                  <th className="py-2 pr-3">Room</th>
-                  <th className="py-2 pr-3">Participants</th>
-                  <th className="py-2 pr-3">Status</th>
+                  <th className="py-2 pr-3">{t('admin.stats.operations.type', 'Type')}</th>
+                  <th className="py-2 pr-3">{t('admin.chart.axis.date', 'Date')}</th>
+                  <th className="py-2 pr-3">{t('admin.stats.operations.time', 'Time')}</th>
+                  <th className="py-2 pr-3">{t('admin.stats.operations.room', 'Room')}</th>
+                  <th className="py-2 pr-3">{t('admin.stats.operations.participants', 'Participants')}</th>
+                  <th className="py-2 pr-3">{t('admin.stats.operations.status', 'Status')}</th>
                   <th className="py-2">ID</th>
                 </tr>
               </thead>
@@ -712,43 +656,19 @@ function formatTimeRange(startAt: string, endAt: string) {
   ).padStart(2, '0')}`;
 }
 
-function stageLabel(stage: string) {
+function stageLabel(stage: string, t: ReturnType<typeof useT>) {
   switch (stage) {
     case 'pending_invites':
-      return 'Pending';
+      return t('admin.stats.operations.pending', 'Pending');
     case 'accepted_invites':
-      return 'Accepted';
+      return t('admin.stats.operations.accepted', 'Accepted');
     case 'rejected_invites':
-      return 'Rejected';
+      return t('admin.stats.operations.rejected', 'Rejected');
     case 'confirmed_total':
-      return 'Confirmed';
+      return t('admin.stats.operations.confirmed', 'Confirmed');
     default:
       return stage;
   }
-}
-
-function PresetButton({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-[8px] px-3 py-1.5 text-sm border ${
-        active
-          ? 'bg-[#111827] text-white border-[#111827]'
-          : 'bg-white text-[#374151] border-[#d1d5db] hover:bg-[#f9fafb]'
-      }`}
-    >
-      {label}
-    </button>
-  );
 }
 
 function EmptyChart({ message }: { message: string }) {
@@ -789,6 +709,7 @@ function MultiLineChart({
   onVisibleSeriesChange: (value: VisibleSeries) => void;
   anomalyDates: Set<string>;
 }) {
+  const t = useT();
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
@@ -954,11 +875,11 @@ function MultiLineChart({
           style={{ left: tooltip.x + 12, top: tooltip.y - 60 }}
         >
           <div className="font-medium mb-0.5">{tooltip.date}</div>
-          {visibleSeries.total && <div>Total: {tooltip.total}</div>}
-          {visibleSeries.meetings && <div>Meetings: {tooltip.meetings}</div>}
-          {visibleSeries.interviews && <div>Interviews: {tooltip.interviews}</div>}
+          {visibleSeries.total && <div>{t('admin.stats.operations.total', 'Total')}: {tooltip.total}</div>}
+          {visibleSeries.meetings && <div>{t('admin.stats.operations.meetings', 'Meetings')}: {tooltip.meetings}</div>}
+          {visibleSeries.interviews && <div>{t('admin.stats.operations.interviews', 'Interviews')}: {tooltip.interviews}</div>}
           {anomalyDates.has(tooltip.date) && (
-            <div className="text-[#b91c1c] font-medium mt-0.5">Anomaly flagged</div>
+            <div className="text-[#b91c1c] font-medium mt-0.5">{t('admin.stats.operations.anomalyFlagged', 'Anomaly flagged')}</div>
           )}
         </div>
       )}
@@ -966,7 +887,7 @@ function MultiLineChart({
       <div className="mt-3 flex flex-wrap gap-5 text-xs text-[#6b7280]">
         <LegendPill
           color="#111827"
-          label="Total"
+          label={t('admin.stats.operations.total', 'Total')}
           active={visibleSeries.total}
           onClick={() =>
             onVisibleSeriesChange({ ...visibleSeries, total: !visibleSeries.total })
@@ -974,7 +895,7 @@ function MultiLineChart({
         />
         <LegendPill
           color="#0ea5e9"
-          label="Meetings"
+          label={t('admin.stats.operations.meetings', 'Meetings')}
           active={visibleSeries.meetings}
           onClick={() =>
             onVisibleSeriesChange({
@@ -985,7 +906,7 @@ function MultiLineChart({
         />
         <LegendPill
           color="#f97316"
-          label="Interviews"
+          label={t('admin.stats.operations.interviews', 'Interviews')}
           active={visibleSeries.interviews}
           onClick={() =>
             onVisibleSeriesChange({

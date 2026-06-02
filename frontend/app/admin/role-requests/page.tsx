@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useStoredUser } from '../../lib/auth';
+import { useT } from '../../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -21,12 +22,12 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
   industry:  { bg: '#dbeafe', text: '#1d4ed8' },
 };
 
-function daysAgo(dateStr: string) {
+function daysAgo(dateStr: string, t: ReturnType<typeof useT>) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const days = Math.floor(diff / 86400000);
-  if (days === 0) return 'today';
-  if (days === 1) return '1 day ago';
-  return `${days} days ago`;
+  if (days === 0) return t('common.today', 'today');
+  if (days === 1) return t('common.oneDayAgo', '1 day ago');
+  return t('common.daysAgo', '{{count}} days ago').replace('{{count}}', String(days));
 }
 
 function initials(email: string) {
@@ -47,6 +48,7 @@ function avatarColor(uid: string) {
 }
 
 export default function RoleRequestsPage() {
+  const t = useT();
   const user = useStoredUser();
   const [requests, setRequests] = useState<RoleRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,19 +69,19 @@ export default function RoleRequestsPage() {
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-          throw new Error(msg ?? 'Failed to load role requests');
+          throw new Error(msg ?? t('admin.roleRequests.errorLoad', 'Failed to load role requests'));
         }
         const data = (await res.json()) as RoleRequest[];
         setRequests(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        setError(err instanceof Error ? err.message : t('common.error.generic', 'An error occurred'));
       } finally {
         setLoading(false);
       }
     }
 
     void load();
-  }, [user]);
+  }, [t, user?.idToken]);
 
   async function handleAction(id: string, action: 'approve' | 'reject') {
     if (!user?.idToken) return;
@@ -92,11 +94,11 @@ export default function RoleRequestsPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? `Failed to ${action} request`);
+        throw new Error(msg ?? t('admin.roleRequests.errorAction', 'Failed to update request'));
       }
       setRequests((prev) => prev.filter((r) => r.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : t('common.error.generic', 'An error occurred'));
     } finally {
       setActing(null);
     }
@@ -108,9 +110,9 @@ export default function RoleRequestsPage() {
     <div>
       {/* Page header */}
       <div className="mb-6">
-        <h1 className="text-[20px] font-bold text-[#0d0d0d] mb-1">Role Requests</h1>
+        <h1 className="text-[20px] font-bold text-[#0d0d0d] mb-1">{t('admin.nav.roleRequests', 'Role Requests')}</h1>
         <p className="text-[13px] text-[#8e8e93]">
-          Review and manage pending role upgrade requests from participants.
+          {t('admin.roleRequests.subtitle', 'Review and manage pending role upgrade requests from participants.')}
         </p>
       </div>
 
@@ -120,7 +122,7 @@ export default function RoleRequestsPage() {
           <div className="text-[22px] font-bold text-[#0d0d0d]">
             {loading ? '—' : pendingCount}
           </div>
-          <div className="text-[12px] text-[#8e8e93] mt-0.5">Pending</div>
+          <div className="text-[12px] text-[#8e8e93] mt-0.5">{t('admin.status.pending', 'Pending')}</div>
         </div>
       </div>
 
@@ -132,14 +134,14 @@ export default function RoleRequestsPage() {
 
       {loading && (
         <div className="rounded-[14px] bg-[#f7f7f7] px-5 py-4 text-sm text-[#8e8e93]">
-          Loading requests...
+          {t('admin.roleRequests.loading', 'Loading requests...')}
         </div>
       )}
 
       {!loading && requests.length === 0 && !error && (
         <div className="rounded-[14px] border border-[#f0f0f0] px-6 py-10 text-center">
-          <p className="text-[15px] font-semibold text-[#0d0d0d] mb-1">All caught up</p>
-          <p className="text-[13px] text-[#8e8e93]">No pending role requests at the moment.</p>
+          <p className="text-[15px] font-semibold text-[#0d0d0d] mb-1">{t('admin.roleRequests.emptyTitle', 'All caught up')}</p>
+          <p className="text-[13px] text-[#8e8e93]">{t('admin.roleRequests.emptyDesc', 'No pending role requests at the moment.')}</p>
         </div>
       )}
 
@@ -167,12 +169,12 @@ export default function RoleRequestsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className="text-[14px] font-semibold text-[#0d0d0d]">{req.email}</span>
-                    <span className="text-[12px] text-[#8e8e93]">participant →</span>
+                    <span className="text-[12px] text-[#8e8e93]">{t('role.participant', 'participant')} →</span>
                     <span
                       className="text-[12px] font-semibold px-2 py-0.5 rounded-full"
                       style={{ background: roleColor.bg, color: roleColor.text }}
                     >
-                      {req.requestedRole}
+                      {t(`role.${req.requestedRole}`, req.requestedRole)}
                     </span>
                   </div>
                   {req.reason && (
@@ -184,7 +186,7 @@ export default function RoleRequestsPage() {
 
                 {/* Actions */}
                 <div className="flex flex-col items-end gap-2 shrink-0">
-                  <span className="text-[11px] text-[#8e8e93]">{daysAgo(req.createdAt)}</span>
+                  <span className="text-[11px] text-[#8e8e93]">{daysAgo(req.createdAt, t)}</span>
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -192,7 +194,7 @@ export default function RoleRequestsPage() {
                       onClick={() => handleAction(req.id, 'approve')}
                       className="px-4 py-[6px] rounded-[8px] bg-[#0d0d0d] text-white text-[12px] font-semibold border-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                     >
-                      {isActing ? '...' : 'Approve'}
+                      {isActing ? '...' : t('admin.action.approve', 'Approve')}
                     </button>
                     <button
                       type="button"
@@ -200,7 +202,7 @@ export default function RoleRequestsPage() {
                       onClick={() => handleAction(req.id, 'reject')}
                       className="px-4 py-[6px] rounded-[8px] bg-[#f0f0f0] text-[#6e6e73] text-[12px] font-semibold border-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                     >
-                      {isActing ? '...' : 'Reject'}
+                      {isActing ? '...' : t('admin.action.reject', 'Reject')}
                     </button>
                   </div>
                 </div>

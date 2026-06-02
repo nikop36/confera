@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStoredUser } from '../../../lib/auth';
 import { useT } from '../../../lib/i18n';
+import { StatisticsRangeFilter } from '../range-filter';
+import { datesForPreset, toIsoRange, type RangePreset } from '../range';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -21,27 +23,19 @@ export default function AdminStatisticsMatchingPage() {
   const user = useStoredUser();
   const [payload, setPayload] = useState<MatchingPayload | null>(null);
   const [error, setError] = useState('');
-  const [refreshTick, setRefreshTick] = useState(0);
-  const [preset, setPreset] = useState<'all' | '7d' | '30d'>('30d');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [preset, setPreset] = useState<RangePreset>('30d');
+  const initialDates = datesForPreset('30d');
+  const [from, setFrom] = useState(initialDates.from);
+  const [to, setTo] = useState(initialDates.to);
 
-  const range = useMemo(() => {
-    const now = new Date();
-    let baseFrom = '';
-    let baseTo = '';
-    if (preset === '7d') {
-      baseFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      baseTo = now.toISOString();
-    } else if (preset === '30d') {
-      baseFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      baseTo = now.toISOString();
-    }
-    return {
-      from: from ? new Date(`${from}T00:00:00`).toISOString() : baseFrom,
-      to: to ? new Date(`${to}T23:59:59.999`).toISOString() : baseTo,
-    };
-  }, [preset, from, to]);
+  const range = useMemo(() => toIsoRange(from, to), [from, to]);
+
+  function applyPreset(nextPreset: RangePreset) {
+    setPreset(nextPreset);
+    const dates = datesForPreset(nextPreset);
+    setFrom(dates.from);
+    setTo(dates.to);
+  }
 
   useEffect(() => {
     if (!user?.idToken) return;
@@ -59,75 +53,67 @@ export default function AdminStatisticsMatchingPage() {
           signal: controller.signal,
         });
         if (!response.ok) {
-          setError('Failed to load matching statistics');
+          setError(t('admin.stats.matching.errorLoad', 'Failed to load matching statistics'));
           return;
         }
         setPayload((await response.json()) as MatchingPayload);
       } catch (err) {
         if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : 'Failed to load matching statistics');
+        setError(err instanceof Error ? err.message : t('admin.stats.matching.errorLoad', 'Failed to load matching statistics'));
       }
     }
     void load();
     return () => controller.abort();
-  }, [range.from, range.to, refreshTick, user?.idToken]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshTick((value) => value + 1);
-    }, 10_000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [range.from, range.to, t, user?.idToken]);
 
   const summary = payload?.summary;
   return (
     <div>
-      <h1 className="text-[32px] font-bold tracking-tight">Matching</h1>
+      <h1 className="text-[32px] font-bold tracking-tight">{t('admin.nav.stats.matching', 'Matching')}</h1>
       <p className="text-sm text-[#8e8e93] mt-1 mb-5">
         {t('admin.stats.matching.subtitle', 'Conversion efficiency from connections into meetings and interviews.')}
       </p>
-      <section className="rounded-[12px] border border-[#ececec] bg-white p-4 mb-5">
-        <div className="flex flex-wrap items-end gap-3">
-          <PresetButton active={preset === 'all'} label="All" onClick={() => setPreset('all')} />
-          <PresetButton active={preset === '7d'} label="Last 7d" onClick={() => setPreset('7d')} />
-          <PresetButton active={preset === '30d'} label="Last 30d" onClick={() => setPreset('30d')} />
-          <div className="ml-auto flex gap-2">
-            <label className="text-xs text-[#6b7280]">From
-              <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="ml-1 rounded-[8px] border border-[#d1d5db] px-2 py-1.5 text-sm" />
-            </label>
-            <label className="text-xs text-[#6b7280]">To
-              <input type="date" value={to} onChange={(event) => setTo(event.target.value)} className="ml-1 rounded-[8px] border border-[#d1d5db] px-2 py-1.5 text-sm" />
-            </label>
-          </div>
-        </div>
-      </section>
+      <StatisticsRangeFilter
+        preset={preset}
+        from={from}
+        to={to}
+        onPresetChange={applyPreset}
+        onFromChange={setFrom}
+        onToChange={setTo}
+      />
       {error && <div className="mb-4 rounded-[12px] bg-[#fff1f2] px-4 py-3 text-sm text-[#dc2626]">{error}</div>}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-        <Card label="Accepted connections" value={summary?.acceptedConnectionsInRange ?? 0} />
-        <Card label="Meeting conversions" value={summary?.meetingConversions ?? 0} />
-        <Card label="Interview conversions" value={summary?.interviewConversions ?? 0} />
-        <Card label="Total conversions" value={summary?.totalConversions ?? 0} />
-        <Card label="Conversion rate" value={`${summary?.connectionToConversionRatePercent ?? 0}%`} />
+        <Card label={t('admin.stats.matching.acceptedConnections', 'Accepted connections')} value={summary?.acceptedConnectionsInRange ?? 0} />
+        <Card label={t('admin.stats.matching.meetingConversions', 'Meeting conversions')} value={summary?.meetingConversions ?? 0} />
+        <Card label={t('admin.stats.matching.interviewConversions', 'Interview conversions')} value={summary?.interviewConversions ?? 0} />
+        <Card label={t('admin.stats.matching.totalConversions', 'Total conversions')} value={summary?.totalConversions ?? 0} />
+        <Card label={t('admin.stats.matching.conversionRate', 'Conversion rate')} value={`${summary?.connectionToConversionRatePercent ?? 0}%`} />
       </div>
       <div className="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-5">
         <section className="rounded-[12px] border border-[#ececec] bg-white p-4">
-          <h2 className="text-[16px] font-semibold mb-3">Conversion Mix</h2>
+          <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.matching.conversionMix', 'Conversion Mix')}</h2>
+          <p className="text-xs text-[#8e8e93] mb-3">
+            {t('admin.stats.matching.conversionMixDesc', 'Shows the share of meeting and interview conversions created from accepted connections.')}
+          </p>
           <ConversionMixChart
             meetings={summary?.meetingConversions ?? 0}
             interviews={summary?.interviewConversions ?? 0}
           />
         </section>
         <section className="rounded-[12px] border border-[#ececec] bg-white p-4">
-          <h2 className="text-[16px] font-semibold mb-3">Conversion Bars</h2>
+          <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.matching.conversionBars', 'Conversion Bars')}</h2>
+          <p className="text-xs text-[#8e8e93] mb-3">
+            {t('admin.stats.matching.conversionBarsDesc', 'Compares accepted connections, meeting conversions, interview conversions, and total conversions.')}
+          </p>
           <SimpleBarChart
             bars={[
-              { label: 'Accepted', value: summary?.acceptedConnectionsInRange ?? 0 },
-              { label: 'Meetings', value: summary?.meetingConversions ?? 0 },
-              { label: 'Interviews', value: summary?.interviewConversions ?? 0 },
-              { label: 'Total', value: summary?.totalConversions ?? 0 },
+              { label: t('admin.stats.operations.accepted', 'Accepted'), value: summary?.acceptedConnectionsInRange ?? 0 },
+              { label: t('admin.stats.operations.meetings', 'Meetings'), value: summary?.meetingConversions ?? 0 },
+              { label: t('admin.stats.operations.interviews', 'Interviews'), value: summary?.interviewConversions ?? 0 },
+              { label: t('admin.stats.operations.total', 'Total'), value: summary?.totalConversions ?? 0 },
             ]}
-            yLabel="Count"
-            xLabel="Metric"
+            yLabel={t('admin.chart.axis.count', 'Count')}
+            xLabel={t('admin.stats.matching.metric', 'Metric')}
           />
         </section>
       </div>
@@ -151,6 +137,7 @@ function ConversionMixChart({
   meetings: number;
   interviews: number;
 }) {
+  const t = useT();
   const total = Math.max(1, meetings + interviews);
   const meetingsWidth = (meetings / total) * 100;
   const interviewsWidth = (interviews / total) * 100;
@@ -162,11 +149,11 @@ function ConversionMixChart({
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
         <div className="rounded-[8px] border border-[#f1f5f9] p-2">
-          <p className="text-[#6b7280]">Meetings</p>
+          <p className="text-[#6b7280]">{t('admin.stats.operations.meetings', 'Meetings')}</p>
           <p className="font-semibold">{meetings}</p>
         </div>
         <div className="rounded-[8px] border border-[#f1f5f9] p-2">
-          <p className="text-[#6b7280]">Interviews</p>
+          <p className="text-[#6b7280]">{t('admin.stats.operations.interviews', 'Interviews')}</p>
           <p className="font-semibold">{interviews}</p>
         </div>
       </div>
@@ -245,29 +232,5 @@ function SimpleBarChart({
         </div>
       )}
     </div>
-  );
-}
-
-function PresetButton({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-[8px] px-3 py-1.5 text-sm border ${
-        active
-          ? 'bg-[#111827] text-white border-[#111827]'
-          : 'bg-white text-[#374151] border-[#d1d5db] hover:bg-[#f9fafb]'
-      }`}
-    >
-      {label}
-    </button>
   );
 }

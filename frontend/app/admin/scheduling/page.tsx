@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useStoredUser } from '../../lib/auth';
+import { useT } from '../../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -45,6 +46,7 @@ type Participant = {
 };
 
 export default function AdminSchedulingPage() {
+  const t = useT();
   const user = useStoredUser();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [allRooms, setAllRooms] = useState<Room[]>([]);
@@ -146,7 +148,7 @@ export default function AdminSchedulingPage() {
             || (Array.isArray(allRoomErr?.message) ? allRoomErr.message[0] : allRoomErr?.message)
             || (Array.isArray(slotErr?.message) ? slotErr.message[0] : slotErr?.message)
             || (Array.isArray(userErr?.message) ? userErr.message[0] : userErr?.message);
-        throw new Error(message ?? 'Failed to load scheduling data');
+        throw new Error(message ?? t('admin.scheduling.errorLoad', 'Failed to load scheduling data'));
       }
 
       const roomData = (await roomsRes.json()) as Room[];
@@ -165,11 +167,11 @@ export default function AdminSchedulingPage() {
       }));
       setAvailabilityRefreshKey((prev) => prev + 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load scheduling data');
+      setError(err instanceof Error ? err.message : t('admin.scheduling.errorLoad', 'Failed to load scheduling data'));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [t, token]);
 
   useEffect(() => {
     if (!token) return;
@@ -264,14 +266,14 @@ export default function AdminSchedulingPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Failed to create room');
+        throw new Error(msg ?? t('admin.scheduling.errorCreateRoom', 'Failed to create room'));
       }
 
       setRoomForm({ name: '', location: '', capacity: '8' });
-      setSuccess('Room created');
+      setSuccess(t('admin.scheduling.roomCreated', 'Room created'));
       await loadRoomsAndSlots();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create room');
+      setError(err instanceof Error ? err.message : t('admin.scheduling.errorCreateRoom', 'Failed to create room'));
     } finally {
       setCreatingRoom(false);
     }
@@ -300,13 +302,13 @@ export default function AdminSchedulingPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Failed to generate time slots');
+        throw new Error(msg ?? t('admin.scheduling.errorGenerateSlots', 'Failed to generate time slots'));
       }
 
-      setSuccess(`Generated ${data.generatedCount ?? 0} new slots`);
+      setSuccess(t('admin.scheduling.generatedSlots', 'Generated {{count}} new slots').replace('{{count}}', String(data.generatedCount ?? 0)));
       await loadRoomsAndSlots();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate time slots');
+      setError(err instanceof Error ? err.message : t('admin.scheduling.errorGenerateSlots', 'Failed to generate time slots'));
     } finally {
       setGeneratingSlots(false);
     }
@@ -329,11 +331,11 @@ export default function AdminSchedulingPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Failed to assign meeting');
+        throw new Error(msg ?? t('admin.scheduling.errorAssignMeeting', 'Failed to assign meeting'));
       }
 
       setLastMeeting(data as Meeting);
-      setSuccess('Meeting assigned');
+      setSuccess(t('admin.scheduling.meetingAssigned', 'Meeting assigned'));
       setAssignForm((prev) => ({
         ...prev,
         requestedByUids: [],
@@ -342,7 +344,7 @@ export default function AdminSchedulingPage() {
       setParticipantQueryBy('');
       setParticipantQueryTo('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to assign meeting');
+      setError(err instanceof Error ? err.message : t('admin.scheduling.errorAssignMeeting', 'Failed to assign meeting'));
     } finally {
       setAssigningMeeting(false);
     }
@@ -362,12 +364,12 @@ export default function AdminSchedulingPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Failed to update room');
+        throw new Error(msg ?? t('admin.scheduling.errorUpdateRoom', 'Failed to update room'));
       }
-      setSuccess(`Room ${room.active ? 'deactivated' : 'activated'}`);
+      setSuccess(room.active ? t('admin.scheduling.roomDeactivated', 'Room deactivated') : t('admin.scheduling.roomActivated', 'Room activated'));
       await loadRoomsAndSlots();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update room');
+      setError(err instanceof Error ? err.message : t('admin.scheduling.errorUpdateRoom', 'Failed to update room'));
     } finally {
       setActingKey(null);
     }
@@ -375,7 +377,7 @@ export default function AdminSchedulingPage() {
 
   async function handleDeleteRoom(room: Room) {
     if (!token) return;
-    if (!window.confirm(`Delete room "${room.name}"?`)) return;
+    if (!window.confirm(t('admin.scheduling.confirmDeleteRoom', 'Delete room "{{name}}"?').replace('{{name}}', room.name))) return;
     setActingKey(`room-delete-${room.id}`);
     setError('');
     setSuccess('');
@@ -387,12 +389,12 @@ export default function AdminSchedulingPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Failed to delete room');
+        throw new Error(msg ?? t('admin.scheduling.errorDeleteRoom', 'Failed to delete room'));
       }
-      setSuccess('Room deleted');
+      setSuccess(t('admin.scheduling.roomDeleted', 'Room deleted'));
       await loadRoomsAndSlots();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete room');
+      setError(err instanceof Error ? err.message : t('admin.scheduling.errorDeleteRoom', 'Failed to delete room'));
     } finally {
       setActingKey(null);
     }
@@ -425,13 +427,13 @@ export default function AdminSchedulingPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Failed to update room');
+        throw new Error(msg ?? t('admin.scheduling.errorUpdateRoom', 'Failed to update room'));
       }
-      setSuccess('Room updated');
+      setSuccess(t('admin.scheduling.roomUpdated', 'Room updated'));
       setEditingRoomId(null);
       await loadRoomsAndSlots();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update room');
+      setError(err instanceof Error ? err.message : t('admin.scheduling.errorUpdateRoom', 'Failed to update room'));
     } finally {
       setActingKey(null);
     }
@@ -439,7 +441,7 @@ export default function AdminSchedulingPage() {
 
   async function handleDeleteSlot(slot: TimeSlot) {
     if (!token) return;
-    if (!window.confirm('Delete this time slot?')) return;
+    if (!window.confirm(t('admin.scheduling.confirmDeleteSlot', 'Delete this time slot?'))) return;
     setActingKey(`slot-delete-${slot.id}`);
     setError('');
     setSuccess('');
@@ -451,12 +453,12 @@ export default function AdminSchedulingPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Failed to delete time slot');
+        throw new Error(msg ?? t('admin.scheduling.errorDeleteSlot', 'Failed to delete time slot'));
       }
-      setSuccess('Time slot deleted');
+      setSuccess(t('admin.scheduling.slotDeleted', 'Time slot deleted'));
       await loadRoomsAndSlots();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete time slot');
+      setError(err instanceof Error ? err.message : t('admin.scheduling.errorDeleteSlot', 'Failed to delete time slot'));
     } finally {
       setActingKey(null);
     }
@@ -489,13 +491,13 @@ export default function AdminSchedulingPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? 'Failed to update time slot');
+        throw new Error(msg ?? t('admin.scheduling.errorUpdateSlot', 'Failed to update time slot'));
       }
-      setSuccess('Time slot updated');
+      setSuccess(t('admin.scheduling.slotUpdated', 'Time slot updated'));
       setEditingSlotId(null);
       await loadRoomsAndSlots();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update time slot');
+      setError(err instanceof Error ? err.message : t('admin.scheduling.errorUpdateSlot', 'Failed to update time slot'));
     } finally {
       setActingKey(null);
     }
@@ -526,24 +528,24 @@ export default function AdminSchedulingPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-[20px] font-bold text-[#0d0d0d] mb-1">Scheduling</h1>
+        <h1 className="text-[20px] font-bold text-[#0d0d0d] mb-1">{t('admin.nav.scheduling', 'Scheduling')}</h1>
         <p className="text-[13px] text-[#8e8e93]">
-          Create rooms, generate time slots, and assign meetings with conflict checks.
+          {t('admin.scheduling.subtitle', 'Create rooms, generate time slots, and assign meetings with conflict checks.')}
         </p>
       </div>
 
       <div className="flex gap-3 mb-6">
         <div className="rounded-[12px] bg-[#f7f7f7] px-5 py-4 min-w-[120px]">
           <div className="text-[22px] font-bold text-[#0d0d0d]">{loading ? '—' : rooms.length}</div>
-          <div className="text-[12px] text-[#8e8e93] mt-0.5">Rooms</div>
+          <div className="text-[12px] text-[#8e8e93] mt-0.5">{t('admin.common.rooms', 'Rooms')}</div>
         </div>
         <div className="rounded-[12px] bg-[#f7f7f7] px-5 py-4 min-w-[120px]">
           <div className="text-[22px] font-bold text-[#0d0d0d]">{loading ? '—' : slots.length}</div>
-          <div className="text-[12px] text-[#8e8e93] mt-0.5">Time slots</div>
+          <div className="text-[12px] text-[#8e8e93] mt-0.5">{t('admin.common.timeSlots', 'Time slots')}</div>
         </div>
         <div className="rounded-[12px] bg-[#f7f7f7] px-5 py-4 min-w-[120px]">
           <div className="text-[22px] font-bold text-[#0d0d0d]">{meetingSummary.scheduled}</div>
-          <div className="text-[12px] text-[#8e8e93] mt-0.5">Scheduled meetings</div>
+          <div className="text-[12px] text-[#8e8e93] mt-0.5">{t('admin.scheduling.scheduledMeetings', 'Scheduled meetings')}</div>
         </div>
       </div>
 
@@ -560,18 +562,18 @@ export default function AdminSchedulingPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <form onSubmit={handleCreateRoom} className="border border-[#f0f0f0] rounded-[14px] p-5 space-y-3">
-          <h2 className="text-[15px] font-semibold text-[#0d0d0d]">Create Room</h2>
+          <h2 className="text-[15px] font-semibold text-[#0d0d0d]">{t('admin.scheduling.createRoom', 'Create Room')}</h2>
           <input
             type="text"
             required
-            placeholder="Room name"
+            placeholder={t('admin.scheduling.roomName', 'Room name')}
             value={roomForm.name}
             onChange={(e) => setRoomForm((prev) => ({ ...prev, name: e.target.value }))}
             className="profile-input"
           />
           <input
             type="text"
-            placeholder="Location (optional)"
+            placeholder={t('admin.common.locationOptional', 'Location (optional)')}
             value={roomForm.location}
             onChange={(e) => setRoomForm((prev) => ({ ...prev, location: e.target.value }))}
             className="profile-input"
@@ -590,14 +592,14 @@ export default function AdminSchedulingPage() {
             disabled={creatingRoom}
             className="px-4 py-[8px] rounded-[8px] bg-[#0d0d0d] text-white text-[12px] font-semibold border-0 cursor-pointer disabled:opacity-40"
           >
-            {creatingRoom ? 'Creating...' : 'Create room'}
+            {creatingRoom ? t('admin.action.creating', 'Creating...') : t('admin.scheduling.createRoomAction', 'Create room')}
           </button>
         </form>
 
         <form onSubmit={handleGenerateSlots} className="border border-[#f0f0f0] rounded-[14px] p-5 space-y-3">
-          <h2 className="text-[15px] font-semibold text-[#0d0d0d]">Generate Time Slots</h2>
+          <h2 className="text-[15px] font-semibold text-[#0d0d0d]">{t('admin.scheduling.generateSlots', 'Generate Time Slots')}</h2>
           <p className="text-[12px] text-[#8e8e93]">
-            Generates recurring slots for each day in a date range.
+            {t('admin.scheduling.generateSlotsDesc', 'Generates recurring slots for each day in a date range.')}
           </p>
           <div className="grid grid-cols-2 gap-3">
             <input
@@ -606,7 +608,7 @@ export default function AdminSchedulingPage() {
               value={slotForm.startDate}
               onChange={(e) => setSlotForm((prev) => ({ ...prev, startDate: e.target.value }))}
               className="profile-input"
-              aria-label="Start date"
+              aria-label={t('admin.common.startDate', 'Start date')}
             />
             <input
               type="date"
@@ -614,7 +616,7 @@ export default function AdminSchedulingPage() {
               value={slotForm.endDate}
               onChange={(e) => setSlotForm((prev) => ({ ...prev, endDate: e.target.value }))}
               className="profile-input"
-              aria-label="End date"
+              aria-label={t('admin.common.endDate', 'End date')}
             />
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -642,25 +644,25 @@ export default function AdminSchedulingPage() {
                 setSlotForm((prev) => ({ ...prev, slotDurationMinutes: e.target.value }))
               }
               className="profile-input"
-              aria-label="Slot duration in minutes"
+              aria-label={t('admin.scheduling.slotDuration', 'Slot duration in minutes')}
             />
           </div>
           <div className="grid grid-cols-3 gap-3 text-[11px] text-[#8e8e93]">
-            <span>Daily start time</span>
-            <span>Daily end time</span>
-            <span>Slot length (minutes)</span>
+            <span>{t('admin.scheduling.dailyStartTime', 'Daily start time')}</span>
+            <span>{t('admin.scheduling.dailyEndTime', 'Daily end time')}</span>
+            <span>{t('admin.scheduling.slotLength', 'Slot length (minutes)')}</span>
           </div>
           <button
             type="submit"
             disabled={generatingSlots}
             className="px-4 py-[8px] rounded-[8px] bg-[#0d0d0d] text-white text-[12px] font-semibold border-0 cursor-pointer disabled:opacity-40"
           >
-            {generatingSlots ? 'Generating...' : 'Generate slots'}
+            {generatingSlots ? t('admin.action.generating', 'Generating...') : t('admin.scheduling.generateSlotsAction', 'Generate slots')}
           </button>
         </form>
 
         <form onSubmit={handleAssignMeeting} className="border border-[#f0f0f0] rounded-[14px] p-5 space-y-3 lg:col-span-2">
-          <h2 className="text-[15px] font-semibold text-[#0d0d0d]">Assign Meeting</h2>
+          <h2 className="text-[15px] font-semibold text-[#0d0d0d]">{t('admin.scheduling.assignMeeting', 'Assign Meeting')}</h2>
           <div className="grid gap-3 md:grid-cols-2">
             <select
               required
@@ -668,7 +670,7 @@ export default function AdminSchedulingPage() {
               onChange={(e) => setAssignForm((prev) => ({ ...prev, roomId: e.target.value }))}
               className="profile-input"
             >
-              <option value="">Select room</option>
+              <option value="">{t('admin.common.selectRoom', 'Select room')}</option>
               {rooms.map((room) => (
                 <option key={room.id} value={room.id}>
                   {room.name} ({room.capacity})
@@ -682,7 +684,7 @@ export default function AdminSchedulingPage() {
               onChange={(e) => setAssignForm((prev) => ({ ...prev, slotId: e.target.value }))}
               className="profile-input"
             >
-              <option value="">Select time slot</option>
+              <option value="">{t('admin.common.selectTimeSlot', 'Select time slot')}</option>
               {slots.map((slot) => (
                 <option key={slot.id} value={slot.id}>
                   {formatDateTime(slot.startAt)} - {formatDateTime(slot.endAt)}
@@ -693,7 +695,8 @@ export default function AdminSchedulingPage() {
 
           <div className="grid gap-3 md:grid-cols-2">
             <ParticipantPicker
-              label="Requested by"
+              t={t}
+              label={t('admin.common.requestedBy', 'Requested by')}
               participants={participants}
               selectedUids={assignForm.requestedByUids}
               query={participantQueryBy}
@@ -707,7 +710,8 @@ export default function AdminSchedulingPage() {
               excludeUids={assignForm.requestedToUids}
             />
             <ParticipantPicker
-              label="Requested to"
+              t={t}
+              label={t('admin.common.requestedTo', 'Requested to')}
               participants={participants}
               selectedUids={assignForm.requestedToUids}
               query={participantQueryTo}
@@ -724,19 +728,19 @@ export default function AdminSchedulingPage() {
 
           <div className="grid gap-3 md:grid-cols-2 text-[11px] text-[#6b7280]">
             <div className="rounded-[8px] bg-[#f7f7f7] px-3 py-2">
-              requestedBy UIDs:{' '}
+              {t('admin.scheduling.requestedByUids', 'requestedBy UIDs')}:{' '}
               <span className="font-mono text-[#111827]">
                 {selectedBy.length
                   ? selectedBy.map((participant) => participant.uid).join(', ')
-                  : 'not selected'}
+                  : t('admin.common.notSelected', 'not selected')}
               </span>
             </div>
             <div className="rounded-[8px] bg-[#f7f7f7] px-3 py-2">
-              requestedTo UIDs:{' '}
+              {t('admin.scheduling.requestedToUids', 'requestedTo UIDs')}:{' '}
               <span className="font-mono text-[#111827]">
                 {selectedTo.length
                   ? selectedTo.map((participant) => participant.uid).join(', ')
-                  : 'not selected'}
+                  : t('admin.common.notSelected', 'not selected')}
               </span>
             </div>
           </div>
@@ -746,21 +750,23 @@ export default function AdminSchedulingPage() {
             disabled={assigningMeeting}
             className="px-4 py-[8px] rounded-[8px] bg-[#0d0d0d] text-white text-[12px] font-semibold border-0 cursor-pointer disabled:opacity-40"
           >
-            {assigningMeeting ? 'Assigning...' : 'Assign meeting'}
+            {assigningMeeting ? t('admin.action.assigning', 'Assigning...') : t('admin.scheduling.assignMeetingAction', 'Assign meeting')}
           </button>
         </form>
       </div>
 
       {lastMeeting && (
         <div className="mt-5 rounded-[12px] bg-[#f7f7f7] px-4 py-3 text-[13px] text-[#374151]">
-          Last meeting: <span className="font-semibold text-[#0d0d0d]">{lastMeeting.id}</span> | room{' '}
-          {lastMeeting.roomId} | slot {lastMeeting.slotId}
+          {t('admin.scheduling.lastMeeting', 'Last meeting')}: <span className="font-semibold text-[#0d0d0d]">{lastMeeting.id}</span> | {t('admin.common.room', 'room')}{' '}
+          {lastMeeting.roomId} | {t('admin.common.timeSlot', 'slot')} {lastMeeting.slotId}
         </div>
       )}
 
       <div className="grid gap-4 lg:grid-cols-2 mt-5">
         <section className="border border-[#f0f0f0] rounded-[14px] p-5">
-          <h2 className="text-[15px] font-semibold text-[#0d0d0d] mb-3">Manage Rooms</h2>
+          <h2 className="text-[15px] font-semibold text-[#0d0d0d] mb-3">
+            {t('admin.scheduling.manageRooms', 'Manage Rooms')}
+          </h2>
           <div className="space-y-2 max-h-[260px] overflow-auto">
             {allRooms.map((room) => (
               <div key={room.id} className="border border-[#f3f4f6] rounded-[10px] px-3 py-2">
@@ -779,7 +785,7 @@ export default function AdminSchedulingPage() {
                         onChange={(e) =>
                           setRoomEditForm((prev) => ({ ...prev, location: e.target.value }))
                         }
-                        placeholder="Location"
+                        placeholder={t('admin.common.location', 'Location')}
                         className="profile-input"
                       />
                       <input
@@ -799,14 +805,14 @@ export default function AdminSchedulingPage() {
                         disabled={actingKey === `room-edit-${room.id}`}
                         className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#d1fae5] bg-[#ecfdf3] text-[#166534]"
                       >
-                        Save
+                        {t('common.save', 'Save')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setEditingRoomId(null)}
                         className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#e5e7eb] bg-white"
                       >
-                        Cancel
+                        {t('common.cancel', 'Cancel')}
                       </button>
                     </div>
                   </div>
@@ -821,7 +827,9 @@ export default function AdminSchedulingPage() {
                           room.active ? 'bg-[#ecfdf3] text-[#166534]' : 'bg-[#f3f4f6] text-[#4b5563]'
                         }`}
                       >
-                        {room.active ? 'active' : 'inactive'}
+                        {room.active
+                          ? t('admin.status.active', 'active')
+                          : t('admin.status.inactive', 'inactive')}
                       </span>
                     </div>
                     <div className="mt-2 flex gap-2">
@@ -830,7 +838,7 @@ export default function AdminSchedulingPage() {
                         onClick={() => beginEditRoom(room)}
                         className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#d1d5db] bg-white"
                       >
-                        Edit
+                        {t('common.edit', 'Edit')}
                       </button>
                       <button
                         type="button"
@@ -838,7 +846,9 @@ export default function AdminSchedulingPage() {
                         disabled={actingKey === `room-toggle-${room.id}`}
                         className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#d1d5db] bg-white"
                       >
-                        {room.active ? 'Deactivate' : 'Activate'}
+                        {room.active
+                          ? t('admin.action.deactivate', 'Deactivate')
+                          : t('admin.action.activate', 'Activate')}
                       </button>
                       <button
                         type="button"
@@ -846,19 +856,25 @@ export default function AdminSchedulingPage() {
                         disabled={actingKey === `room-delete-${room.id}`}
                         className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#fecaca] bg-[#fff1f2] text-[#b91c1c]"
                       >
-                        Delete
+                        {t('common.delete', 'Delete')}
                       </button>
                     </div>
                   </>
                 )}
               </div>
             ))}
-            {allRooms.length === 0 && <p className="text-[12px] text-[#8e8e93]">No rooms</p>}
+            {allRooms.length === 0 && (
+              <p className="text-[12px] text-[#8e8e93]">
+                {t('admin.scheduling.noRooms', 'No rooms')}
+              </p>
+            )}
           </div>
         </section>
 
         <section className="border border-[#f0f0f0] rounded-[14px] p-5">
-          <h2 className="text-[15px] font-semibold text-[#0d0d0d] mb-3">Manage Time Slots</h2>
+          <h2 className="text-[15px] font-semibold text-[#0d0d0d] mb-3">
+            {t('admin.scheduling.manageSlots', 'Manage Time Slots')}
+          </h2>
           <div className="space-y-2 max-h-[260px] overflow-auto">
             {slots.map((slot) => (
               <div key={slot.id} className="border border-[#f3f4f6] rounded-[10px] px-3 py-2">
@@ -889,14 +905,14 @@ export default function AdminSchedulingPage() {
                         disabled={actingKey === `slot-edit-${slot.id}`}
                         className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#d1fae5] bg-[#ecfdf3] text-[#166534]"
                       >
-                        Save
+                        {t('common.save', 'Save')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setEditingSlotId(null)}
                         className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#e5e7eb] bg-white"
                       >
-                        Cancel
+                        {t('common.cancel', 'Cancel')}
                       </button>
                     </div>
                   </div>
@@ -911,7 +927,7 @@ export default function AdminSchedulingPage() {
                         onClick={() => beginEditSlot(slot)}
                         className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#d1d5db] bg-white"
                       >
-                        Edit
+                        {t('common.edit', 'Edit')}
                       </button>
                       <button
                         type="button"
@@ -919,14 +935,18 @@ export default function AdminSchedulingPage() {
                         disabled={actingKey === `slot-delete-${slot.id}`}
                         className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#fecaca] bg-[#fff1f2] text-[#b91c1c]"
                       >
-                        Delete
+                        {t('common.delete', 'Delete')}
                       </button>
                     </div>
                   </>
                 )}
               </div>
             ))}
-            {slots.length === 0 && <p className="text-[12px] text-[#8e8e93]">No time slots</p>}
+            {slots.length === 0 && (
+              <p className="text-[12px] text-[#8e8e93]">
+                {t('admin.scheduling.noTimeSlots', 'No time slots')}
+              </p>
+            )}
           </div>
         </section>
       </div>
@@ -934,14 +954,14 @@ export default function AdminSchedulingPage() {
       <section className="border border-[#f0f0f0] rounded-[14px] p-5 mt-5">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <h2 className="text-[15px] font-semibold text-[#0d0d0d]">
-            Slot Availability
+            {t('admin.scheduling.slotAvailability', 'Slot Availability')}
           </h2>
           <div className="flex items-center gap-2 text-[12px]">
             <span className="rounded-full bg-[#ecfdf3] text-[#166534] px-2 py-0.5">
-              completed: {meetingSummary.completed}
+              {t('admin.status.completed', 'completed')}: {meetingSummary.completed}
             </span>
             <span className="rounded-full bg-[#fff1f2] text-[#b91c1c] px-2 py-0.5">
-              cancelled: {meetingSummary.cancelled}
+              {t('admin.status.cancelled', 'cancelled')}: {meetingSummary.cancelled}
             </span>
           </div>
         </div>
@@ -951,7 +971,7 @@ export default function AdminSchedulingPage() {
             onChange={(event) => setAvailabilityRoomId(event.target.value)}
             className="profile-input"
           >
-            <option value="all">All rooms</option>
+            <option value="all">{t('admin.filter.allRooms', 'All rooms')}</option>
             {rooms.map((room) => (
               <option key={room.id} value={room.id}>
                 {room.name}
@@ -973,9 +993,9 @@ export default function AdminSchedulingPage() {
             }
             className="profile-input"
           >
-            <option value="all">All slots</option>
-            <option value="free">Free only</option>
-            <option value="booked">Booked only</option>
+            <option value="all">{t('admin.filter.allSlots', 'All slots')}</option>
+            <option value="free">{t('admin.filter.freeOnly', 'Free only')}</option>
+            <option value="booked">{t('admin.filter.bookedOnly', 'Booked only')}</option>
           </select>
         </div>
         <div className="space-y-2 max-h-[260px] overflow-auto">
@@ -995,13 +1015,15 @@ export default function AdminSchedulingPage() {
                 }`}
               >
                 {item.isBooked
-                  ? `booked (${item.scheduledMeetingCount})`
-                  : 'free'}
+                  ? `${t('admin.status.booked', 'booked')} (${item.scheduledMeetingCount})`
+                  : t('admin.status.free', 'free')}
               </span>
             </div>
           ))}
           {visibleAvailability.length === 0 && (
-            <p className="text-[12px] text-[#8e8e93]">No matching slots</p>
+            <p className="text-[12px] text-[#8e8e93]">
+              {t('admin.scheduling.noMatchingSlots', 'No matching slots')}
+            </p>
           )}
         </div>
       </section>
@@ -1010,6 +1032,7 @@ export default function AdminSchedulingPage() {
 }
 
 function ParticipantPicker({
+  t,
   label,
   participants,
   selectedUids,
@@ -1018,6 +1041,7 @@ function ParticipantPicker({
   onToggle,
   excludeUids,
 }: {
+  t: (key: string, fallback?: string) => string;
   label: string;
   participants: Participant[];
   selectedUids: string[];
@@ -1043,14 +1067,16 @@ function ParticipantPicker({
       <label className="text-[12px] font-medium text-[#4b5563]">{label}</label>
       <input
         type="text"
-        placeholder="Search by name or email..."
+        placeholder={t('admin.scheduling.searchParticipants', 'Search by name or email...')}
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
         className="profile-input"
       />
       <div className="max-h-[176px] overflow-auto rounded-[10px] border border-[#e5e7eb] bg-white">
         {options.length === 0 && (
-          <div className="px-3 py-2 text-[12px] text-[#9ca3af]">No matching participants</div>
+          <div className="px-3 py-2 text-[12px] text-[#9ca3af]">
+            {t('admin.scheduling.noMatchingParticipants', 'No matching participants')}
+          </div>
         )}
         {options.map((participant) => {
           const active = selectedUids.includes(participant.uid);

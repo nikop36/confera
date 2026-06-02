@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useStoredUser } from '../../lib/auth';
+import { useT } from '../../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -47,6 +48,7 @@ type AcceptedPair = {
 };
 
 export default function CareerInterviewsPage() {
+  const t = useT();
   const user = useStoredUser();
   const [items, setItems] = useState<CareerInterview[]>([]);
   const [users, setUsers] = useState<UserLite[]>([]);
@@ -128,7 +130,7 @@ export default function CareerInterviewsPage() {
           const message = Array.isArray(body.message)
             ? body.message[0]
             : body.message;
-          throw new Error(message ?? 'Failed to load career interviews data');
+          throw new Error(message ?? t('admin.career.errorLoadData', 'Failed to load career interviews data'));
         }
 
         const interviews = (await interviewsRes.json()) as CareerInterview[];
@@ -169,7 +171,7 @@ export default function CareerInterviewsPage() {
         setAssignFormById(defaults);
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : 'Failed to load career interviews',
+          err instanceof Error ? err.message : t('admin.career.errorLoad', 'Failed to load career interviews'),
         );
       } finally {
         setLoading(false);
@@ -177,7 +179,7 @@ export default function CareerInterviewsPage() {
     }
 
     void loadData();
-  }, [candidateFilter, dateFilter, interviewerFilter, statusFilter, token]);
+  }, [candidateFilter, dateFilter, interviewerFilter, statusFilter, t, token]);
 
   const usersByUid = useMemo(
     () => new Map(users.map((entry) => [entry.uid, entry])),
@@ -277,7 +279,7 @@ export default function CareerInterviewsPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const message = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(message ?? 'Failed to create career interview');
+        throw new Error(message ?? t('admin.career.errorCreate', 'Failed to create career interview'));
       }
 
       const created = data as CareerInterview;
@@ -301,7 +303,7 @@ export default function CareerInterviewsPage() {
         const message = Array.isArray(assignData.message)
           ? assignData.message[0]
           : assignData.message;
-        throw new Error(message ?? 'Failed to assign career interview');
+        throw new Error(message ?? t('admin.career.errorAssign', 'Failed to assign career interview'));
       }
 
       const scheduledInterview: CareerInterview = {
@@ -322,10 +324,10 @@ export default function CareerInterviewsPage() {
         },
       }));
       setCreateForm((prev) => ({ ...prev, notes: '' }));
-      setSuccess('Career interview created and scheduled');
+      setSuccess(t('admin.career.createdScheduled', 'Career interview created and scheduled'));
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to create career interview',
+        err instanceof Error ? err.message : t('admin.career.errorCreate', 'Failed to create career interview'),
       );
     }
   }
@@ -350,7 +352,7 @@ export default function CareerInterviewsPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const message = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(message ?? 'Failed to assign career interview');
+        throw new Error(message ?? t('admin.career.errorAssign', 'Failed to assign career interview'));
       }
 
       setItems((prev) =>
@@ -358,10 +360,10 @@ export default function CareerInterviewsPage() {
           item.id === id ? { ...item, ...assignForm, status: 'scheduled' } : item,
         ),
       );
-      setSuccess('Career interview assigned');
+      setSuccess(t('admin.career.assigned', 'Career interview assigned'));
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to assign career interview',
+        err instanceof Error ? err.message : t('admin.career.errorAssign', 'Failed to assign career interview'),
       );
     } finally {
       setActingId(null);
@@ -386,14 +388,14 @@ export default function CareerInterviewsPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const message = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(message ?? 'Failed to update status');
+        throw new Error(message ?? t('admin.career.errorStatus', 'Failed to update status'));
       }
       setItems((prev) =>
         prev.map((item) => (item.id === id ? { ...item, status } : item)),
       );
-      setSuccess('Status updated');
+      setSuccess(t('admin.career.statusUpdated', 'Status updated'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update status');
+      setError(err instanceof Error ? err.message : t('admin.career.errorStatus', 'Failed to update status'));
     } finally {
       setActingId(null);
     }
@@ -401,7 +403,7 @@ export default function CareerInterviewsPage() {
 
   async function handleDeleteInterview(id: string) {
     if (!token) return;
-    if (!window.confirm('Delete this career interview?')) return;
+    if (!window.confirm(t('admin.career.confirmDelete', 'Delete this career interview?'))) return;
 
     setActingId(id);
     setError('');
@@ -414,13 +416,13 @@ export default function CareerInterviewsPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const message = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(message ?? 'Failed to delete career interview');
+        throw new Error(message ?? t('admin.career.errorDelete', 'Failed to delete career interview'));
       }
       setItems((prev) => prev.filter((item) => item.id !== id));
-      setSuccess('Career interview deleted');
+      setSuccess(t('admin.career.deleted', 'Career interview deleted'));
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to delete career interview',
+        err instanceof Error ? err.message : t('admin.career.errorDelete', 'Failed to delete career interview'),
       );
     } finally {
       setActingId(null);
@@ -431,11 +433,13 @@ export default function CareerInterviewsPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-[20px] font-bold text-[#0d0d0d] mb-1">
-          Career Interviews
+          {t('admin.nav.careerInterviews', 'Career Interviews')}
         </h1>
         <p className="text-[13px] text-[#8e8e93]">
-          Register candidates, assign interviewers and slots, and track interview
-          statuses.
+          {t(
+            'admin.career.subtitle',
+            'Register candidates, assign interviewers and slots, and track interview statuses.',
+          )}
         </p>
       </div>
 
@@ -455,12 +459,12 @@ export default function CareerInterviewsPage() {
         className="mb-5 border border-[#f0f0f0] rounded-[14px] p-5"
       >
         <h2 className="text-[15px] font-semibold text-[#0d0d0d] mb-3">
-          Create & Schedule Career Interview
+          {t('admin.career.createSchedule', 'Create & Schedule Career Interview')}
         </h2>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-[10px] border border-[#e5e7eb] bg-white p-3">
             <p className="text-[11px] uppercase tracking-wide text-[#6b7280] font-semibold mb-2">
-              Interviewer
+              {t('admin.common.interviewer', 'Interviewer')}
             </p>
             <select
               required
@@ -474,7 +478,7 @@ export default function CareerInterviewsPage() {
               }
               className="profile-input"
             >
-              <option value="">Select interviewer</option>
+              <option value="">{t('admin.career.selectInterviewer', 'Select interviewer')}</option>
               {interviewerOptions.map((entry) => (
                 <option key={entry.uid} value={entry.uid}>
                   {entry.displayName} ({entry.email})
@@ -484,7 +488,7 @@ export default function CareerInterviewsPage() {
           </div>
           <div className="rounded-[10px] border border-[#e5e7eb] bg-white p-3">
             <p className="text-[11px] uppercase tracking-wide text-[#6b7280] font-semibold mb-2">
-              Candidate
+              {t('admin.common.candidate', 'Candidate')}
             </p>
             <select
               required
@@ -497,7 +501,7 @@ export default function CareerInterviewsPage() {
               }
               className="profile-input"
             >
-              <option value="">Select candidate</option>
+              <option value="">{t('admin.career.selectCandidate', 'Select candidate')}</option>
               {candidateOptions.map((entry) => (
                 <option key={entry.uid} value={entry.uid}>
                   {entry.displayName} ({entry.email})
@@ -506,7 +510,10 @@ export default function CareerInterviewsPage() {
             </select>
             {createForm.interviewerUid && candidateOptions.length === 0 && (
               <p className="mt-2 text-[11px] text-[#9ca3af]">
-                No connected candidates for selected interviewer.
+                {t(
+                  'admin.career.noConnectedCandidates',
+                  'No connected candidates for selected interviewer.',
+                )}
               </p>
             )}
           </div>
@@ -521,7 +528,7 @@ export default function CareerInterviewsPage() {
             }
             className="profile-input"
           >
-            <option value="">Select room</option>
+            <option value="">{t('admin.common.selectRoom', 'Select room')}</option>
             {rooms.map((entry) => (
               <option key={entry.id} value={entry.id}>
                 {entry.name}
@@ -539,7 +546,7 @@ export default function CareerInterviewsPage() {
             }
             className="profile-input"
           >
-            <option value="">Select slot</option>
+            <option value="">{t('admin.common.selectTimeSlot', 'Select slot')}</option>
             {slots.map((entry) => (
               <option key={entry.id} value={entry.id}>
                 {formatDateTime(entry.startAt)} - {formatDateTime(entry.endAt)}
@@ -552,7 +559,7 @@ export default function CareerInterviewsPage() {
             onChange={(event) =>
               setCreateForm((prev) => ({ ...prev, notes: event.target.value }))
             }
-            placeholder="Notes (optional)"
+            placeholder={t('admin.career.notesOptional', 'Notes (optional)')}
             className="profile-input"
           />
         </div>
@@ -566,7 +573,7 @@ export default function CareerInterviewsPage() {
           }
           className="mt-3 px-4 py-[8px] rounded-[8px] bg-[#0d0d0d] text-white text-[12px] font-semibold border-0 cursor-pointer"
         >
-          Create interview
+          {t('admin.career.createInterview', 'Create interview')}
         </button>
       </form>
 
@@ -581,11 +588,11 @@ export default function CareerInterviewsPage() {
             }
             className="profile-input"
           >
-            <option value="all">All statuses</option>
-            <option value="draft">Draft</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="all">{t('admin.filter.allStatuses', 'All statuses')}</option>
+            <option value="draft">{t('admin.status.draft', 'Draft')}</option>
+            <option value="scheduled">{t('admin.status.scheduled', 'Scheduled')}</option>
+            <option value="completed">{t('admin.status.completed', 'Completed')}</option>
+            <option value="cancelled">{t('admin.status.cancelled', 'Cancelled')}</option>
           </select>
           <input
             type="date"
@@ -598,7 +605,7 @@ export default function CareerInterviewsPage() {
             onChange={(event) => setCandidateFilter(event.target.value)}
             className="profile-input"
           >
-            <option value="all">All candidates</option>
+            <option value="all">{t('admin.career.allCandidates', 'All candidates')}</option>
             {users.map((entry) => (
               <option key={entry.uid} value={entry.uid}>
                 {entry.displayName}
@@ -610,7 +617,7 @@ export default function CareerInterviewsPage() {
             onChange={(event) => setInterviewerFilter(event.target.value)}
             className="profile-input"
           >
-            <option value="all">All interviewers</option>
+            <option value="all">{t('admin.career.allInterviewers', 'All interviewers')}</option>
             {users.map((entry) => (
               <option key={entry.uid} value={entry.uid}>
                 {entry.displayName}
@@ -622,22 +629,22 @@ export default function CareerInterviewsPage() {
           type="text"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search candidate/interviewer/notes..."
+          placeholder={t('admin.career.searchPlaceholder', 'Search candidate/interviewer/notes...')}
           className="profile-input"
         />
       </div>
 
       {loading ? (
         <div className="rounded-[14px] bg-[#f7f7f7] px-5 py-4 text-sm text-[#8e8e93]">
-          Loading career interviews...
+          {t('admin.career.loading', 'Loading career interviews...')}
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="rounded-[14px] border border-[#f0f0f0] px-6 py-10 text-center">
           <p className="text-[15px] font-semibold text-[#0d0d0d] mb-1">
-            No career interviews yet
+            {t('admin.career.emptyTitle', 'No career interviews yet')}
           </p>
           <p className="text-[13px] text-[#8e8e93]">
-            Create one to start scheduling interviews.
+            {t('admin.career.emptyDesc', 'Create one to start scheduling interviews.')}
           </p>
         </div>
       ) : (
@@ -685,7 +692,7 @@ export default function CareerInterviewsPage() {
                   >
                     {statusOptionsByCurrent[item.status].map((statusOption) => (
                       <option key={statusOption} value={statusOption}>
-                        {statusOption}
+                        {careerStatusLabel(statusOption, t)}
                       </option>
                     ))}
                   </select>
@@ -695,13 +702,13 @@ export default function CareerInterviewsPage() {
                     disabled={actingId === item.id}
                     className="ml-auto px-3 py-1.5 rounded-[8px] border border-[#fecaca] bg-[#fff1f2] text-[12px] text-[#b91c1c] font-semibold disabled:opacity-50 cursor-pointer"
                   >
-                    {actingId === item.id ? 'Deleting...' : 'Delete'}
+                    {actingId === item.id ? t('admin.action.deleting', 'Deleting...') : t('common.delete', 'Delete')}
                   </button>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2 text-[13px] mb-3">
                   <div>
-                    <p className="text-[#8e8e93] mb-1">Candidate</p>
+                    <p className="text-[#8e8e93] mb-1">{t('admin.common.candidate', 'Candidate')}</p>
                     <p className="font-medium text-[#111827]">
                       {candidate
                         ? `${candidate.displayName} (${candidate.email})`
@@ -709,36 +716,37 @@ export default function CareerInterviewsPage() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-[#8e8e93] mb-1">Interviewer</p>
+                    <p className="text-[#8e8e93] mb-1">{t('admin.common.interviewer', 'Interviewer')}</p>
                     <p className="font-medium text-[#111827]">
                       {interviewer
                         ? `${interviewer.displayName} (${interviewer.email})`
-                        : item.interviewerUid ?? 'Not assigned'}
+                        : item.interviewerUid ?? t('admin.common.notAssigned', 'Not assigned')}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[#8e8e93] mb-1">Room</p>
+                    <p className="text-[#8e8e93] mb-1">{t('admin.common.room', 'Room')}</p>
                     <p className="font-medium text-[#111827]">
-                      {room ? room.name : item.roomId ?? 'Not assigned'}
+                      {room ? room.name : item.roomId ?? t('admin.common.notAssigned', 'Not assigned')}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[#8e8e93] mb-1">Slot</p>
+                    <p className="text-[#8e8e93] mb-1">{t('admin.common.timeSlot', 'Slot')}</p>
                     <p className="font-medium text-[#111827]">
                       {slot
                         ? `${formatDateTime(slot.startAt)} - ${formatDateTime(slot.endAt)}`
-                        : item.slotId ?? 'Not assigned'}
+                        : item.slotId ?? t('admin.common.notAssigned', 'Not assigned')}
                     </p>
                   </div>
                 </div>
 
                 {slot && room && (
                   <p className="text-[12px] text-[#4b5563] mb-3">
-                    Scheduled at{' '}
+                    {t('admin.career.scheduledAt', 'Scheduled at')}{' '}
                     <span className="font-semibold text-[#111827]">
                       {formatDateTime(slot.startAt)} - {formatDateTime(slot.endAt)}
                     </span>{' '}
-                    in room <span className="font-semibold text-[#111827]">{room.name}</span>
+                    {t('admin.career.inRoom', 'in room')}{' '}
+                    <span className="font-semibold text-[#111827]">{room.name}</span>
                   </p>
                 )}
 
@@ -758,7 +766,7 @@ export default function CareerInterviewsPage() {
                         }
                         className="profile-input"
                       >
-                        <option value="">Select interviewer</option>
+                        <option value="">{t('admin.career.selectInterviewer', 'Select interviewer')}</option>
                         {users.map((entry) => (
                           <option key={entry.uid} value={entry.uid}>
                             {entry.displayName}
@@ -775,7 +783,7 @@ export default function CareerInterviewsPage() {
                         }
                         className="profile-input"
                       >
-                        <option value="">Select room</option>
+                        <option value="">{t('admin.common.selectRoom', 'Select room')}</option>
                         {rooms.map((entry) => (
                           <option key={entry.id} value={entry.id}>
                             {entry.name}
@@ -792,7 +800,7 @@ export default function CareerInterviewsPage() {
                         }
                         className="profile-input"
                       >
-                        <option value="">Select slot</option>
+                        <option value="">{t('admin.common.selectTimeSlot', 'Select slot')}</option>
                         {slots.map((entry) => (
                           <option key={entry.id} value={entry.id}>
                             {formatDateTime(entry.startAt)} - {formatDateTime(entry.endAt)}
@@ -813,7 +821,7 @@ export default function CareerInterviewsPage() {
                         }
                         className="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-[#d1fae5] bg-[#ecfdf3] text-[#166534] disabled:opacity-40"
                       >
-                        {actingId === item.id ? 'Saving...' : 'Assign'}
+                        {actingId === item.id ? t('admin.action.saving', 'Saving...') : t('admin.career.assign', 'Assign')}
                       </button>
                     </div>
                   </>
@@ -821,7 +829,7 @@ export default function CareerInterviewsPage() {
 
                 {item.notes && (
                   <p className="text-[12px] text-[#6b7280] mt-3">
-                    Notes: {item.notes}
+                    {t('admin.common.notes', 'Notes')}: {item.notes}
                   </p>
                 )}
               </article>
@@ -831,6 +839,13 @@ export default function CareerInterviewsPage() {
       )}
     </div>
   );
+}
+
+function careerStatusLabel(
+  status: CareerInterviewStatus,
+  t: (key: string, fallback?: string) => string,
+) {
+  return t(`admin.status.${status}`, status);
 }
 
 function formatDateTime(value: unknown) {

@@ -7,32 +7,32 @@ export default function AdminStatisticsOverviewPage() {
   const t = useT();
   const SECTIONS = [
     {
-      title: 'Overview',
+      title: t('admin.nav.stats.overview', 'Overview'),
       description: t('admin.stats.overview.desc', 'Unified view of all statistics modules.'),
       href: '/admin/statistics',
     },
     {
-      title: 'Operations',
+      title: t('admin.nav.stats.operations', 'Operations'),
       description: t('admin.stats.operations.desc', 'Room occupancy, confirmed meetings, anomalies, and drilldown.'),
       href: '/admin/statistics/operations',
     },
     {
-      title: 'Usage',
+      title: t('admin.nav.stats.usage', 'Usage'),
       description: t('admin.stats.usage.desc', 'Registration and completed profile trends.'),
       href: '/admin/statistics/usage',
     },
     {
-      title: 'Matching',
+      title: t('admin.nav.stats.matching', 'Matching'),
       description: t('admin.stats.matching.desc', 'Conversions from connections to meetings and interviews.'),
       href: '/admin/statistics/matching',
     },
     {
-      title: 'Engagement',
+      title: t('admin.nav.stats.engagement', 'Engagement'),
       description: t('admin.stats.engagement.desc', 'Notifications, read-rate, and invite response metrics.'),
       href: '/admin/statistics/engagement',
     },
     {
-      title: 'Reports',
+      title: t('admin.nav.stats.reports', 'Reports'),
       description: t('admin.stats.reports.desc', 'Export reports (JSON/CSV) for admin analysis.'),
       href: '/admin/statistics/reports',
     },
@@ -41,7 +41,7 @@ export default function AdminStatisticsOverviewPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-[32px] font-bold tracking-tight">Statistics</h1>
+        <h1 className="text-[32px] font-bold tracking-tight">{t('admin.stats.title', 'Statistics')}</h1>
         <p className="text-sm text-[#8e8e93] mt-1">
           {t('admin.stats.overview.subtitle', 'Unified view for operational statistics and analytics.')}
         </p>

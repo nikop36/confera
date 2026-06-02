@@ -147,6 +147,7 @@ export class AuthService {
         createdAt: new Date(),
       });
     }
+    await this.usersService.markLoginActivity(uid);
 
     return { idToken, uid };
   }
