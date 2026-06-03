@@ -1,6 +1,6 @@
 ## Sprint 5
 
-**Beno**
+**Beno:**
 ## TODO:
 
 ---

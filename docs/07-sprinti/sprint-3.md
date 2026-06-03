@@ -1,6 +1,6 @@
 ## Sprint 3 
 
-**Beno**
+**Beno:**
 V tretjem sprintu sem se posvetil razvoju sistema notifikacij, email integracijam ter naprednim funkcionalnostim za uporabnike. Opravil sem:
 
 - Posodobitev in izboljšavo UML diagramov.

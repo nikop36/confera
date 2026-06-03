@@ -1,6 +1,6 @@
 ## Sprint 4
 
-**Beno**
+**Beno:**
 V tem sprintu sem se osredotočil na funkcijsko testiranje, razširitev sistema notifikacij ter zaključevanje dokumentacije. Izvedel sem:
 
 - Pripravo osnovnih funkcijskih testov za Playwright in Bruno ter njihovo izvajanje.

@@ -1,6 +1,6 @@
 ## Sprint 2
 
-**Beno**
+**Beno:**
 Drugi sprint je bil osredotočen na uporabniške profile, vloge in izboljšanje avtentikacijskih mehanizmov. V tem sklopu sem:
 
 - Pripravil in dokumentiral UML diagrame za nadaljnji razvoj.

@@ -1,6 +1,6 @@
 ## Sprint 1 
 
-**Beno**
+**Beno:**
 V prvem sprintu sem postavil temeljne komponente backend sistema ter izvedel ključne integracije, potrebne za nadaljnji razvoj. Uspešno sem:
 
 - Integriral Firebase in vzpostavil osnovno avtentikacijsko logiko.
