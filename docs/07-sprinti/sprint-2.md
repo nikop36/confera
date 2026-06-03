@@ -1,6 +1,6 @@
 ## Sprint 2
 
-**Beno**
+**Beno:**
 Drugi sprint je bil osredotočen na uporabniške profile, vloge in izboljšanje avtentikacijskih mehanizmov. V tem sklopu sem:
 
 - Pripravil in dokumentiral UML diagrame za nadaljnji razvoj.
@@ -23,5 +23,17 @@ Drugi sprint je bil osredotočen na vzpostavitev razvojnega okolja in gradnjo ad
 - Implementiral stran za upravljanje zahtevkov za spremembo vloge z odobritvijo/zavrnitvijo z enim klikom.
 - Uredil preusmeritev `/admin → /admin/role-requests` in popravil napake pri nalaganju admin layouta.
 - Uvedel tematske spremembe in posodobil vizualno podobo aplikacije.
+
+---
+
+**Aleš:**
+V drugem sprintu sem razvijal uporabniški profil, strukturo interesnih področij in prvo različico AI ujemanja. V tem sklopu sem:
+
+- Implementiral urejanje uporabniškega profila z osnovnimi podatki, opisom, afiliacijo in dodatnimi profilnimi polji.
+- Uredil nalaganje in prikaz profilnih slik z uporabo zunanjega storage sistema.
+- Dopolnil profil z interesi, cilji mreženja, kompetencami in raziskovalnimi področji.
+- Pomagal oblikovati podatkovno strukturo, ki se uporablja kot osnova za priporočila.
+- Implementiral prvo različico AI priporočanja oseb na podlagi interesov.
+- Poskrbel, da so profilni podatki uporabni tako za prikaz uporabnika kot tudi za kasnejše ujemanje.
 
 ---
