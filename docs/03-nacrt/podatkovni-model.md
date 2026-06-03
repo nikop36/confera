@@ -323,20 +323,24 @@ Dogodki in konference, ki jih organizirajo organizatorji.
 
 Posamezne vsebinske seje znotraj dogodkov.
 
-| Polje           | Tip           | Obvezno | Opis                        |
-| --------------- | ------------- | ------- | --------------------------- |
-| id              | string        | Da      | Firestore auto-generated ID |
-| title           | string        | Da      | Naslov seje                 |
-| description     | string        | Da      | Opis seje                   |
-| speakers        | array         | Da      | Seznam predavateljev        |
-| startAt         | timestamp     | Da      | Začetek seje                |
-| endAt           | timestamp     | Da      | Konec seje                  |
-| location        | string        | Da      | Lokacija seje               |
-| capacity        | number | null | Ne      | Kapaciteta seje             |
-| registeredCount | number        | Da      | Število prijavljenih        |
-| tags            | string[]      | Ne      | Oznake                      |
-| createdBy       | string        | Da      | UID organizatorja           |
-| createdAt       | timestamp     | Da      | Čas ustvaritve              |
+| Polje           | Tip              | Obvezno | Opis                                                                                          |
+| --------------- | ---------------- | ------- | --------------------------------------------------------------------------------------------- |
+| id              | string           | Da      | Firestore auto-generated ID                                                                   |
+| title           | string           | Da      | Naslov seje                                                                                   |
+| description     | string           | Da      | Opis seje                                                                                     |
+| speakers        | array            | Da      | Seznam predavateljev (ime, bio, userId)                                                       |
+| startAt         | timestamp        | Da      | Začetek seje                                                                                  |
+| endAt           | timestamp        | Da      | Konec seje                                                                                    |
+| location        | string           | Da      | Lokacija seje                                                                                 |
+| capacity        | number \| null   | Ne      | Kapaciteta seje                                                                               |
+| registeredCount | number           | Da      | Število prijavljenih                                                                          |
+| tags            | string[]         | Ne      | Oznake                                                                                        |
+| createdBy       | string           | Da      | UID organizatorja                                                                             |
+| createdAt       | timestamp        | Da      | Čas ustvaritve                                                                                |
+| presenterName   | string           | Ne      | Prikazno ime povabljenega predavatelja (uporabnik v sistemu ali gost)                         |
+| presenterUid    | string           | Ne      | UID povabljenega predavatelja, če je v sistemu                                                |
+| presenterStatus | string           | Ne      | `pending` — čaka na odgovor; `confirmed`; `auto_confirmed` — gost; `declined` — zavrnjeno    |
+| status          | string           | Ne      | `active` (privzeto) ali `cancelled` — nastavi se samodejno ob zavrnitvi predavatelja          |
 
 
 #### `registrations`
@@ -351,20 +355,39 @@ Prijave uporabnikov na posamezne seje.
 
 #### `careerSlots`
 
-Razpoložljivi termini za karierne intervjuje.
+Termini za karierne razgovore, ki jih predlagajo predstavniki industrije ali ustvarijo organizatorji/admini.
 
-| Polje        | Tip       | Obvezno | Opis                        |
-| ------------ | --------- | ------- | --------------------------- |
-| id           | string    | Da      | Firestore auto-generated ID |
-| title        | string    | Da      | Naziv termina               |
-| description  | string    | Da      | Opis termina                |
-| startAt      | timestamp | Da      | Začetek termina             |
-| endAt        | timestamp | Da      | Konec termina               |
-| location     | string    | Da      | Lokacija                    |
-| capacity     | number    | Da      | Število razpoložljivih mest |
-| requirements | string[]  | Ne      | Zahteve za prijavo          |
-| createdByUid | string    | Da      | UID organizatorja           |
-| createdAt    | timestamp | Da      | Čas ustvaritve              |
+| Polje          | Tip       | Obvezno | Opis                                                                                                  |
+| -------------- | --------- | ------- | ----------------------------------------------------------------------------------------------------- |
+| id             | string    | Da      | Firestore auto-generated ID                                                                           |
+| title          | string    | Da      | Naziv termina                                                                                         |
+| description    | string    | Da      | Opis termina                                                                                          |
+| startAt        | timestamp | Da      | Začetek termina                                                                                       |
+| endAt          | timestamp | Da      | Konec termina                                                                                         |
+| location       | string    | Da      | Lokacija                                                                                              |
+| capacity       | number    | Da      | Število razpoložljivih pod-terminov                                                                   |
+| requirements   | string[]  | Ne      | Zahteve za prijavo                                                                                    |
+| createdByUid   | string    | Da      | UID ustvarjalca (industrijalec ali organizator)                                                       |
+| createdAt      | timestamp | Da      | Čas ustvaritve                                                                                        |
+| approvalStatus | string    | Ne      | `pending_approval` — čaka odobritev; `approved` — aktiven; `rejected` — zavrnjen. Organizatorji/admini dobijo `approved` samodejno. |
+
+**Vidnost glede na vlogo:**
+- `participant`: vidi samo termine z `approvalStatus: approved`
+- `industry` (ustvarjalec): vidi svoje termine ne glede na status
+- `organizer` / `admin`: vidi vse termine
+
+#### `careerSlotRequests`
+
+Prijave udeležencev na pod-termine znotraj kariernih terminov.
+
+| Polje        | Tip       | Obvezno | Opis                                                |
+| ------------ | --------- | ------- | --------------------------------------------------- |
+| id           | string    | Da      | Firestore auto-generated ID                         |
+| requesterUid | string    | Da      | UID udeleženca                                      |
+| subSlotIndex | number    | Da      | Indeks pod-termina (0 do `capacity - 1`)            |
+| status       | string    | Da      | `pending`, `approved` ali `declined`                |
+| requestedAt  | timestamp | Da      | Čas prijave                                         |
+| respondedAt  | timestamp | Ne      | Čas odgovora industrijalca                          |
 
 
 **Primer dokumenta (`events`):**
@@ -459,6 +482,31 @@ Obvestila za uporabnike — odobritve vlog, povabila na sestanke, spremembe term
 | read      | boolean   | Da      | Ali je bilo prebrano        |
 | archived  | boolean   | Da      | Ali je arhivirano           |
 | createdAt | timestamp | Da      | Čas ustvaritve              |
+
+**Tipi obvestil (`type`) in ali pošljejo e-mail:**
+
+| Vrednost                          | E-mail | Opis                                                    |
+| --------------------------------- | ------ | ------------------------------------------------------- |
+| `role_approved`                   | Da     | Admin je odobril zahtevek za spremembo vloge            |
+| `role_rejected`                   | Da     | Admin je zavrnil zahtevek za spremembo vloge            |
+| `meeting_request`                 | Da     | Nova zahteva za sestanek                                |
+| `meeting_accepted`                | Da     | Sestanek sprejet                                        |
+| `meeting_rejected`                | Da     | Sestanek zavrnjen                                       |
+| `connection_request`              | Ne     | Nova zahteva za povezavo                                |
+| `connection_accepted`             | Ne     | Zahteva za povezavo sprejeta                            |
+| `connection_rejected`             | Ne     | Zahteva za povezavo zavrnjena                           |
+| `career_interview_assigned`       | Da     | Karierni intervju dodeljen                              |
+| `career_interview_rescheduled`    | Da     | Karierni intervju prestavljen                           |
+| `career_interview_cancelled`      | Da     | Karierni intervju odpovedan                             |
+| `session_presenter_invited`       | Da     | Povabilo za predavatelja seje                           |
+| `session_presenter_confirmed`     | Da     | Predavatelj je potrdil vabilo                           |
+| `session_presenter_declined`      | Da     | Predavatelj je zavrnil vabilo (seja se označi kot odpovedana) |
+| `career_slot_approval_request`    | Da     | Industrijalec je predlagal karierni termin (organizatorju) |
+| `career_slot_organizer_approved`  | Da     | Organizator je odobril karierni termin (industrijalcu)  |
+| `career_slot_organizer_rejected`  | Da     | Organizator je zavrnil karierni termin (industrijalcu)  |
+| `career_slot_requested`           | Da     | Udeleženec se je prijavil na pod-termin (industrijalcu) |
+| `career_slot_approved`            | Da     | Industrijalec je potrdil prijavo udeleženca             |
+| `career_slot_declined`            | Da     | Industrijalec je zavrnil prijavo udeleženca             |
 
 **Indeksi:**
 

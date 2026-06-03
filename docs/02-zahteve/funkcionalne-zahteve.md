@@ -67,47 +67,77 @@
 
 ---
 
-## 6. Karierni razgovori
+## 6. Seje in predavatelji
 
-### 6.1 Upravljanje terminov (NUJNO)
-- Podjetja razpišejo termine za razgovore.
-- Kandidati se lahko prijavijo na razpoložljive termine.
+### 6.1 Upravljanje sej (NUJNO)
+- Organizator ustvari sejo znotraj dogodka (naslov, opis, lokacija, čas, kapaciteta, oznake).
+- Organizator lahko pri ustvarjanju seje povabi predavatelja po imenu.
+- Sistem prikaže dropdown z ujemajočimi uporabniki vlog `organizer`, `industry` in `admin` (ne `participant`).
+- Če je vnešeno ime, ki ne ustreza nobenemu uporabniku v sistemu, se seja samodejno potrdi z gostujočim predavateljem.
 
-### 6.2 Potrditev ali zavrnitev srečanja (NUJNO)
-- Zaposlovalec potrdi ali zavrne prijavo kandidata.
-
----
-
-## 7. Obvestila
-
-### 7.1 E‑mail obvestila (ZAŽELENO)
-- Obvestilo ob potrditvi srečanja.
-- Obvestilo ob spremembi ali odpovedi termina.
+### 6.2 Potrjevanje predavatelja (NUJNO)
+- Povabljeni predavatelj (v sistemu) prejme sistemsko obvestilo in e-mail.
+- Predavatelj potrdi ali zavrne vabilo neposredno v aplikaciji.
+- Ob potrditvi organizator prejme obvestilo; seja ostane aktivna.
+- Ob zavrnitvi organizator prejme obvestilo; **seja se samodejno označi kot odpovedana**.
 
 ---
 
-## 8. Statistika in KPI
+## 7. Karierni razgovori
 
-### 8.1 Osnovna statistika (NUJNO)
+### 7.1 Predlog termina (NUJNO)
+- Predstavnik industrije predlaga termin za karierne razgovore znotraj dogodka.
+- Predlog je v stanju `pending_approval` in ni viden udeležencem.
+- Organizator ali admin prejme sistemsko obvestilo in e-mail o novem predlogu.
+
+### 7.2 Odobritev ali zavrnitev predloga (NUJNO)
+- Organizator ali admin odobri ali zavrne predlog termina.
+- Industrijalec prejme obvestilo in e-mail o odločitvi.
+- Samo odobreni termini (`approved`) so vidni udeležencem.
+- Organizatorji, admini in ustvarjalec termina vidijo vse termine (vključno s čakajočimi in zavrnjenimi).
+- Organizator/admin, ki ustvari termin neposredno, ga dobi avtomatično odobrenega.
+
+### 7.3 Prijava na termin (NUJNO)
+- Udeleženec (vloga `participant`) se prijavi na razpoložljiv pod-termin znotraj odobrenega termina.
+- Ob prijavi industrijalec prejme sistemsko obvestilo in e-mail.
+- Industrijalec potrdi ali zavrne posamezno prijavo neposredno v kartici termina.
+- Ob odločitvi udeleženec prejme obvestilo in e-mail.
+
+---
+
+## 8. Obvestila
+
+### 8.1 E‑mail obvestila (NUJNO)
+- Obvestilo ob potrditvi ali zavrnitvi predavatelja.
+- Obvestilo ob predlogu kariernega termina (organizatorju).
+- Obvestilo ob odobritvi ali zavrnitvi kariernega termina (industrijalcu).
+- Obvestilo ob prijavi na pod-termin (industrijalcu).
+- Obvestilo ob potrditvi ali zavrnitvi prijave (udeležencu).
+
+---
+
+## 9. Statistika in KPI
+
+### 9.1 Osnovna statistika (NUJNO)
 - Povprečno število priporočil na uporabnika.
 - Stopnja sprejetih srečanj (%).
 - Stopnja izvedenih srečanj (%).
 - Zasedenost terminov (%).
 - Povprečen čas do prvega srečanja.
 
-### 8.2 Napredna statistika (ZAŽELENO)
+### 9.2 Napredna statistika (ZAŽELENO)
 - Analiza mreženja.
 - Vizualizacija grafa povezav.
 
 ---
 
-## 9. Dodatne funkcionalnosti
+## 10. Dodatne funkcionalnosti
 
-### 9.1 Napredni filtri (ZAŽELENO)
+### 10.1 Napredni filtri (ZAŽELENO)
 - Filtri po interesih, vlogi, kompetencah, razpoložljivosti.
 
-### 9.2 Gamifikacija (DODATNO)
+### 10.2 Gamifikacija (DODATNO)
 - Značke, točke, napredovanje.
 
-### 9.3 Mobilna optimizacija (DODATNO)
+### 10.3 Mobilna optimizacija (DODATNO)
 - Prilagoditev za mobilne naprave (ne native aplikacija).
