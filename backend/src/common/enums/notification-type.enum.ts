@@ -22,4 +22,12 @@ export enum NotificationTypeEnum {
   GUEST_CONFIRMATION = 'guest_confirmation', // first time — email + system
   GUEST_CONFIRMED = 'guest_confirmed',
   GUEST_EVENT_INVITE = 'guest_event_invite', // confirmed guest, new event — email + system
+
+  SESSION_PRESENTER_INVITED = 'session_presenter_invited',
+  SESSION_PRESENTER_CONFIRMED = 'session_presenter_confirmed',
+  SESSION_PRESENTER_DECLINED = 'session_presenter_declined',
+
+  CAREER_SLOT_APPROVAL_REQUEST = 'career_slot_approval_request',
+  CAREER_SLOT_ORGANIZER_APPROVED = 'career_slot_organizer_approved',
+  CAREER_SLOT_ORGANIZER_REJECTED = 'career_slot_organizer_rejected',
 }

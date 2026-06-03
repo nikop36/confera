@@ -316,6 +316,40 @@ export default function ConferenceProgramPage() {
     await loadData();
   }
 
+  async function handlePresenterResponse(
+    sessionId: string,
+    status: 'confirmed' | 'declined',
+  ) {
+    if (!user?.idToken) return;
+    try {
+      const res = await fetch(
+        `${API}/events/${eventId}/sessions/${sessionId}/presenter-response`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${user.idToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status }),
+        },
+      );
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          message?: string | string[];
+        };
+        const msg = Array.isArray(body.message)
+          ? body.message[0]
+          : body.message;
+        throw new Error(msg ?? t('events.error.generic'));
+      }
+      await loadData();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t('events.error.generic'),
+      );
+    }
+  }
+
   async function handleSessionDelete(sessionId: string) {
     if (
       !user?.idToken ||
@@ -538,6 +572,9 @@ export default function ConferenceProgramPage() {
                                         isAdminOrOrganizer={isAdminOrOrganizer}
                                         onEdit={() => setModalSession(item.data)}
                                         onDelete={() => void handleSessionDelete(item.data.id)}
+                                        currentUserUid={user?.uid}
+                                        onPresenterConfirm={() => void handlePresenterResponse(item.data.id, 'confirmed')}
+                                        onPresenterDecline={() => void handlePresenterResponse(item.data.id, 'declined')}
                                       />
                                     )}
                                   </div>

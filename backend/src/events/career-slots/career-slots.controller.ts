@@ -137,4 +137,28 @@ export class CareerSlotsController {
       dto.status,
     );
   }
+
+  @Patch(':slotId/approve')
+  @Roles('admin', 'organizer')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Approve a pending career slot' })
+  @ApiResponse({ status: 204, description: 'Slot approved' })
+  async approveSlot(
+    @Param('eventId') eventId: string,
+    @Param('slotId') slotId: string,
+  ) {
+    await this.careerSlotsService.approveSlot(eventId, slotId);
+  }
+
+  @Patch(':slotId/reject')
+  @Roles('admin', 'organizer')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Reject a pending career slot' })
+  @ApiResponse({ status: 204, description: 'Slot rejected' })
+  async rejectSlot(
+    @Param('eventId') eventId: string,
+    @Param('slotId') slotId: string,
+  ) {
+    await this.careerSlotsService.rejectSlot(eventId, slotId);
+  }
 }

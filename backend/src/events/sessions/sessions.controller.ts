@@ -10,9 +10,11 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { IsEnum } from 'class-validator';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiProperty,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -24,6 +26,12 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { FirebaseUser } from '../../common/interfaces/firebase-user.interface';
+
+class PresenterResponseDto {
+  @ApiProperty({ enum: ['confirmed', 'declined'] })
+  @IsEnum(['confirmed', 'declined'])
+  status!: 'confirmed' | 'declined';
+}
 
 @ApiTags('sessions')
 @Controller('events/:eventId/sessions')
@@ -77,6 +85,26 @@ export class SessionsController {
     @Param('sessionId') sessionId: string,
   ) {
     await this.sessionsService.deleteSession(eventId, sessionId);
+  }
+
+  @Patch(':sessionId/presenter-response')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Respond to a presenter invitation (confirm or decline)' })
+  @ApiResponse({ status: 204, description: 'Response recorded' })
+  @ApiResponse({ status: 403, description: 'Not the invited presenter' })
+  @ApiResponse({ status: 409, description: 'Invitation already responded to' })
+  async respondToPresenterInvite(
+    @Param('eventId') eventId: string,
+    @Param('sessionId') sessionId: string,
+    @Body() dto: PresenterResponseDto,
+    @CurrentUser() user: FirebaseUser,
+  ) {
+    await this.sessionsService.respondToPresenterInvite(
+      eventId,
+      sessionId,
+      user.uid,
+      dto.status,
+    );
   }
 
   @Post(':sessionId/register')

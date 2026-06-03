@@ -52,6 +52,13 @@ export class CareerSlotsRepository {
     await this.slotsCol(eventId).doc(slotId).update(data);
   }
 
+  async getEventCreatedBy(eventId: string): Promise<string | null> {
+    const db = this.firebaseService.getFirestore();
+    const doc = await db.collection('events').doc(eventId).get();
+    if (!doc.exists) return null;
+    return (doc.data()?.['createdBy'] as string) ?? null;
+  }
+
   async deleteSlot(eventId: string, slotId: string): Promise<void> {
     await this.slotsCol(eventId).doc(slotId).delete();
   }
@@ -130,7 +137,7 @@ export class CareerSlotsRepository {
 
   private mapSlotDoc(doc: FirebaseFirestore.DocumentSnapshot): CareerSlot {
     const data = doc.data()!;
-    return {
+    const slot: CareerSlot = {
       id: doc.id,
       title: data['title'] as string,
       description: data['description'] as string,
@@ -144,6 +151,10 @@ export class CareerSlotsRepository {
       createdByUid: data['createdByUid'] as string,
       createdAt: (data['createdAt'] as FirebaseFirestore.Timestamp).toDate(),
     };
+    if (data['approvalStatus']) {
+      slot.approvalStatus = data['approvalStatus'] as CareerSlot['approvalStatus'];
+    }
+    return slot;
   }
 
   private mapRequestDoc(
