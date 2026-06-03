@@ -155,21 +155,23 @@ export class CareerSlotsRepository {
     await db.collection('careerBookings').doc(data.id).set(data);
   }
 
-  async findBookingsByRequester(requesterUid: string): Promise<Array<{
-    id: string;
-    requesterUid: string;
-    eventId: string;
-    eventTitle: string;
-    slotId: string;
-    slotTitle: string;
-    location: string;
-    slotStartAt: Date;
-    slotEndAt: Date;
-    capacity: number;
-    subSlotIndex: number;
-    industryMemberUid: string;
-    industryMemberName: string;
-  }>> {
+  async findBookingsByRequester(requesterUid: string): Promise<
+    Array<{
+      id: string;
+      requesterUid: string;
+      eventId: string;
+      eventTitle: string;
+      slotId: string;
+      slotTitle: string;
+      location: string;
+      slotStartAt: Date;
+      slotEndAt: Date;
+      capacity: number;
+      subSlotIndex: number;
+      industryMemberUid: string;
+      industryMemberName: string;
+    }>
+  > {
     const db = this.firebaseService.getFirestore();
     const snap = await db
       .collection('careerBookings')
@@ -219,7 +221,9 @@ export class CareerSlotsRepository {
       createdAt: (data['createdAt'] as FirebaseFirestore.Timestamp).toDate(),
     };
     if (data['approvalStatus']) {
-      slot.approvalStatus = data['approvalStatus'] as CareerSlot['approvalStatus'];
+      slot.approvalStatus = data[
+        'approvalStatus'
+      ] as CareerSlot['approvalStatus'];
     }
     return slot;
   }

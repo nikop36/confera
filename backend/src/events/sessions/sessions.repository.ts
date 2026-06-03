@@ -217,7 +217,9 @@ export class SessionsRepository {
       session.presenterUid = data['presenterUid'] as string;
     }
     if (data['presenterStatus']) {
-      session.presenterStatus = data['presenterStatus'] as Session['presenterStatus'];
+      session.presenterStatus = data[
+        'presenterStatus'
+      ] as Session['presenterStatus'];
     }
     if (data['status']) {
       session.status = data['status'] as Session['status'];

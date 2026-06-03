@@ -40,7 +40,9 @@ export class CareerSlotsService {
     const slots = allSlots.filter((slot) => {
       if (isManager) return true;
       if (slot.createdByUid === callerUid) return true;
-      return slot.approvalStatus === 'approved' || slot.approvalStatus === undefined;
+      return (
+        slot.approvalStatus === 'approved' || slot.approvalStatus === undefined
+      );
     });
 
     const [creators, approvedCounts, myRequests] = await Promise.all([
@@ -175,10 +177,7 @@ export class CareerSlotsService {
     await this.careerSlotsRepository.deleteSlot(eventId, slotId);
   }
 
-  async approveSlot(
-    eventId: string,
-    slotId: string,
-  ): Promise<void> {
+  async approveSlot(eventId: string, slotId: string): Promise<void> {
     const slot = await this.careerSlotsRepository.findSlotById(eventId, slotId);
     if (!slot) throw new NotFoundException('Career slot not found');
 
@@ -196,10 +195,7 @@ export class CareerSlotsService {
     });
   }
 
-  async rejectSlot(
-    eventId: string,
-    slotId: string,
-  ): Promise<void> {
+  async rejectSlot(eventId: string, slotId: string): Promise<void> {
     const slot = await this.careerSlotsRepository.findSlotById(eventId, slotId);
     if (!slot) throw new NotFoundException('Career slot not found');
 
@@ -339,7 +335,9 @@ export class CareerSlotsService {
     ]);
 
     if (status === 'approved') {
-      const industryMember = await this.usersRepository.findByUid(slot.createdByUid);
+      const industryMember = await this.usersRepository.findByUid(
+        slot.createdByUid,
+      );
       await this.careerSlotsRepository.writeCareerBooking({
         id: requestId,
         requesterUid: request.requesterUid,

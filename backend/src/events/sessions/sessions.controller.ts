@@ -89,7 +89,9 @@ export class SessionsController {
 
   @Patch(':sessionId/presenter-response')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Respond to a presenter invitation (confirm or decline)' })
+  @ApiOperation({
+    summary: 'Respond to a presenter invitation (confirm or decline)',
+  })
   @ApiResponse({ status: 204, description: 'Response recorded' })
   @ApiResponse({ status: 403, description: 'Not the invited presenter' })
   @ApiResponse({ status: 409, description: 'Invitation already responded to' })

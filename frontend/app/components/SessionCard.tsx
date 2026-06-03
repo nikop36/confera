@@ -145,7 +145,7 @@ export default function SessionCard({
       {/* Presenter invite response buttons */}
       {isInvitedPresenter && (
         <div className="flex gap-1 items-center mt-[2px]">
-          <span className="text-[9px] text-[#92400e]">You're invited as presenter:</span>
+          <span className="text-[9px] text-[#92400e]">You&apos;re invited as presenter:</span>
           <button
             type="button"
             onClick={onPresenterConfirm}

@@ -149,7 +149,9 @@ export class SessionsService {
       );
     }
     if (session.presenterStatus !== 'pending') {
-      throw new ConflictException('This invitation has already been responded to');
+      throw new ConflictException(
+        'This invitation has already been responded to',
+      );
     }
 
     await this.sessionsRepository.updateSession(eventId, sessionId, {
