@@ -18,6 +18,7 @@ export type CareerSlotItem = {
   approvedCount: number;
   myRequestStatus: 'pending' | 'approved' | 'declined' | null;
   mySubSlotIndex: number | null;
+  approvalStatus?: 'pending_approval' | 'approved' | 'rejected';
 };
 
 type SubSlotRequest = {
@@ -176,9 +177,16 @@ export default function CareerSlotCard({
       >
         <div className="flex items-start justify-between gap-1">
           <p className="text-[11px] font-bold text-[#0d0d0d] leading-tight line-clamp-2">💼 {slot.title}</p>
-          <span className="text-[9px] font-semibold text-[#92400e] bg-[#fef3c7] px-[5px] py-[1px] rounded-full whitespace-nowrap flex-shrink-0">
-            {t('careerCard.type', 'Career')}
-          </span>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {isMine && slot.approvalStatus === 'pending_approval' && (
+              <span className="text-[9px] font-semibold text-[#92400e] bg-[#fef3c7] px-[5px] py-[1px] rounded-full whitespace-nowrap">
+                ⏳ {t('careerCard.awaitingApproval', 'Čakam na odobritev')}
+              </span>
+            )}
+            <span className="text-[9px] font-semibold text-[#92400e] bg-[#fef3c7] px-[5px] py-[1px] rounded-full whitespace-nowrap">
+              {t('careerCard.type', 'Career')}
+            </span>
+          </div>
         </div>
         <Link
           href={`/profile/${slot.createdByUid}`}
@@ -250,7 +258,7 @@ export default function CareerSlotCard({
                     <span className="text-[10px] font-semibold text-[#166534]">✓ {t('careerCard.mySlot', 'My slot')}</span>
                   ) : isPending ? (
                     <span className="text-[10px] text-[#92400e]">{t('meetings.pending', 'Pending')}</span>
-                  ) : !canManage && !slot.myRequestStatus ? (
+                  ) : !canManage && !slot.myRequestStatus && (slot.approvalStatus === 'approved' || slot.approvalStatus === undefined) ? (
                     <button
                       type="button"
                       disabled={acting}

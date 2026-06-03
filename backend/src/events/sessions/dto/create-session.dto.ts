@@ -64,4 +64,14 @@ export class CreateSessionDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiPropertyOptional({ example: 'uid-of-industry-member' })
+  @IsOptional()
+  @IsString()
+  presenterUid?: string;
+
+  @ApiPropertyOptional({ example: 'Jane Doe' })
+  @IsOptional()
+  @IsString()
+  presenterName?: string;
 }

@@ -45,12 +45,39 @@ Authorization: Bearer <token>
 | `connections` | Zahteve za mreženje med udeleženci |
 | `invites` | Povabila na karierne razgovore |
 | `career-interviews` | Upravljanje kariernih razgovorov |
-| `events` | Konferenčni dogodki in seje |
+| `events` | Konferenčni dogodki, seje in registracije |
+| `sessions` | Seje znotraj dogodkov — ustvarjanje, urejanje, povabilo predavatelja, potrditev/zavrnitev |
+| `career-slots` | Karierni termini — predlog, odobritev organizatorja, prijave udeležencev |
 | `guests` | Gostovska povabila in potrditve |
 | `tags` | Upravljanje oznak interesnih področij |
 | `notifications` | Sistemska obvestila |
 | `export` | Izvoz podatkov (udeleženci, statistika) |
 | `statistics` | KPI metrike in analitika |
+
+---
+
+## Ključni endpointi — nove funkcionalnosti
+
+### Seje — predavatelji
+
+| Metoda | Pot | Vloga | Opis |
+|--------|-----|-------|------|
+| `POST` | `/events/:id/sessions` | organizer, admin | Ustvari sejo; opcijsko `presenterUid` + `presenterName` za povabilo |
+| `PATCH` | `/events/:id/sessions/:sid/presenter-response` | kdor je povabljen | Potrdi (`confirmed`) ali zavrni (`declined`) vabilo |
+
+Ko predavatelj zavrne, se `presenterStatus` nastavi na `declined` in `status` seje na `cancelled`.
+
+---
+
+### Karierni termini
+
+| Metoda | Pot | Vloga | Opis |
+|--------|-----|-------|------|
+| `POST` | `/events/:id/career-slots` | industry, organizer, admin | Predlaga karierni termin; industrijalec dobi `pending_approval`, organizer/admin dobi `approved` |
+| `PATCH` | `/events/:id/career-slots/:sid/approve` | organizer, admin | Odobri termin; industrijalec prejme obvestilo |
+| `PATCH` | `/events/:id/career-slots/:sid/reject` | organizer, admin | Zavrne termin; industrijalec prejme obvestilo |
+| `POST` | `/events/:id/career-slots/:sid/request` | participant, admin | Udeleženec se prijavi na pod-termin |
+| `PATCH` | `/events/:id/career-slots/:sid/requests/:rid` | industry, organizer, admin | Potrdi ali zavrne prijavo udeleženca |
 
 ---
 

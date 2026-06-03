@@ -16,6 +16,8 @@ export type SessionFormValues = {
   location: string;
   capacity: number | null;
   tags: string[];
+  presenterUid?: string;
+  presenterName?: string;
 };
 
 type SessionFormModalProps = {
@@ -31,6 +33,7 @@ type CommunityUser = {
   uid: string;
   displayName: string;
   bio?: string;
+  role?: string;
 };
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -91,6 +94,8 @@ type SessionFormInternal = {
   location: string;
   capacity: number | null;
   tags: string[];
+  presenterName: string;
+  presenterUid: string;
 };
 
 const EMPTY: SessionFormInternal = {
@@ -103,6 +108,8 @@ const EMPTY: SessionFormInternal = {
   location: '',
   capacity: null,
   tags: [],
+  presenterName: '',
+  presenterUid: '',
 };
 
 function sessionToForm(session: SessionItem): SessionFormInternal {
@@ -116,6 +123,8 @@ function sessionToForm(session: SessionItem): SessionFormInternal {
     location: session.location,
     capacity: session.capacity,
     tags: session.tags ?? [],
+    presenterName: session.presenterName ?? '',
+    presenterUid: '',
   };
 }
 
@@ -196,6 +205,8 @@ export default function SessionFormModal({
         location: form.location,
         capacity: form.capacity,
         tags: form.tags,
+        ...(form.presenterUid !== '' && { presenterUid: form.presenterUid }),
+        ...(form.presenterName.trim() !== '' && { presenterName: form.presenterName.trim() }),
       });
       onClose();
     } catch (err) {
@@ -293,6 +304,19 @@ export default function SessionFormModal({
               className="border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors resize-none"
             />
           </label>
+
+          {/* Presenter picker */}
+          <div className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
+              Predavatelj
+            </span>
+            <PresenterPicker
+              name={form.presenterName}
+              uid={form.presenterUid}
+              industryUsers={users.filter((u) => u.role !== 'participant')}
+              onChange={(name, uid) => setForm((prev) => ({ ...prev, presenterName: name, presenterUid: uid }))}
+            />
+          </div>
 
           {/* Speakers */}
           <div className="flex flex-col gap-2">
@@ -436,5 +460,69 @@ export default function SessionFormModal({
       />
     )}
     </>
+  );
+}
+
+function PresenterPicker({
+  name,
+  uid,
+  industryUsers,
+  onChange,
+}: {
+  name: string;
+  uid: string;
+  industryUsers: CommunityUser[];
+  onChange: (name: string, uid: string) => void;
+}) {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filtered = name.trim()
+    ? industryUsers.filter((u) =>
+        u.displayName.toLowerCase().includes(name.toLowerCase()),
+      )
+    : [];
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => { onChange(e.target.value, ''); setShowDropdown(true); }}
+        onFocus={() => setShowDropdown(true)}
+        placeholder="Ime predavatelja (izberite iz sistema ali vpišite gosta)"
+        className="w-full border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
+      />
+      {uid ? (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#059669] font-semibold">✓ V sistemu</span>
+      ) : name.trim() ? (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#8e8e93] font-semibold">Gost</span>
+      ) : null}
+      {showDropdown && filtered.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e5e7eb] rounded-[8px] shadow-md z-10 max-h-[160px] overflow-y-auto">
+          {filtered.slice(0, 6).map((u) => (
+            <button
+              key={u.uid}
+              type="button"
+              onClick={() => { onChange(u.displayName, u.uid); setShowDropdown(false); }}
+              className="w-full text-left px-3 py-2 text-[12px] hover:bg-[#f3f4f6] border-0 bg-transparent cursor-pointer font-sans"
+            >
+              <span className="font-semibold">{u.displayName}</span>
+              {u.bio && <span className="text-[#8e8e93] ml-2">{u.bio.slice(0, 40)}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

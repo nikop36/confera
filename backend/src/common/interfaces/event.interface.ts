@@ -41,6 +41,10 @@ export interface Session {
   tags?: string[];
   createdBy: string;
   createdAt: Date;
+  presenterName?: string;
+  presenterUid?: string;
+  presenterStatus?: 'pending' | 'confirmed' | 'auto_confirmed' | 'declined';
+  status?: 'active' | 'cancelled';
 }
 
 export interface SessionRegistration {

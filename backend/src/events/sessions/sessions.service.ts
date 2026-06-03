@@ -2,12 +2,17 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   SessionsRepository,
   SessionNotFoundError,
   SessionFullError,
 } from './sessions.repository';
+import { UsersRepository } from '../../users/users.repository';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationTypeEnum } from '../../common/enums/notification-type.enum';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 import {
@@ -18,7 +23,11 @@ import {
 
 @Injectable()
 export class SessionsService {
-  constructor(private readonly sessionsRepository: SessionsRepository) {}
+  constructor(
+    private readonly sessionsRepository: SessionsRepository,
+    private readonly usersRepository: UsersRepository,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async listSessions(
     eventId: string,
@@ -32,7 +41,20 @@ export class SessionsService {
     dto: CreateSessionDto,
     createdBy: string,
   ): Promise<void> {
-    await this.sessionsRepository.createSession(eventId, {
+    let presenterName: string | undefined;
+    let presenterUid: string | undefined;
+    let presenterStatus: 'pending' | 'auto_confirmed' | undefined;
+
+    if (dto.presenterUid) {
+      presenterUid = dto.presenterUid;
+      presenterName = dto.presenterName;
+      presenterStatus = 'pending';
+    } else if (dto.presenterName) {
+      presenterName = dto.presenterName;
+      presenterStatus = 'auto_confirmed';
+    }
+
+    const session = await this.sessionsRepository.createSession(eventId, {
       title: dto.title,
       description: dto.description,
       speakers: dto.speakers ?? [],
@@ -44,7 +66,21 @@ export class SessionsService {
       tags: dto.tags ?? [],
       createdBy,
       createdAt: new Date(),
+      ...(presenterName !== undefined && { presenterName }),
+      ...(presenterUid !== undefined && { presenterUid }),
+      ...(presenterStatus !== undefined && { presenterStatus }),
     });
+
+    if (presenterUid && presenterStatus === 'pending') {
+      const presenter = await this.usersRepository.findByUid(presenterUid);
+      await this.notificationsService.createNotification({
+        uid: presenterUid,
+        email: presenter?.email,
+        displayName: presenter?.displayName,
+        type: NotificationTypeEnum.SESSION_PRESENTER_INVITED,
+        message: `You have been invited as a presenter for the session "${session.title}".`,
+      });
+    }
   }
 
   async updateSession(
@@ -93,6 +129,55 @@ export class SessionsService {
       }
       throw err;
     }
+  }
+
+  async respondToPresenterInvite(
+    eventId: string,
+    sessionId: string,
+    callerUid: string,
+    status: 'confirmed' | 'declined',
+  ): Promise<void> {
+    const session = await this.sessionsRepository.findById(eventId, sessionId);
+    if (!session) throw new NotFoundException('Session not found');
+
+    if (!session.presenterUid) {
+      throw new BadRequestException('This session has no invited presenter');
+    }
+    if (session.presenterUid !== callerUid) {
+      throw new ForbiddenException(
+        'Only the invited presenter can respond to this invitation',
+      );
+    }
+    if (session.presenterStatus !== 'pending') {
+      throw new ConflictException('This invitation has already been responded to');
+    }
+
+    await this.sessionsRepository.updateSession(eventId, sessionId, {
+      presenterStatus: status,
+      ...(status === 'declined' && { status: 'cancelled' }),
+    });
+
+    const [presenter, sessionCreator] = await Promise.all([
+      this.usersRepository.findByUid(callerUid),
+      this.usersRepository.findByUid(session.createdBy),
+    ]);
+
+    const notificationType =
+      status === 'confirmed'
+        ? NotificationTypeEnum.SESSION_PRESENTER_CONFIRMED
+        : NotificationTypeEnum.SESSION_PRESENTER_DECLINED;
+    const message =
+      status === 'confirmed'
+        ? `${presenter?.displayName ?? 'The presenter'} has confirmed their role for the session "${session.title}".`
+        : `${presenter?.displayName ?? 'The presenter'} has declined their role for the session "${session.title}".`;
+
+    await this.notificationsService.createNotification({
+      uid: session.createdBy,
+      email: sessionCreator?.email,
+      displayName: sessionCreator?.displayName,
+      type: notificationType,
+      message,
+    });
   }
 
   async cancelRegistration(
