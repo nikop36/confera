@@ -33,6 +33,8 @@ type UploadedFilePayload = {
   originalname: string;
 };
 
+const MAX_IMPORT_FILE_SIZE_BYTES = 1048576;
+
 @ApiTags('export')
 @Controller()
 @UseGuards(FirebaseAuthGuard)
@@ -72,7 +74,7 @@ export class ExportController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(), // keep file in memory
-      limits: { fileSize: 1 * 1024 * 1024 }, // 1MB hard limit at multer level
+      limits: { fileSize: MAX_IMPORT_FILE_SIZE_BYTES },
     }),
   )
   @ApiOperation({ summary: 'Import profile from CSV or Excel file' })
