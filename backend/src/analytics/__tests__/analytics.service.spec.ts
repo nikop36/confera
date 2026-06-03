@@ -5,6 +5,9 @@ import type { UsersRepository } from '../../users/users.repository';
 import type { SchedulingRepository } from '../../scheduling/scheduling.repository';
 import type { CareerInterviewsRepository } from '../../career-interviews/career-interviews.repository';
 import type { ConnectionsRepository } from '../../connections/connections.repository';
+import { NotificationTypeEnum } from '../../common/enums/notification-type.enum';
+import type { EventsRepository } from '../../events/events.repository';
+import type { StatisticsService } from '../../statistics/statistics.service';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
@@ -21,6 +24,14 @@ describe('AnalyticsService', () => {
   const connectionsRepository = {
     listAccepted: jest.fn(),
   } as unknown as ConnectionsRepository;
+  const eventsRepository = {
+    listAllEvents: jest.fn(),
+    listAllRegistrations: jest.fn(),
+  } as unknown as EventsRepository;
+  const statisticsService = {
+    getConfirmedMeetingsStats: jest.fn(),
+    getRoomOccupancyStats: jest.fn(),
+  } as unknown as StatisticsService;
   const firebaseService = {
     getFirestore: jest.fn(),
   } as unknown as FirebaseService;
@@ -33,6 +44,8 @@ describe('AnalyticsService', () => {
       schedulingRepository,
       careerInterviewsRepository,
       connectionsRepository,
+      eventsRepository,
+      statisticsService,
     );
   });
 
@@ -122,7 +135,7 @@ describe('AnalyticsService', () => {
     );
   });
 
-  it('computes usage trend with active users and total role row', async () => {
+  it('computes usage trend with active users, role rows, and inactive role rows', async () => {
     (usersRepository.listUsers as jest.Mock).mockResolvedValue([
       {
         uid: 'u1',
@@ -152,6 +165,10 @@ describe('AnalyticsService', () => {
     );
 
     expect(result.roleBreakdown[0]).toEqual({ role: 'total', count: 2 });
+    expect(result.inactiveByRole[0]).toEqual({ role: 'total', count: 1 });
+    expect(result.inactiveByRole).toEqual(
+      expect.arrayContaining([{ role: 'participant', count: 1 }]),
+    );
     expect(result.series).toEqual([
       {
         date: '2026-05-20',
@@ -169,23 +186,34 @@ describe('AnalyticsService', () => {
   });
 
   it('computes engagement metrics correctly', async () => {
-    (connectionsRepository.listAccepted as jest.Mock).mockResolvedValue([
-      { id: 'c1' },
+    (eventsRepository.listAllEvents as jest.Mock).mockResolvedValue([
+      {
+        id: 'e1',
+        title: 'AI Workshop',
+        startAt: new Date('2026-05-20T09:00:00.000Z'),
+        endAt: new Date('2026-05-20T10:00:00.000Z'),
+        capacity: 10,
+        registeredCount: 3,
+      },
+      {
+        id: 'e2',
+        title: 'Robotics Meetup',
+        startAt: new Date('2026-05-22T09:00:00.000Z'),
+        endAt: new Date('2026-05-22T10:00:00.000Z'),
+        capacity: 5,
+        registeredCount: 1,
+      },
     ]);
-    (careerInterviewsRepository.list as jest.Mock).mockResolvedValue([
+    (eventsRepository.listAllRegistrations as jest.Mock).mockResolvedValue([
       {
-        id: 'i1',
-        invitationStatus: 'accepted',
-        invitationRespondedAt: new Date('2026-05-20T10:00:00.000Z'),
+        eventId: 'e1',
+        uid: 'u1',
+        registeredAt: new Date('2026-05-20T09:15:00.000Z'),
       },
       {
-        id: 'i2',
-        invitationStatus: 'rejected',
-        invitationRespondedAt: new Date('2026-05-20T12:00:00.000Z'),
-      },
-      {
-        id: 'i3',
-        invitationStatus: 'pending',
+        eventId: 'e2',
+        uid: 'u2',
+        registeredAt: new Date('2026-05-22T09:15:00.000Z'),
       },
     ]);
     (firebaseService.getFirestore as jest.Mock).mockReturnValue({
@@ -206,6 +234,8 @@ describe('AnalyticsService', () => {
                     createdAt: new Date('2026-05-20T10:00:00.000Z'),
                     read: true,
                     archived: false,
+                    type: NotificationTypeEnum.EVENT_CANCELLED,
+                    eventId: 'e1',
                   }),
                 },
               ],
@@ -221,15 +251,31 @@ describe('AnalyticsService', () => {
 
     expect(result.summary).toEqual(
       expect.objectContaining({
-        acceptedConnectionsTotal: 1,
         notificationsInRange: 2,
         unreadNotificationsInRange: 1,
         readRatePercent: 50,
-        acceptedInterviewInvites: 1,
-        rejectedInterviewInvites: 1,
-        inviteDecisionCount: 2,
+        eventRegistrationsInRange: 1,
+        eventCancellationsInRange: 1,
+        eventCapacityUtilizationPercent: 30,
+        activeEventsInRange: 1,
       }),
     );
+    expect(result.topEvents).toEqual([
+      {
+        eventId: 'e1',
+        title: 'AI Workshop',
+        registeredCount: 3,
+        capacity: 10,
+        fillRatePercent: 30,
+      },
+    ]);
+    expect(result.topCancelledEvents).toEqual([
+      {
+        eventId: 'e1',
+        title: 'AI Workshop',
+        cancellationCount: 1,
+      },
+    ]);
   });
 
   it('throws on invalid range', async () => {

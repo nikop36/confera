@@ -8,6 +8,9 @@ import { clearStoredUser, useStoredUser } from '../lib/auth';
 import { useT } from '../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+const SHELL_CACHE_TTL_MS = 60_000;
+const BADGE_REFRESH_MS = 120_000;
+const NOTIFICATION_REFRESH_MS = 90_000;
 
 type NavItem = {
   key:
@@ -40,6 +43,21 @@ const SUGGESTIONS = [
   { name: 'Nina Hauptman', org: 'Public Administration', hue: 155 },
 ];
 
+const RECOMMENDATION_COLORS = [
+  { bg: '#1d1d1f', fg: '#ffffff' },
+  { bg: '#ff6b6b', fg: '#ffffff' },
+  { bg: '#dbeafe', fg: '#1e40af' },
+  { bg: '#7c3aed', fg: '#ffffff' },
+];
+
+const RECOMMENDATION_FALLBACK = [
+  'Artificial intelligence',
+  'Industry collaboration',
+  'Public administration',
+  'Sustainability',
+  'Research',
+  'Innovation',
+];
 
 type MatchSuggestion = {
   uid: string;
@@ -93,6 +111,40 @@ type SidebarNotification = {
   unread: boolean;
 };
 
+type ProfileRecommendationSource = {
+  tags?: string[];
+  interests?: string[];
+  goals?: string[];
+};
+
+type CacheEntry<T> = {
+  token: string;
+  at: number;
+  data: T;
+};
+
+const shellCache: {
+  matches?: CacheEntry<MatchSuggestion[]>;
+  connections?: CacheEntry<ConnectionOverview>;
+  invites?: CacheEntry<InviteOverview>;
+  notifications?: CacheEntry<SidebarNotification[]>;
+  recommendations?: CacheEntry<ProfileRecommendationSource | undefined>;
+} = {};
+
+function readShellCache<T>(entry: CacheEntry<T> | undefined, token: string) {
+  if (!entry || entry.token !== token) return null;
+  if (Date.now() - entry.at > SHELL_CACHE_TTL_MS) return null;
+  return entry.data;
+}
+
+function clearShellCache() {
+  shellCache.matches = undefined;
+  shellCache.connections = undefined;
+  shellCache.invites = undefined;
+  shellCache.notifications = undefined;
+  shellCache.recommendations = undefined;
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = useStoredUser();
   const t = useT();
@@ -109,6 +161,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<SidebarNotification[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
+  const [recommendations, setRecommendations] = useState<
+    Array<{ label: string; bg: string; fg: string }>
+  >(
+    RECOMMENDATION_FALLBACK.slice(0, 4).map((label, index) => ({
+      label,
+      ...RECOMMENDATION_COLORS[index % RECOMMENDATION_COLORS.length],
+    })),
+  );
   const unreadNotificationsCount = notifications.filter(
     (item) => item.unread,
   ).length;
@@ -130,10 +190,47 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }))
     : SUGGESTIONS.map((entry) => ({ ...entry, uid: '' }));
 
+  const buildRecommendations = useCallback(
+    (source?: ProfileRecommendationSource) => {
+      const uniqueLabels: string[] = [];
+      const pushUnique = (value?: string) => {
+        const normalized = value?.trim();
+        if (!normalized) return;
+        if (
+          uniqueLabels.some(
+            (entry) => entry.toLowerCase() === normalized.toLowerCase(),
+          )
+        ) {
+          return;
+        }
+        uniqueLabels.push(normalized);
+      };
+
+      (source?.tags ?? []).forEach(pushUnique);
+      (source?.interests ?? []).forEach(pushUnique);
+      (source?.goals ?? []).forEach(pushUnique);
+      RECOMMENDATION_FALLBACK.forEach(pushUnique);
+
+      setRecommendations(
+        uniqueLabels.slice(0, 4).map((label, index) => ({
+          label,
+          ...RECOMMENDATION_COLORS[index % RECOMMENDATION_COLORS.length],
+        })),
+      );
+    },
+    [],
+  );
+
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true); }, []);
 
   const loadMatches = useCallback(async (idToken: string) => {
+    const cached = readShellCache(shellCache.matches, idToken);
+    if (cached) {
+      setMatches(cached);
+      return;
+    }
+
     try {
       const response = await fetch(`${API}/matches/me`, {
         headers: { Authorization: `Bearer ${idToken}` },
@@ -145,6 +242,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }
 
       const data = (await response.json()) as MatchSuggestion[];
+      shellCache.matches = { token: idToken, at: Date.now(), data };
       setMatches(data);
     } catch {
       setMatches([]);
@@ -152,12 +250,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadConnections = useCallback(async (idToken: string) => {
+    const cached = readShellCache(shellCache.connections, idToken);
+    if (cached) {
+      setPendingFriendRequests(cached.pendingCount ?? 0);
+      setConnectedUids(
+        new Set((cached.accepted ?? []).map((item) => item.counterpart.uid)),
+      );
+      setPendingSentUids(
+        new Set((cached.pendingSent ?? []).map((item) => item.counterpart.uid)),
+      );
+      return;
+    }
+
     try {
       const response = await fetch(`${API}/connections/me`, {
         headers: { Authorization: `Bearer ${idToken}` },
       });
       if (!response.ok) return;
       const data = (await response.json()) as ConnectionOverview;
+      shellCache.connections = { token: idToken, at: Date.now(), data };
       setPendingFriendRequests(data.pendingCount ?? 0);
       setConnectedUids(
         new Set((data.accepted ?? []).map((item) => item.counterpart.uid)),
@@ -171,12 +282,29 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadInvites = useCallback(async (token: string) => {
+    const cached = readShellCache(shellCache.invites, token);
+    if (cached) {
+      setPendingInvites(cached.pendingCount ?? 0);
+      const cachedCandidateAcceptedCount = (cached.processed ?? []).filter(
+        (item) => item.invitationStatus === 'accepted',
+      ).length;
+      const cachedInterviewerActiveCount = [
+        ...(cached.interviewerPending ?? []),
+        ...(cached.interviewerProcessed ?? []),
+      ].filter((item) => item.invitationStatus !== 'rejected').length;
+      setMeetingsBadgeCount(
+        cachedCandidateAcceptedCount + cachedInterviewerActiveCount,
+      );
+      return;
+    }
+
     try {
       const response = await fetch(`${API}/invites/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) return;
       const data = (await response.json()) as InviteOverview;
+      shellCache.invites = { token, at: Date.now(), data };
       setPendingInvites(data.pendingCount ?? 0);
       const candidateAcceptedCount = (data.processed ?? []).filter(
         (item) => item.invitationStatus === 'accepted',
@@ -192,6 +320,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadNotifications = useCallback(async (token: string) => {
+    const cached = readShellCache(shellCache.notifications, token);
+    if (cached) {
+      setNotifications(cached);
+      return;
+    }
+
     try {
       const response = await fetch(`${API}/notifications`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -204,11 +338,38 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         time: formatRelativeTime(item.createdAt),
         unread: !item.read,
       }));
+      shellCache.notifications = { token, at: Date.now(), data: mapped };
       setNotifications(mapped);
     } catch {
       // ignore notification refresh errors
     }
   }, []);
+
+  const loadRecommendations = useCallback(
+    async (token: string) => {
+      const cached = readShellCache(shellCache.recommendations, token);
+      if (cached !== null) {
+        buildRecommendations(cached);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API}/profile/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          buildRecommendations();
+          return;
+        }
+        const data = (await response.json()) as ProfileRecommendationSource;
+        shellCache.recommendations = { token, at: Date.now(), data };
+        buildRecommendations(data);
+      } catch {
+        buildRecommendations();
+      }
+    },
+    [buildRecommendations],
+  );
 
   useEffect(() => {
     if (!user?.idToken) return;
@@ -225,7 +386,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const refresh = () => void loadConnections(idToken);
     const initial = window.setTimeout(refresh, 0);
     window.addEventListener('connections:refresh', refresh);
-    const interval = window.setInterval(refresh, 45_000);
+    const interval = window.setInterval(refresh, BADGE_REFRESH_MS);
     return () => {
       window.clearTimeout(initial);
       window.removeEventListener('connections:refresh', refresh);
@@ -239,7 +400,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const refresh = () => void loadInvites(idToken);
     const initial = window.setTimeout(refresh, 0);
     window.addEventListener('invites:refresh', refresh);
-    const interval = window.setInterval(refresh, 45_000);
+    const interval = window.setInterval(refresh, BADGE_REFRESH_MS);
     return () => {
       window.clearTimeout(initial);
       window.removeEventListener('invites:refresh', refresh);
@@ -255,13 +416,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }, 0);
     const interval = window.setInterval(
       () => void loadNotifications(idToken),
-      30_000,
+      NOTIFICATION_REFRESH_MS,
     );
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(interval);
     };
   }, [user?.idToken, loadNotifications]);
+
+  useEffect(() => {
+    if (!user?.idToken) return;
+    const idToken = user.idToken;
+    const initial = window.setTimeout(() => {
+      void loadRecommendations(idToken);
+    }, 0);
+    return () => window.clearTimeout(initial);
+  }, [user?.idToken, loadRecommendations]);
 
   useEffect(() => {
     if (!isNotificationsOpen) {
@@ -278,6 +448,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   function handleLogout() {
     clearStoredUser();
+    clearShellCache();
     setMatches([]);
     router.replace('/login');
   }
@@ -297,6 +468,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         return;
       }
+      shellCache.connections = undefined;
       setPendingSentUids((prev) => new Set([...prev, targetUid]));
       window.dispatchEvent(new Event('connections:refresh'));
     } finally {
@@ -582,6 +754,78 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               ))}
             </div>
           </section>}
+
+          <section>
+            <h3 className="text-lg font-bold mb-[14px]">
+              {t('shell.recommendations')}
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {recommendations.map((recommendation, index) => (
+                <div
+                  key={`${recommendation.label}-${index}`}
+                  className="min-h-[78px] rounded-xl p-3 flex flex-col justify-end"
+                  style={{
+                    background: recommendation.bg,
+                    color: recommendation.fg,
+                  }}
+                >
+                  <div className="mb-auto">
+                    {index === 0 ? (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
+                      </svg>
+                    ) : index === 1 ? (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <polygon points="12 2 15 9 22 9 16.5 13.5 18.5 21 12 16.5 5.5 21 7.5 13.5 2 9 9 9 12 2" />
+                      </svg>
+                    ) : index === 2 ? (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M3 11l9-8 9 8" />
+                        <path d="M5 10v10h14V10" />
+                        <path d="M9 20v-6h6v6" />
+                      </svg>
+                    ) : (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M12 3l8 4v5c0 5-3.4 8.4-8 9-4.6-.6-8-4-8-9V7l8-4z" />
+                      </svg>
+                    )}
+                  </div>
+                  <p className="text-[12px] font-bold leading-tight break-words">
+                    {recommendation.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
 
         </aside>
       </div>

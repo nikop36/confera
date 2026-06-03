@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UsersRepository } from './users.repository';
 import {
   User,
@@ -39,8 +43,63 @@ export class UsersService {
     });
   }
 
+  async listUsersForAdmin(search?: string) {
+    const [users, reports] = await Promise.all([
+      this.listUsers(search),
+      this.usersRepository.listProfileReports(),
+    ]);
+    const reportsByTarget = new Map<
+      string,
+      Array<{
+        id: string;
+        reporterUid: string;
+        reason: string;
+        customReason?: string;
+        createdAt: Date;
+        updatedAt: Date;
+      }>
+    >();
+
+    for (const report of reports) {
+      const existing = reportsByTarget.get(report.targetUid) ?? [];
+      existing.push({
+        id: report.id,
+        reporterUid: report.reporterUid,
+        reason: report.reason,
+        customReason: report.customReason,
+        createdAt: report.createdAt,
+        updatedAt: report.updatedAt,
+      });
+      reportsByTarget.set(report.targetUid, existing);
+    }
+
+    return users.map((user) => {
+      const userReports = reportsByTarget.get(user.uid) ?? [];
+      return {
+        ...user,
+        reportCount: userReports.length,
+        reports: userReports,
+      };
+    });
+  }
+
   async findByEmailOrNull(email: string): Promise<(User & UserProfile) | null> {
     return this.usersRepository.findByEmail(email);
+  }
+
+  async deleteUserAsAdmin(uid: string, currentAdminUid: string): Promise<void> {
+    if (uid === currentAdminUid) {
+      throw new BadRequestException(
+        'Admins cannot delete their own account here',
+      );
+    }
+
+    const user = await this.usersRepository.findByUid(uid);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    await this.usersRepository.deleteAccountData(uid);
   }
 
   async markLoginActivity(uid: string): Promise<void> {

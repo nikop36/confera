@@ -105,7 +105,7 @@ const ADMIN_NAV: AdminNavItem[] = [
       { labelKey: 'admin.nav.stats.reports', labelFallback: 'Reports', href: '/admin/statistics/reports' },
     ],
   },
-  { labelKey: 'admin.nav.users', labelFallback: 'Users', href: '/admin/users', icon: <UsersIcon />, disabled: true },
+  { labelKey: 'admin.nav.users', labelFallback: 'Users', href: '/admin/users', icon: <UsersIcon /> },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

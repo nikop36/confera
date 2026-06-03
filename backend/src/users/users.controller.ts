@@ -1,4 +1,13 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -10,6 +19,8 @@ import { UsersService } from './users.service';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { FirebaseUser } from '../common/interfaces/firebase-user.interface';
 
 @ApiTags('users')
 @Controller('users')
@@ -44,6 +55,47 @@ export class UsersController {
       displayName: user.displayName,
       email: user.email,
       role: user.role,
+      profileStatus: user.profileStatus,
     }));
+  }
+
+  @Get('admin')
+  @Roles('admin')
+  @ApiOperation({ summary: 'List users with admin moderation metadata' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Filter by displayName or email',
+  })
+  @ApiResponse({ status: 200, description: 'Admin users returned' })
+  async listUsersForAdmin(@Query('search') search?: string) {
+    const users = await this.usersService.listUsersForAdmin(search);
+
+    return users.map((user) => ({
+      uid: user.uid,
+      displayName: user.displayName,
+      email: user.email,
+      role: user.role,
+      profileStatus: user.profileStatus,
+      createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt,
+      lastActiveAt: user.lastActiveAt,
+      updatedAt: user.updatedAt,
+      reportCount: user.reportCount,
+      reports: user.reports,
+    }));
+  }
+
+  @Delete(':uid')
+  @Roles('admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a user profile as an admin' })
+  @ApiResponse({ status: 200, description: 'User profile deleted' })
+  async deleteUser(
+    @Param('uid') uid: string,
+    @CurrentUser() currentUser: FirebaseUser,
+  ) {
+    await this.usersService.deleteUserAsAdmin(uid, currentUser.uid);
+    return { message: 'User deleted successfully' };
   }
 }

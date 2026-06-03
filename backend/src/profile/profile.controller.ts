@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Param,
   Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -21,6 +22,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { FirebaseUser } from '../common/interfaces/firebase-user.interface';
 import { ProfileService } from './profile.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ReportProfileDto } from './dto/report-profile.dto';
 
 @ApiTags('profile')
 @Controller('profile')
@@ -78,5 +80,22 @@ export class ProfileController {
     const profile = await this.profileService.findProfile(uid);
     if (!profile) throw new NotFoundException('Profile not found');
     return profile;
+  }
+
+  // POST /profile/:uid/report
+  @Post(':uid/report')
+  @UseGuards(FirebaseAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Report another user profile' })
+  @ApiResponse({ status: 200, description: 'Profile report stored' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  async reportProfile(
+    @Param('uid') uid: string,
+    @CurrentUser() user: FirebaseUser,
+    @Body() dto: ReportProfileDto,
+  ) {
+    await this.profileService.reportProfile(uid, user.uid, dto);
+    return { message: 'Profile reported successfully' };
   }
 }

@@ -7,6 +7,7 @@ import { StatisticsRangeFilter } from '../range-filter';
 import { datesForPreset, toIsoRange, type RangePreset } from '../range';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+type ReportSection = 'all' | 'operations' | 'usage' | 'matching' | 'engagement';
 
 export default function AdminStatisticsReportsPage() {
   const t = useT();
@@ -33,35 +34,36 @@ export default function AdminStatisticsReportsPage() {
     const controller = new AbortController();
     async function load() {
       setError('');
-      const buildUrl = (path: string) => {
-        const url = new URL(`${API}${path}`);
-        if (range.from) url.searchParams.set('from', range.from);
-        if (range.to) url.searchParams.set('to', range.to);
-        return url.toString();
-      };
+      const currentRange = { from: range.from, to: range.to };
+      const sections: Array<{ section: ReportSection; label: string }> = [
+        { section: 'all', label: t('admin.filter.all', 'All') },
+        { section: 'operations', label: t('admin.nav.stats.operations', 'Operations') },
+        { section: 'usage', label: t('admin.nav.stats.usage', 'Usage') },
+        { section: 'matching', label: t('admin.nav.stats.matching', 'Matching') },
+        { section: 'engagement', label: t('admin.nav.stats.engagement', 'Engagement') },
+      ];
       try {
-        const [overviewRes, usageRes, matchingRes, engagementRes] = await Promise.all([
-          fetch(buildUrl('/analytics/overview'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store', signal: controller.signal }),
-          fetch(buildUrl('/analytics/usage-trend'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store', signal: controller.signal }),
-          fetch(buildUrl('/analytics/matching-performance'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store', signal: controller.signal }),
-          fetch(buildUrl('/analytics/engagement'), { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store', signal: controller.signal }),
-        ]);
-        if (!overviewRes.ok || !usageRes.ok || !matchingRes.ok || !engagementRes.ok) {
+        const responses = await Promise.all(
+          sections.map(({ section }) =>
+            fetch(buildExportHref('csv', section, currentRange), {
+              headers: { Authorization: `Bearer ${idToken}` },
+              cache: 'no-store',
+              signal: controller.signal,
+            }),
+          ),
+        );
+        if (responses.some((response) => !response.ok)) {
           setError(t('admin.stats.reports.errorLoad', 'Failed to load report volumes'));
           return;
         }
 
-        const usage = (await usageRes.json()) as {
-          series: Array<unknown>;
-          roleBreakdown: Array<unknown>;
-        };
-        setVolumes([
-          { label: t('admin.nav.stats.overview', 'Overview'), value: 1 },
-          { label: t('admin.stats.reports.usageTrendRows', 'Usage trend rows'), value: usage.series.length },
-          { label: t('admin.stats.reports.usageRoleRows', 'Usage role rows'), value: usage.roleBreakdown.length },
-          { label: t('admin.nav.stats.matching', 'Matching'), value: 1 },
-          { label: t('admin.nav.stats.engagement', 'Engagement'), value: 1 },
-        ]);
+        const csvTexts = await Promise.all(responses.map((response) => response.text()));
+        setVolumes(
+          csvTexts.map((csv, index) => ({
+            label: sections[index].label,
+            value: countCsvRows(csv),
+          })),
+        );
       } catch (err) {
         if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : t('admin.stats.reports.errorLoad', 'Failed to load report volumes'));
@@ -105,9 +107,9 @@ export default function AdminStatisticsReportsPage() {
         />
         <ExportButton
           idToken={user?.idToken}
-          href={buildExportHref('csv', 'overview', range)}
-          filename="analytics-overview-report.csv"
-          label={`CSV / ${t('admin.nav.stats.overview', 'Overview')}`}
+          href={buildExportHref('csv', 'operations', range)}
+          filename="analytics-operations-report.csv"
+          label={`CSV / ${t('admin.nav.stats.operations', 'Operations')}`}
           onError={setError}
         />
         <ExportButton
@@ -135,12 +137,12 @@ export default function AdminStatisticsReportsPage() {
 
       <section className="mt-5 rounded-[12px] border border-[#ececec] bg-white p-4">
         <h2 className="text-[16px] font-semibold mb-1">
-          {t('admin.stats.reports.estimatedRows', 'Estimated Report Rows by Section')}
+          {t('admin.stats.reports.actualRows', 'Report Rows by Export Section')}
         </h2>
         <p className="text-xs text-[#8e8e93] mb-3">
           {t(
-            'admin.stats.reports.estimatedRowsDesc',
-            'Shows the estimated number of rows included in exports by report section.',
+            'admin.stats.reports.actualRowsDesc',
+            'Shows the number of rows currently included in exported report sections for the selected period.',
           )}
         </p>
         <VolumeChartXY items={volumes} />
@@ -151,7 +153,7 @@ export default function AdminStatisticsReportsPage() {
 
 function buildExportHref(
   format: 'json' | 'csv',
-  section: 'all' | 'overview' | 'usage' | 'matching' | 'engagement',
+  section: ReportSection,
   range: { from: string; to: string },
 ) {
   const url = new URL(`${API}/analytics/report`);
@@ -160,6 +162,12 @@ function buildExportHref(
   if (range.from) url.searchParams.set('from', range.from);
   if (range.to) url.searchParams.set('to', range.to);
   return url.toString();
+}
+
+function countCsvRows(csv: string) {
+  const trimmed = csv.trim();
+  if (!trimmed) return 0;
+  return Math.max(0, trimmed.split(/\r?\n/).length - 1);
 }
 
 function ExportButton({
@@ -227,18 +235,19 @@ function VolumeChartXY({ items }: { items: Array<{ label: string; value: number 
   if (items.length === 0) {
     return <p className="text-sm text-[#8e8e93]">{t('admin.stats.noDataDisplay', 'No data to display.')}</p>;
   }
-  const width = 620;
-  const height = 260;
-  const padding = { top: 20, right: 16, bottom: 48, left: 42 };
+  const width = 1040;
+  const height = 460;
+  const padding = { top: 28, right: 30, bottom: 82, left: 58 };
   const rawMax = Math.max(1, ...items.map((item) => item.value));
   const max = rawMax <= 5 ? 5 : Math.ceil(rawMax / 5) * 5;
   const plotWidth = width - padding.left - padding.right;
   const plotHeight = height - padding.top - padding.bottom;
-  const barWidth = Math.max(20, plotWidth / Math.max(1, items.length) - 20);
+  const slotWidth = plotWidth / Math.max(1, items.length);
+  const barWidth = Math.min(120, Math.max(56, slotWidth * 0.52));
   const yTicks = 5;
   return (
     <div className="relative w-full overflow-x-auto">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[420px] h-[230px]">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-[420px] w-full min-w-[780px]">
         <line x1={padding.left} y1={padding.top + plotHeight} x2={padding.left + plotWidth} y2={padding.top + plotHeight} stroke="#d1d5db" />
         <line x1={padding.left} y1={padding.top} x2={padding.left} y2={padding.top + plotHeight} stroke="#d1d5db" />
         {Array.from({ length: yTicks + 1 }, (_, index) => index).map((tick) => {
@@ -261,7 +270,7 @@ function VolumeChartXY({ items }: { items: Array<{ label: string; value: number 
           {t('admin.stats.reports.section', 'section')}
         </text>
         {items.map((item, index) => {
-          const x = padding.left + index * (plotWidth / items.length) + 10;
+          const x = padding.left + index * slotWidth + (slotWidth - barWidth) / 2;
           const h = (item.value / max) * plotHeight;
           const y = padding.top + plotHeight - h;
           return (
@@ -278,7 +287,10 @@ function VolumeChartXY({ items }: { items: Array<{ label: string; value: number 
                 }
                 onMouseLeave={() => setTooltip(null)}
               />
-              <text x={x + barWidth / 2} y={height - 24} textAnchor="middle" fontSize={10} fill="#64748b">
+              <text x={x + barWidth / 2} y={Math.max(14, y - 8)} textAnchor="middle" fontSize={11} fill="#64748b">
+                {item.value}
+              </text>
+              <text x={x + barWidth / 2} y={height - 42} textAnchor="middle" fontSize={12} fill="#64748b">
                 {item.label}
               </text>
             </g>

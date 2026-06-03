@@ -167,10 +167,10 @@ describe('StatisticsService', () => {
           confirmedMeetingsCount: 2,
           confirmedCareerInterviewsCount: 1,
           confirmedTotalCount: 3,
-          pendingInterviewInvitesCount: 2,
-          acceptedInterviewInvitesCount: 1,
+          pendingInterviewInvitesCount: 1,
+          acceptedInterviewInvitesCount: 0,
           rejectedInterviewInvitesCount: 1,
-          inviteAcceptanceRatePercent: 50,
+          inviteAcceptanceRatePercent: 0,
         }),
       );
       expect(result.series).toHaveLength(2);
