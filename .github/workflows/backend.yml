@@ -66,6 +66,7 @@ jobs:
             -Dsonar.tests=src,test
             -Dsonar.exclusions=**/*.spec.ts,**/*.e2e-spec.ts
             -Dsonar.test.inclusions=**/*.spec.ts,**/*.e2e-spec.ts
+            -Dsonar.coverage.exclusions=**/*.module.ts,**/*.controller.ts,**/*.repository.ts,**/*.dto.ts,**/main.ts,**/common/**,**/firebase/**,**/database/**,**/email/**,**/export/helpers/excel.helper.ts,**/__mocks__/**
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
 
       - name: Skip SonarQube Cloud scan

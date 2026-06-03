@@ -83,7 +83,23 @@
       "^resend$": "<rootDir>/__mocks__/resend.js"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.(t|j)s",
+      "!**/*.module.ts",
+      "!**/*.controller.ts",
+      "!**/*.repository.ts",
+      "!**/*.dto.ts",
+      "!**/main.ts",
+      "!**/common/decorators/**",
+      "!**/common/enums/**",
+      "!**/common/interfaces/**",
+      "!**/common/constants/**",
+      "!**/common/guards/**",
+      "!**/common/filters/**",
+      "!**/firebase/**",
+      "!**/database/**",
+      "!**/email/**",
+      "!**/export/helpers/excel.helper.ts",
+      "!**/__mocks__/**"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"

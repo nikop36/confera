@@ -34,6 +34,7 @@ V petem sprintu sem dokončal več funkcionalnosti za nastavitve, večjezičnost
 - Dodal napredne statistike za uporabo sistema, aktivne in neaktivne uporabnike, dogodke, obvestila, sobe in poročila.
 - Implementiral administratorski pregled uporabnikov s filtriranjem po vlogah, prikazom zadnje aktivnosti in možnostjo brisanja uporabnika.
 - Dodal funkcionalnost prijave profilov (report), kjer lahko uporabnik prijavi drug profil, administrator pa vidi število prijav in razloge.
-- Popravljal lint, test in build napake ter reševal konflikte po posodobitvah glavne veje.
+- Razširil backend unit teste za ključne domenske servise, vključno z razporejanjem, kariernimi termini, povezavami, profili, uporabniki, povabili, izvozom podatkov in indeksiranjem dogodkov.
+- Popravljal lint, test in build napake
 
 ---
