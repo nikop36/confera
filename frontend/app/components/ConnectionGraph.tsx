@@ -2,7 +2,7 @@
 
 import '@xyflow/react/dist/style.css';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -73,15 +73,31 @@ type Props = {
   idToken: string | undefined;
   connectedUids: Set<string>;
   pendingUids: Set<string>;
+  activeTags: Set<string>;
   onConnectAction: (uid: string) => Promise<void>;
+  onTagsLoaded: (tags: string[]) => void;
 };
 
-export function ConnectionGraph({ idToken, connectedUids, pendingUids, onConnectAction }: Props) {
+export function ConnectionGraph({ idToken, connectedUids, pendingUids, activeTags, onConnectAction, onTagsLoaded }: Props) {
   const { nodes: rawNodes, edges: rawEdges, loading, error } = useGraphData(idToken);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<GraphNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<GraphEdgeData>>([]);
   const [selectedNode, setSelectedNode] = useState<(GraphNodeData & { id: string }) | null>(null);
   const [connectingUids, setConnectingUids] = useState<Record<string, boolean>>({});
+
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const n of rawNodes) {
+      for (const tag of (n.data as GraphNodeData).tags ?? []) {
+        set.add(tag);
+      }
+    }
+    return [...set].sort();
+  }, [rawNodes]);
+
+  useEffect(() => {
+    onTagsLoaded(allTags);
+  }, [allTags, onTagsLoaded]);
 
   // Apply d3-force layout once when data arrives
   useEffect(() => {
@@ -90,6 +106,30 @@ export function ConnectionGraph({ idToken, connectedUids, pendingUids, onConnect
     setNodes(laid);
     setEdges(rawEdges);
   }, [rawNodes, rawEdges, setNodes, setEdges]);
+
+  useEffect(() => {
+    const dimmedIds = new Set<string>();
+    setNodes((prev) => {
+      return prev.map((n) => {
+        const d = n.data as GraphNodeData;
+        if (activeTags.size === 0) return { ...n, data: { ...n.data, dimmed: false } };
+        if (d.nodeType === 'self') return n;
+        const matches = (d.tags ?? []).some((t) => activeTags.has(t));
+        const nextDimmed = !matches;
+        if (nextDimmed) dimmedIds.add(n.id);
+        return { ...n, data: { ...n.data, dimmed: nextDimmed } };
+      });
+    });
+    setEdges((prev) =>
+      prev.map((e) => ({
+        ...e,
+        style: {
+          ...e.style,
+          opacity: dimmedIds.has(e.source) || dimmedIds.has(e.target) ? 0.05 : undefined,
+        },
+      })),
+    );
+  }, [activeTags, setNodes, setEdges]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_evt, node) => {
     const d = node.data as GraphNodeData;

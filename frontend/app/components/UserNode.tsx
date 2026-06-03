@@ -39,7 +39,14 @@ export function UserNode({ data, selected }: NodeProps) {
 
   return (
     // Wrapper matches circle exactly — label floats below without affecting edge anchors
-    <div style={{ position: 'relative', width: size, height: size, overflow: 'visible' }}>
+    <div style={{
+      position: 'relative',
+      width: size,
+      height: size,
+      overflow: 'visible',
+      opacity: d.dimmed ? 0.15 : 1,
+      transition: 'opacity 0.2s ease',
+    }}>
       <Handle type="target" position={Position.Left} style={CENTER_HANDLE} />
       <Handle type="source" position={Position.Right} style={CENTER_HANDLE} />
 

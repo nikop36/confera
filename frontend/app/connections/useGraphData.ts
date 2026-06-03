@@ -11,6 +11,8 @@ export type GraphNodeData = {
   role: string;
   affiliation?: string;
   isConnected: boolean;
+  tags: string[];
+  dimmed?: boolean;
   [key: string]: unknown;
 };
 
@@ -29,6 +31,7 @@ type ApiNode = {
   role: string;
   affiliation?: string;
   isConnected: boolean;
+  tags?: string[];
 };
 
 type ApiEdge = {
@@ -90,6 +93,7 @@ export function useGraphData(idToken: string | undefined) {
               role: n.role,
               affiliation: n.affiliation,
               isConnected: n.isConnected,
+              tags: n.tags ?? [],
             },
           })),
         );

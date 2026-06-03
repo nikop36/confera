@@ -17,6 +17,9 @@ export class GraphNodeDto {
   @ApiProperty({ example: 'Acme Corp', required: false })
   affiliation?: string;
 
+  @ApiProperty({ example: ['AI', 'SaaS'], required: false, type: [String] })
+  tags?: string[];
+
   @ApiProperty({ example: true })
   isConnected!: boolean;
 }
