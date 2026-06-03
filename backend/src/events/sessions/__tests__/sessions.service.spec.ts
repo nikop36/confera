@@ -6,6 +6,8 @@ import {
   SessionNotFoundError,
   SessionFullError,
 } from '../sessions.repository';
+import { UsersRepository } from '../../../users/users.repository';
+import { NotificationsService } from '../../../notifications/notifications.service';
 
 describe('SessionsService', () => {
   let service: SessionsService;
@@ -17,6 +19,9 @@ describe('SessionsService', () => {
   const mockRegisterAtomic = jest.fn();
   const mockCancelRegistration = jest.fn();
   const mockListRegistrations = jest.fn();
+  const mockFindByUid = jest.fn();
+  const mockFindByEmail = jest.fn();
+  const mockCreateNotification = jest.fn();
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -34,6 +39,14 @@ describe('SessionsService', () => {
             cancelRegistration: mockCancelRegistration,
             listRegistrations: mockListRegistrations,
           },
+        },
+        {
+          provide: UsersRepository,
+          useValue: { findByUid: mockFindByUid, findByEmail: mockFindByEmail },
+        },
+        {
+          provide: NotificationsService,
+          useValue: { createNotification: mockCreateNotification },
         },
       ],
     }).compile();
