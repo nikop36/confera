@@ -106,7 +106,9 @@ export function useGraphData(idToken: string | undefined) {
         };
         const edgeMap = new Map<string, ApiEdge>();
         for (const e of data.edges) {
-          const key = [e.source, e.target].sort().join('|');
+          const key = [e.source, e.target]
+            .sort((a, b) => a.localeCompare(b))
+            .join('|');
           const existing = edgeMap.get(key);
           if (!existing || priority[e.edgeType] > priority[existing.edgeType]) {
             edgeMap.set(key, e);

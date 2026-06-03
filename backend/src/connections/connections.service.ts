@@ -315,7 +315,7 @@ export class ConnectionsService {
             fofUids.add(uidB); // reachable through a peer, not directly connected
             continue;
           }
-          const key = [uidA, uidB].sort().join('|');
+          const key = [uidA, uidB].sort((a, b) => a.localeCompare(b)).join('|');
           if (seen.has(key)) continue;
           seen.add(key);
           edges.push({
@@ -361,7 +361,9 @@ export class ConnectionsService {
       } of peerConnectionsResult.value) {
         for (const fofUid of connectedUids) {
           if (!fofNodeIds.has(fofUid)) continue;
-          const key = [peerUid, fofUid].sort().join('|');
+          const key = [peerUid, fofUid]
+            .sort((a, b) => a.localeCompare(b))
+            .join('|');
           if (seen.has(key)) continue;
           seen.add(key);
           edges.push({

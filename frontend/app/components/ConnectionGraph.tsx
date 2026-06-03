@@ -92,7 +92,7 @@ export function ConnectionGraph({ idToken, connectedUids, pendingUids, activeTag
         set.add(tag);
       }
     }
-    return [...set].sort();
+    return [...set].sort((a, b) => a.localeCompare(b));
   }, [rawNodes]);
 
   useEffect(() => {

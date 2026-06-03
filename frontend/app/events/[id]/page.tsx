@@ -30,7 +30,10 @@ function toGridItems(sessions: SessionItem[], careerSlots: CareerSlotItem[]): Gr
 function buildGrid(items: GridItem[]): { timeSlots: string[]; tracks: string[] } {
   const timeSet = new Set(items.map((i) => i.data.startAt));
   const trackSet = new Set(items.map((i) => i.data.location));
-  return { timeSlots: [...timeSet].sort(), tracks: [...trackSet].sort() };
+  return {
+    timeSlots: [...timeSet].sort((a, b) => a.localeCompare(b)),
+    tracks: [...trackSet].sort((a, b) => a.localeCompare(b)),
+  };
 }
 
 function getRowSpan(item: GridItem, timeSlots: string[]): number {
