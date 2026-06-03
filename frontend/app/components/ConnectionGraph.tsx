@@ -73,16 +73,17 @@ type Props = {
   idToken: string | undefined;
   connectedUids: Set<string>;
   pendingUids: Set<string>;
+  activeTags: Set<string>;
   onConnectAction: (uid: string) => Promise<void>;
+  onTagsLoaded: (tags: string[]) => void;
 };
 
-export function ConnectionGraph({ idToken, connectedUids, pendingUids, onConnectAction }: Props) {
+export function ConnectionGraph({ idToken, connectedUids, pendingUids, activeTags, onConnectAction, onTagsLoaded }: Props) {
   const { nodes: rawNodes, edges: rawEdges, loading, error } = useGraphData(idToken);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<GraphNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<GraphEdgeData>>([]);
   const [selectedNode, setSelectedNode] = useState<(GraphNodeData & { id: string }) | null>(null);
   const [connectingUids, setConnectingUids] = useState<Record<string, boolean>>({});
-  const [activeTags, setActiveTags] = useState<Set<string>>(new Set());
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -93,6 +94,10 @@ export function ConnectionGraph({ idToken, connectedUids, pendingUids, onConnect
     }
     return [...set].sort();
   }, [rawNodes]);
+
+  useEffect(() => {
+    onTagsLoaded(allTags);
+  }, [allTags, onTagsLoaded]);
 
   // Apply d3-force layout once when data arrives
   useEffect(() => {
@@ -188,77 +193,6 @@ export function ConnectionGraph({ idToken, connectedUids, pendingUids, onConnect
           if (d.role === 'organizer') return '#9333ea';
           return '#2563eb';
         }} />
-
-        {!selectedNode && allTags.length > 0 && (
-          <Panel position="top-right">
-            <div
-              style={{
-                background: '#fff',
-                border: '1px solid #e5e7eb',
-                borderRadius: 10,
-                padding: '10px 12px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                minWidth: 140,
-                maxWidth: 200,
-                fontFamily: 'system-ui, sans-serif',
-              }}
-            >
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#0d0d0d', marginBottom: 6 }}>
-                Filtriraj po tagih
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {allTags.map((tag) => {
-                  const active = activeTags.has(tag);
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() =>
-                        setActiveTags((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(tag)) next.delete(tag);
-                          else next.add(tag);
-                          return next;
-                        })
-                      }
-                      style={{
-                        padding: '2px 8px',
-                        borderRadius: 99,
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: 11,
-                        fontWeight: 600,
-                        background: active ? '#0071e3' : '#f0f0f0',
-                        color: active ? '#fff' : '#3d3d3d',
-                        transition: 'background 0.15s, color 0.15s',
-                      }}
-                    >
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
-              {activeTags.size > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setActiveTags(new Set())}
-                  style={{
-                    marginTop: 8,
-                    fontSize: 10,
-                    color: '#8e8e93',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    textDecoration: 'underline',
-                  }}
-                >
-                  Počisti filter
-                </button>
-              )}
-            </div>
-          </Panel>
-        )}
 
         {selectedNode && (
           <Panel position="top-right">

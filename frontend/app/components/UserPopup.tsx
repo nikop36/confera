@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { GraphNodeData } from '../connections/useGraphData';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -63,9 +64,32 @@ export function UserPopup({ node, isConnected, isPending, isConnecting, onConnec
         {isFof && <span style={{ marginLeft: 6, fontSize: 10, color: '#d1d5db', fontStyle: 'italic' }}>prijatelj prijatelja</span>}
       </p>
       {node.affiliation && (
-        <p style={{ fontSize: 12, color: '#555', margin: '0 0 10px' }}>{String(node.affiliation)}</p>
+        <p style={{ fontSize: 12, color: '#555', margin: '0 0 8px' }}>{String(node.affiliation)}</p>
       )}
 
+      {(node.tags ?? []).length > 0 && (
+        <div style={{ display: 'flex', gap: 4, overflowX: 'hidden', flexWrap: 'nowrap', margin: '0 0 10px', WebkitMaskImage: 'linear-gradient(to right, black 80%, transparent 100%)', maskImage: 'linear-gradient(to right, black 80%, transparent 100%)' }}>
+          {(node.tags ?? []).map((tag, i) => {
+            const COLORS = [
+              { bg: '#eff6ff', color: '#1e40af' },
+              { bg: '#f0fdf4', color: '#166534' },
+              { bg: '#fdf4ff', color: '#7e22ce' },
+              { bg: '#fff7ed', color: '#c2410c' },
+            ];
+            const c = COLORS[i % 4];
+            return (
+              <span
+                key={tag}
+                style={{ background: c.bg, color: c.color, borderRadius: 99, padding: '2px 7px', fontSize: 9, fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}
+              >
+                {tag}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       {isConnected ? (
         <span
           style={{
@@ -117,6 +141,13 @@ export function UserPopup({ node, isConnected, isPending, isConnecting, onConnec
           {isConnecting ? '...' : 'Poveži se'}
         </button>
       )}
+      <Link
+        href={`/profile/${node.id}`}
+        style={{ fontSize: 12, color: '#0071e3', fontWeight: 500, textDecoration: 'none', whiteSpace: 'nowrap' }}
+      >
+        Profil →
+      </Link>
+      </div>
     </div>
   );
 }
