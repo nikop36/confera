@@ -12,3 +12,16 @@ Drugi sprint je bil osredotočen na uporabniške profile, vloge in izboljšanje 
 - Dokumentiral modele ter razširil API dokumentacijo in testne primere.
 
 ---
+
+**Niko**
+Drugi sprint je bil osredotočen na vzpostavitev razvojnega okolja in gradnjo admin dela aplikacije. Uspešno sem:
+
+- Dockeriziral oba servisa (frontend in backend) ter uredil prenos Firebase okoljskih spremenljivk v kontejner.
+- Narisal wireframe za strani registracije, profila in domače strani po prijavi.
+- Implementiral prijavo prek Firebase REST API-ja, kar je odpravilo odvisnost od Firebase SDK-ja na backend strani.
+- Zgradil **AdminShell** — ločen layout za admin del z avtentikacijskim guardom.
+- Implementiral stran za upravljanje zahtevkov za spremembo vloge z odobritvijo/zavrnitvijo z enim klikom.
+- Uredil preusmeritev `/admin → /admin/role-requests` in popravil napake pri nalaganju admin layouta.
+- Uvedel tematske spremembe in posodobil vizualno podobo aplikacije.
+
+---

@@ -11,3 +11,12 @@ V prvem sprintu sem postavil temeljne komponente backend sistema ter izvedel klj
 - Implementiral `HttpExceptionFilter` ter `firebase-auth.guard` za obravnavo napak in zaščito endpointov.
 
 ---
+
+**Niko**
+V prvem sprintu sem postavil osnove projekta in začel z razvojem frontenda. Uspešno sem:
+
+- Inicializiral repozitorij in uredil strukturo monorepa z ločenima `backend` in `frontend` direktorijema.
+- Integriral obstoječo frontend zgodovino v enotno git zgodovino.
+- Vzpostavil osnovno Next.js aplikacijo z začetno dobrodošlico.
+
+---
