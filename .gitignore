@@ -26,3 +26,4 @@ tests/bruno/environments/local.bru
 # Playwright
 playwright-report/
 test-results/.superpowers/
+test-results/
