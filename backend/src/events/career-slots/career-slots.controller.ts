@@ -84,6 +84,7 @@ export class CareerSlotsController {
   }
 
   @Post(':slotId/request')
+  @Roles('participant', 'admin')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Request a spot in a career slot' })
   @ApiResponse({ status: 201, description: 'Request submitted' })
@@ -135,5 +136,46 @@ export class CareerSlotsController {
       user.uid,
       dto.status,
     );
+  }
+
+  @Patch(':slotId/approve')
+  @Roles('admin', 'organizer')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Approve a pending career slot' })
+  @ApiResponse({ status: 204, description: 'Slot approved' })
+  async approveSlot(
+    @Param('eventId') eventId: string,
+    @Param('slotId') slotId: string,
+  ) {
+    await this.careerSlotsService.approveSlot(eventId, slotId);
+  }
+
+  @Patch(':slotId/reject')
+  @Roles('admin', 'organizer')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Reject a pending career slot' })
+  @ApiResponse({ status: 204, description: 'Slot rejected' })
+  async rejectSlot(
+    @Param('eventId') eventId: string,
+    @Param('slotId') slotId: string,
+  ) {
+    await this.careerSlotsService.rejectSlot(eventId, slotId);
+  }
+}
+
+@ApiTags('career-bookings')
+@Controller('career-bookings')
+@UseGuards(FirebaseAuthGuard, RolesGuard)
+@ApiBearerAuth()
+export class CareerBookingsController {
+  constructor(private readonly careerSlotsService: CareerSlotsService) {}
+
+  @Get('me')
+  @ApiOperation({
+    summary: 'List all approved career slot bookings for the current user',
+  })
+  @ApiResponse({ status: 200, description: 'Bookings returned' })
+  async getMyBookings(@CurrentUser() user: FirebaseUser) {
+    return this.careerSlotsService.listMyBookings(user.uid);
   }
 }

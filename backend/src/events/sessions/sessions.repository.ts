@@ -196,7 +196,7 @@ export class SessionsRepository {
 
   private mapDoc(doc: FirebaseFirestore.DocumentSnapshot): Session {
     const data = doc.data()!;
-    return {
+    const session: Session = {
       id: doc.id,
       title: data['title'] as string,
       description: data['description'] as string,
@@ -210,5 +210,20 @@ export class SessionsRepository {
       createdBy: data['createdBy'] as string,
       createdAt: (data['createdAt'] as FirebaseFirestore.Timestamp).toDate(),
     };
+    if (data['presenterName']) {
+      session.presenterName = data['presenterName'] as string;
+    }
+    if (data['presenterUid']) {
+      session.presenterUid = data['presenterUid'] as string;
+    }
+    if (data['presenterStatus']) {
+      session.presenterStatus = data[
+        'presenterStatus'
+      ] as Session['presenterStatus'];
+    }
+    if (data['status']) {
+      session.status = data['status'] as Session['status'];
+    }
+    return session;
   }
 }

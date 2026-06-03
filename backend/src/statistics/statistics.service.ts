@@ -223,17 +223,18 @@ export class StatisticsService {
     const confirmedInterviewsCount = [
       ...interviewCountBySlotId.values(),
     ].reduce((sum, count) => sum + count, 0);
-    const [scheduledInterviews, cancelledInterviews] = await Promise.all([
-      this.careerInterviewsRepository.list('scheduled'),
-      this.careerInterviewsRepository.list('cancelled'),
-    ]);
-    const pendingInterviewInvitesCount = scheduledInterviews.filter(
+    const cancelledInterviews =
+      await this.careerInterviewsRepository.list('cancelled');
+    const rangeCancelledInterviews = cancelledInterviews.filter(
+      (interview) => interview.slotId && slotMap.has(interview.slotId),
+    );
+    const pendingInterviewInvitesCount = rangeInterviews.filter(
       (item) => (item.invitationStatus ?? 'pending') === 'pending',
     ).length;
-    const acceptedInterviewInvitesCount = scheduledInterviews.filter(
+    const acceptedInterviewInvitesCount = rangeInterviews.filter(
       (item) => item.invitationStatus === 'accepted',
     ).length;
-    const rejectedInterviewInvitesCount = cancelledInterviews.filter(
+    const rejectedInterviewInvitesCount = rangeCancelledInterviews.filter(
       (item) => item.invitationStatus === 'rejected',
     ).length;
     const inviteDecisionBase =

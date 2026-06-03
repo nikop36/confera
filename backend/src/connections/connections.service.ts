@@ -240,6 +240,7 @@ export class ConnectionsService {
       role: profile.role,
       affiliation: profile.affiliation,
       isConnected: false,
+      tags: profile.tags ?? [],
     };
 
     const peerNodes: GraphNodeDto[] = peers.map((p) => ({
@@ -249,6 +250,7 @@ export class ConnectionsService {
       role: p.role,
       affiliation: p.affiliation,
       isConnected: true,
+      tags: p.tags ?? [],
     }));
 
     const edges: GraphEdgeDto[] = [];
@@ -347,6 +349,7 @@ export class ConnectionsService {
         role: r.value.role,
         affiliation: r.value.affiliation,
         isConnected: false,
+        tags: r.value.tags ?? [],
       }));
 
     const fofNodeIds = new Set(fofNodes.map((n) => n.id));

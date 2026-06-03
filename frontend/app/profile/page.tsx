@@ -29,7 +29,10 @@ type UserProfile = {
 };
 
 type ConnectionsOverview = {
-  accepted: Array<{ id: string }>;
+  accepted: Array<{
+    id: string;
+    counterpart: { uid: string; displayName: string; affiliation?: string };
+  }>;
 };
 
 type InvitesOverview = {
@@ -79,86 +82,6 @@ const TAB_KEYS = [
   'profile.tab.invites',
   'profile.tab.friends',
 ] as const;
-
-type ProfileNavCard = {
-  titleKey: string;
-  titleFallback: string;
-  locationKey: string;
-  locationFallback: string;
-  descKey: string;
-  descFallback: string;
-  from: string;
-  to: string;
-  href?: string;
-};
-
-const CARDS: ProfileNavCard[] = [
-  { titleKey: 'profile.cards.1.title', titleFallback: 'AI in industry', locationKey: 'profile.cards.1.location', locationFallback: 'Hall A', descKey: 'profile.cards.1.desc', descFallback: 'Panel discussion about the future', from: '#7c6cf6', to: '#c084fc' },
-  { titleKey: 'profile.cards.2.title', titleFallback: 'Career interview', locationKey: 'profile.cards.2.location', locationFallback: 'Meeting room 3', descKey: 'profile.cards.2.desc', descFallback: 'Meeting with employers', from: '#fb923c', to: '#fbbf24' },
-  { titleKey: 'profile.cards.3.title', titleFallback: 'Academic networking', locationKey: 'profile.cards.3.location', locationFallback: 'Atrium', descKey: 'profile.cards.3.desc', descFallback: 'Exchange of experiences', from: '#22d3ee', to: '#6ee7b7' },
-  { titleKey: 'profile.cards.4.title', titleFallback: 'Industry meeting', locationKey: 'profile.cards.4.location', locationFallback: 'Expo area', descKey: 'profile.cards.4.desc', descFallback: 'Solutions showcase', from: '#f472b6', to: '#fb7185' },
-];
-
-const INVITE_CARDS: ProfileNavCard[] = [
-  {
-    titleKey: 'profile.inviteCards.1.title',
-    titleFallback: 'Open invites',
-    locationKey: 'profile.inviteCards.location',
-    locationFallback: 'Invites',
-    descKey: 'profile.inviteCards.1.desc',
-    descFallback: 'Review new and processed invites.',
-    from: '#7c6cf6',
-    to: '#c084fc',
-    href: '/invites',
-  },
-  {
-    titleKey: 'profile.inviteCards.2.title',
-    titleFallback: 'Career invites',
-    locationKey: 'profile.inviteCards.location',
-    locationFallback: 'Invites',
-    descKey: 'profile.inviteCards.2.desc',
-    descFallback: 'Accept or reject interview invites.',
-    from: '#22d3ee',
-    to: '#6ee7b7',
-    href: '/invites',
-  },
-];
-
-const FRIEND_CARDS: ProfileNavCard[] = [
-  {
-    titleKey: 'profile.friendCards.1.title',
-    titleFallback: 'Open friends',
-    locationKey: 'profile.friendCards.location',
-    locationFallback: 'Friends',
-    descKey: 'profile.friendCards.1.desc',
-    descFallback: 'Manage connections and connection requests.',
-    from: '#fb923c',
-    to: '#fbbf24',
-    href: '/connections',
-  },
-  {
-    titleKey: 'profile.friendCards.2.title',
-    titleFallback: 'Connect with new people',
-    locationKey: 'profile.friendCards.location',
-    locationFallback: 'Friends',
-    descKey: 'profile.friendCards.2.desc',
-    descFallback: 'Check suggestions and expand your network.',
-    from: '#f472b6',
-    to: '#fb7185',
-    href: '/community',
-  },
-  {
-    titleKey: 'profile.friendCards.3.title',
-    titleFallback: 'Connection graph',
-    locationKey: 'profile.friendCards.location',
-    locationFallback: 'Friends',
-    descKey: 'profile.friendCards.3.desc',
-    descFallback: 'Visualize your network and mutual connections.',
-    from: '#22d3ee',
-    to: '#60a5fa',
-    href: '/connections?tab=graf',
-  },
-];
 
 type RecommendedEvent = {
   id: string;
@@ -264,6 +187,9 @@ export default function ProfilePage() {
   const [roleRequestReason, setRoleRequestReason] = useState('');
   const [roleRequestError, setRoleRequestError] = useState('');
   const [connectionCount, setConnectionCount] = useState(0);
+  const [acceptedConnections, setAcceptedConnections] = useState<
+    Array<{ id: string; counterpart: { uid: string; displayName: string; affiliation?: string } }>
+  >([]);
   const [meetingCount, setMeetingCount] = useState(0);
   const [recommendedEvents, setRecommendedEvents] = useState<RecommendedEvent[]>(
     [],
@@ -343,6 +269,7 @@ export default function ProfilePage() {
         if (!res.ok) return;
         const payload = (await res.json()) as ConnectionsOverview;
         setConnectionCount(payload.accepted?.length ?? 0);
+        setAcceptedConnections(payload.accepted ?? []);
       } catch {
         // keep previous count on transient errors
       }
@@ -409,9 +336,6 @@ export default function ProfilePage() {
     () => displayName.split(' ').map((word) => word[0]).slice(0, 2).join('').toUpperCase(),
     [displayName],
   );
-
-  const staticTabCards: ProfileNavCard[] =
-    activeTab === 1 ? INVITE_CARDS : activeTab === 2 ? FRIEND_CARDS : CARDS;
 
   function field(key: keyof ProfileForm) {
     return (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -939,56 +863,40 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      {/* 2-col card grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {activeTab === 0 && loadingRecommendations && (
-          <div className="col-span-2 rounded-2xl border border-[#f0f0f0] bg-white px-4 py-5 text-sm text-[#8e8e93]">
-            {t('profile.recommendations.loading', 'Loading event recommendations...')}
-          </div>
-        )}
-
-        {activeTab === 0 &&
-          !loadingRecommendations &&
-          recommendedEvents.length === 0 && (
+      {/* Events tab */}
+      {activeTab === 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {loadingRecommendations && (
+            <div className="col-span-2 rounded-2xl border border-[#f0f0f0] bg-white px-4 py-5 text-sm text-[#8e8e93]">
+              {t('profile.recommendations.loading', 'Loading event recommendations...')}
+            </div>
+          )}
+          {!loadingRecommendations && recommendedEvents.length === 0 && (
             <div className="col-span-2 rounded-2xl border border-[#f0f0f0] bg-white px-4 py-5 text-sm text-[#8e8e93]">
               {t('profile.recommendations.empty', 'There are currently no new event recommendations.')}
             </div>
           )}
-
-        {activeTab === 0 &&
-          recommendedEvents.map((event, i) => (
+          {recommendedEvents.map((event, i) => (
             <div
               key={event.id}
               className="rounded-2xl overflow-hidden bg-white border border-[#f0f0f0] cursor-pointer"
               role="button"
               tabIndex={0}
               onClick={() => router.push(`/events/${event.id}`)}
-              onKeyDown={(eventKey) => {
-                if (eventKey.key === 'Enter' || eventKey.key === ' ') {
-                  eventKey.preventDefault();
-                  router.push(`/events/${event.id}`);
-                }
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/events/${event.id}`); }
               }}
             >
               <div
                 className="h-[128px] relative"
-                style={{
-                  background:
-                    i % 4 === 0
-                      ? 'linear-gradient(135deg, #7c6cf6, #c084fc)'
-                      : i % 4 === 1
-                        ? 'linear-gradient(135deg, #fb923c, #fbbf24)'
-                        : i % 4 === 2
-                          ? 'linear-gradient(135deg, #22d3ee, #6ee7b7)'
-                          : 'linear-gradient(135deg, #f472b6, #fb7185)',
-                }}
+                style={{ background: ['linear-gradient(135deg,#7c6cf6,#c084fc)', 'linear-gradient(135deg,#fb923c,#fbbf24)', 'linear-gradient(135deg,#22d3ee,#6ee7b7)', 'linear-gradient(135deg,#f472b6,#fb7185)'][i % 4] }}
               >
                 <svg className="absolute inset-0 w-full h-full" viewBox="0 0 220 128" fill="none" preserveAspectRatio="xMidYMid slice">
                   <circle cx="170" cy="20" r="75" fill="rgba(255,255,255,0.1)" />
                   <circle cx="20" cy="110" r="55" fill="rgba(255,255,255,0.07)" />
                 </svg>
                 <div className="absolute bottom-[9px] right-[9px] rounded-lg bg-white/20 px-2 py-1 text-[11px] font-semibold text-white">
-                  {Math.round(event.score * 100)}%
+                  Priporočeno
                 </div>
               </div>
               <div className="px-[14px] py-3">
@@ -999,75 +907,78 @@ export default function ProfilePage() {
                   </svg>
                   {event.location}
                 </p>
-                <p className="text-xs text-[#b0b0b0] line-clamp-2 mb-1">
-                  {event.description}
-                </p>
+                <p className="text-xs text-[#b0b0b0] line-clamp-2 mb-1">{event.description}</p>
                 {(event.tags ?? []).length > 0 && (
-                  <p className="text-[11px] text-[#8e8e93]">
-                    Oznake: {(event.tags ?? []).slice(0, 3).join(', ')}
-                  </p>
+                  <p className="text-[11px] text-[#8e8e93]">Oznake: {(event.tags ?? []).slice(0, 3).join(', ')}</p>
                 )}
                 {(event.friendsGoing?.length ?? 0) > 0 && (
                   <p className="text-[11px] text-[#4f46e5] font-semibold mt-1">
-                    {(event.friendsGoing ?? []).length === 1
-                      ? '1 prijatelj gre'
-                      : `${(event.friendsGoing ?? []).length} prijatelji gredo`}
+                    {(event.friendsGoing ?? []).length === 1 ? '1 prijatelj gre' : `${(event.friendsGoing ?? []).length} prijatelji gredo`}
                   </p>
                 )}
               </div>
             </div>
           ))}
+        </div>
+      )}
 
-        {activeTab !== 0 &&
-          staticTabCards.map((card, i) => (
-            <div
-              key={i}
-              className="rounded-2xl overflow-hidden bg-white border border-[#f0f0f0] cursor-pointer"
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                if (card.href) {
-                  router.push(card.href);
-                }
-              }}
-              onKeyDown={(eventKey) => {
-                if (
-                  card.href &&
-                  (eventKey.key === 'Enter' || eventKey.key === ' ')
-                ) {
-                  eventKey.preventDefault();
-                  router.push(card.href);
-                }
-              }}
-            >
-              <div
-                className="h-[128px] relative"
-                style={{ background: `linear-gradient(135deg, ${card.from}, ${card.to})` }}
-              >
-                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 220 128" fill="none" preserveAspectRatio="xMidYMid slice">
-                  <circle cx="170" cy="20" r="75" fill="rgba(255,255,255,0.1)" />
-                  <circle cx="20" cy="110" r="55" fill="rgba(255,255,255,0.07)" />
-                </svg>
-                <div className="absolute bottom-[9px] right-[9px] bg-white/20 backdrop-blur-sm rounded-lg w-7 h-7 flex items-center justify-center">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2">
-                    <path d="M5 12h14" />
-                    <path d="m13 6 6 6-6 6" />
-                  </svg>
-                </div>
-              </div>
-              <div className="px-[14px] py-3">
-                <p className="text-sm font-semibold mb-1">{t(card.titleKey, card.titleFallback)}</p>
-                <p className="text-xs text-[#8e8e93] flex items-center gap-1 mb-[3px]">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
-                  </svg>
-                  {t(card.locationKey, card.locationFallback)}
-                </p>
-                <p className="text-xs text-[#b0b0b0]">{t(card.descKey, card.descFallback)}</p>
-              </div>
+      {/* Invites tab */}
+      {activeTab === 1 && (
+        <div className="flex flex-col gap-3">
+          <div className="rounded-[14px] border border-[#f0f0f0] px-4 py-4 flex items-center justify-between">
+            <div>
+              <p className="text-[13px] font-semibold text-[#0d0d0d]">{t('profile.tab.invites', 'Invites')}</p>
+              <p className="text-[12px] text-[#8e8e93] mt-0.5">
+                {meetingCount} {t('profile.count.meetings', 'Meetings')}
+              </p>
             </div>
-          ))}
-      </div>
+            <button
+              type="button"
+              onClick={() => router.push('/invites')}
+              className="px-4 py-[7px] rounded-full text-[13px] font-semibold bg-[#0d0d0d] text-white border-0 cursor-pointer font-sans"
+            >
+              {t('profile.invites.open', 'Open')} →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Friends tab */}
+      {activeTab === 2 && (
+        <div className="flex flex-col gap-2">
+          {acceptedConnections.length === 0 ? (
+            <div className="rounded-[14px] border border-[#f0f0f0] px-5 py-6 text-sm text-[#8e8e93]">
+              {t('connections.noneAccepted', 'No connections yet.')}
+            </div>
+          ) : (
+            acceptedConnections.map((conn) => (
+              <div
+                key={conn.id}
+                className="rounded-[12px] border border-[#f0f0f0] px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-[#fafafa] transition-colors"
+                role="button"
+                tabIndex={0}
+                onClick={() => router.push(`/profile/${conn.counterpart.uid}`)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push(`/profile/${conn.counterpart.uid}`); }
+                }}
+              >
+                <div className="w-9 h-9 rounded-full bg-[#f0f7ff] text-[#2563eb] text-xs font-bold flex items-center justify-center shrink-0">
+                  {conn.counterpart.displayName.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-semibold truncate">{conn.counterpart.displayName}</p>
+                  {conn.counterpart.affiliation && (
+                    <p className="text-[12px] text-[#8e8e93] truncate">{conn.counterpart.affiliation}</p>
+                  )}
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {cropDraft && (
         <ImageCropModal

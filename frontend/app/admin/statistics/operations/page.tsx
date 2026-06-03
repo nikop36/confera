@@ -205,11 +205,6 @@ export default function AdminStatisticsPage() {
   );
   const series = useMemo(() => confirmed?.series ?? [], [confirmed?.series]);
   const heatmap = useMemo(() => confirmed?.heatmap ?? [], [confirmed?.heatmap]);
-  const funnel = useMemo(() => confirmed?.funnel ?? [], [confirmed?.funnel]);
-  const anomalies = useMemo(
-    () => confirmed?.anomalies ?? [],
-    [confirmed?.anomalies],
-  );
   const drilldown = useMemo(
     () => confirmed?.drilldown ?? [],
     [confirmed?.drilldown],
@@ -230,6 +225,25 @@ export default function AdminStatisticsPage() {
     });
   }, [drilldown, selectedDate, selectedHour]);
   const isNoData = !loading && series.length === 0 && sortedRooms.length === 0;
+  const acceptedInviteCount =
+    confirmed?.summary.acceptedInterviewInvitesCount ?? 0;
+  const decidedInviteCount =
+    acceptedInviteCount +
+    (confirmed?.summary.rejectedInterviewInvitesCount ?? 0);
+  const inviteAcceptanceValue = decidedInviteCount
+    ? `${confirmed?.summary.inviteAcceptanceRatePercent ?? 0}% (${acceptedInviteCount}/${decidedInviteCount})`
+    : t('admin.stats.operations.noInviteDecisionsShort', 'No decisions');
+  const pendingInviteCount =
+    confirmed?.summary.pendingInterviewInvitesCount ?? 0;
+  const rejectedInviteCount =
+    confirmed?.summary.rejectedInterviewInvitesCount ?? 0;
+  const totalInviteCount =
+    pendingInviteCount + acceptedInviteCount + rejectedInviteCount;
+  const confirmedMeetingCount =
+    confirmed?.summary.confirmedMeetingsCount ?? 0;
+  const confirmedInterviewCount =
+    confirmed?.summary.confirmedCareerInterviewsCount ?? 0;
+  const confirmedTotalCount = confirmed?.summary.confirmedTotalCount ?? 0;
 
   return (
     <div>
@@ -264,69 +278,30 @@ export default function AdminStatisticsPage() {
         </section>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
         <StatCard
           label={t('admin.stats.operations.confirmedTotal', 'Confirmed total')}
           value={confirmed?.summary.confirmedTotalCount ?? 0}
+          description={t('admin.stats.operations.confirmedTotalDesc', 'All confirmed meetings and interviews in this range.')}
         />
         <StatCard
           label={t('admin.stats.operations.meetings', 'Meetings')}
           value={confirmed?.summary.confirmedMeetingsCount ?? 0}
+          description={t('admin.stats.operations.meetingsDesc', 'Confirmed participant meetings.')}
         />
         <StatCard
           label={t('admin.stats.operations.interviews', 'Interviews')}
           value={confirmed?.summary.confirmedCareerInterviewsCount ?? 0}
+          description={t('admin.stats.operations.interviewsDesc', 'Scheduled or completed career interviews. Accepted invites are counted separately.')}
         />
         <StatCard
-          label={t('admin.stats.operations.avgOccupancy', 'Avg occupancy')}
-          value={`${occupancy?.summary.averageOccupancyPercent ?? 0}%`}
-        />
-        <StatCard
-          label={t('admin.stats.operations.seatUtilization', 'Seat utilization')}
-          value={`${occupancy?.summary.averageCapacityUtilizationPercent ?? 0}%`}
-        />
-        <StatCard
-          label={t('admin.stats.operations.inviteAcceptance', 'Invite acceptance')}
-          value={`${confirmed?.summary.inviteAcceptanceRatePercent ?? 0}%`}
+          label={t('admin.stats.operations.inviteAcceptance', 'Invite decision acceptance')}
+          value={inviteAcceptanceValue}
+          description={t('admin.stats.operations.inviteAcceptanceDesc', 'Accepted interview invites out of accepted plus rejected invite decisions.')}
         />
       </div>
 
-      <section className="rounded-[12px] border border-[#ececec] bg-white p-4 mb-5">
-        <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.anomalyFlags', 'Anomaly Flags')}</h2>
-        <p className="text-xs text-[#8e8e93] mb-3">
-          {t('admin.stats.operations.anomalyDesc', 'Large day-to-day changes in total confirmed volume.')}
-        </p>
-        {loading ? (
-          <p className="text-sm text-[#8e8e93]">{t('admin.stats.operations.checkingAnomalies', 'Checking anomalies...')}</p>
-        ) : anomalies.length === 0 ? (
-          <p className="text-sm text-[#8e8e93]">{t('admin.stats.operations.noAnomalies', 'No strong spikes or drops detected.')}</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {anomalies.slice(0, 8).map((item) => (
-              <div
-                key={`${item.date}_${item.type}`}
-                className={`rounded-[10px] border px-3 py-2 text-sm ${
-                  item.type === 'spike'
-                    ? 'border-[#bbf7d0] bg-[#f0fdf4] text-[#166534]'
-                    : 'border-[#fecaca] bg-[#fef2f2] text-[#991b1b]'
-                }`}
-              >
-                <div className="font-medium">
-                  {item.type === 'spike'
-                    ? t('admin.stats.operations.spike', 'Spike')
-                    : t('admin.stats.operations.drop', 'Drop')}{' '}
-                  {t('admin.stats.operations.onDate', 'on')} {item.date}
-                </div>
-                <div className="text-xs">
-                  {item.previousTotal} → {item.currentTotal} ({item.deltaPercent}%)
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
+      <div className="mb-5">
         <section className="rounded-[12px] border border-[#ececec] p-4 bg-white">
           <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.confirmedOverTime', 'Confirmed Over Time')}</h2>
           <p className="text-xs text-[#8e8e93] mb-3">
@@ -377,7 +352,7 @@ export default function AdminStatisticsPage() {
               onSelectDate={setSelectedDate}
               visibleSeries={visibleSeries}
               onVisibleSeriesChange={setVisibleSeries}
-              anomalyDates={new Set(anomalies.map((item) => item.date))}
+              anomalyDates={new Set()}
             />
           )}
           {selectedDaySeries && (
@@ -389,7 +364,103 @@ export default function AdminStatisticsPage() {
             </div>
           )}
         </section>
+      </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
+        <section className="rounded-[12px] border border-[#ececec] p-4 bg-white">
+          <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.inviteDecisionChart', 'Interview Invite Decisions')}</h2>
+          <p className="text-xs text-[#8e8e93] mb-3">
+            {t(
+              'admin.stats.operations.inviteDecisionChartDesc',
+              'Tracks whether interview invites are still pending, accepted, or rejected.',
+            )}
+          </p>
+          {loading ? (
+            <p className="text-sm text-[#8e8e93]">{t('admin.stats.operations.loadingFunnel', 'Loading funnel...')}</p>
+          ) : totalInviteCount === 0 ? (
+            <EmptyChart message={t('admin.stats.operations.noFunnelData', 'No funnel data.')} />
+          ) : (
+            <FunnelBars
+              items={[
+                {
+                  label: t('admin.stats.operations.pendingInvites', 'Pending invites'),
+                  value: pendingInviteCount,
+                },
+                {
+                  label: t('admin.stats.operations.acceptedInvites', 'Accepted invites'),
+                  value: acceptedInviteCount,
+                },
+                {
+                  label: t('admin.stats.operations.rejectedInvites', 'Rejected invites'),
+                  value: rejectedInviteCount,
+                },
+              ]}
+            />
+          )}
+        </section>
+
+        <section className="rounded-[12px] border border-[#ececec] p-4 bg-white">
+          <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.scheduledCompletedChart', 'Scheduled/Completed Volume')}</h2>
+          <p className="text-xs text-[#8e8e93] mb-3">
+            {t(
+              'admin.stats.operations.scheduledCompletedChartDesc',
+              'Shows confirmed meetings and career interviews that are already scheduled or completed.',
+            )}
+          </p>
+          {loading ? (
+            <p className="text-sm text-[#8e8e93]">{t('admin.stats.loadingChart', 'Loading chart...')}</p>
+          ) : confirmedTotalCount === 0 ? (
+            <EmptyChart message={t('admin.stats.operations.noConfirmedRecords', 'No confirmed records in selected range.')} />
+          ) : (
+            <FunnelBars
+              items={[
+                {
+                  label: t('admin.stats.operations.meetings', 'Meetings'),
+                  value: confirmedMeetingCount,
+                },
+                {
+                  label: t('admin.stats.operations.interviews', 'Interviews'),
+                  value: confirmedInterviewCount,
+                },
+                {
+                  label: t('admin.stats.operations.total', 'Total'),
+                  value: confirmedTotalCount,
+                },
+              ]}
+            />
+          )}
+        </section>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-5">
+        <StatCard
+          label={t('admin.stats.operations.rooms', 'Rooms')}
+          value={occupancy?.summary.roomsCount ?? 0}
+          description={t('admin.stats.operations.roomsDesc', 'All rooms available to the scheduling module.')}
+        />
+        <StatCard
+          label={t('admin.stats.operations.activeRooms', 'Active rooms')}
+          value={occupancy?.summary.activeRoomsCount ?? 0}
+          description={t('admin.stats.operations.activeRoomsDesc', 'Rooms currently enabled for scheduling.')}
+        />
+        <StatCard
+          label={t('admin.stats.operations.totalRoomSlots', 'Room slots')}
+          value={occupancy?.summary.totalSlots ?? 0}
+          description={t('admin.stats.operations.totalRoomSlotsDesc', 'Generated room time slots in the selected range.')}
+        />
+        <StatCard
+          label={t('admin.stats.operations.avgOccupancy', 'Avg occupancy')}
+          value={`${occupancy?.summary.averageOccupancyPercent ?? 0}%`}
+          description={t('admin.stats.operations.avgOccupancyDesc', 'Average share of booked room slots.')}
+        />
+        <StatCard
+          label={t('admin.stats.operations.seatUtilization', 'Seat utilization')}
+          value={`${occupancy?.summary.averageCapacityUtilizationPercent ?? 0}%`}
+          description={t('admin.stats.operations.seatUtilizationDesc', 'Used seats compared with available capacity.')}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
         <section className="rounded-[12px] border border-[#ececec] p-4 bg-white">
           <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.roomOccupancy', 'Room Occupancy (%)')}</h2>
           <p className="text-xs text-[#8e8e93] mb-3">
@@ -442,27 +513,6 @@ export default function AdminStatisticsPage() {
               bars={sortedRooms.map((room) => ({
                 label: room.roomName,
                 value: room.occupancyRatePercent,
-              }))}
-            />
-          )}
-        </section>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
-        <section className="rounded-[12px] border border-[#ececec] p-4 bg-white">
-          <h2 className="text-[16px] font-semibold mb-1">{t('admin.stats.operations.interviewFunnel', 'Interview Funnel')}</h2>
-          <p className="text-xs text-[#8e8e93] mb-3">
-            {t('admin.stats.operations.interviewFunnelDesc', 'Pending, accepted, rejected, and confirmed totals.')}
-          </p>
-          {loading ? (
-            <p className="text-sm text-[#8e8e93]">{t('admin.stats.operations.loadingFunnel', 'Loading funnel...')}</p>
-          ) : funnel.length === 0 ? (
-            <EmptyChart message={t('admin.stats.operations.noFunnelData', 'No funnel data.')} />
-          ) : (
-            <FunnelBars
-              items={funnel.map((entry) => ({
-                label: stageLabel(entry.stage, t),
-                value: entry.value,
               }))}
             />
           )}
@@ -656,21 +706,6 @@ function formatTimeRange(startAt: string, endAt: string) {
   ).padStart(2, '0')}`;
 }
 
-function stageLabel(stage: string, t: ReturnType<typeof useT>) {
-  switch (stage) {
-    case 'pending_invites':
-      return t('admin.stats.operations.pending', 'Pending');
-    case 'accepted_invites':
-      return t('admin.stats.operations.accepted', 'Accepted');
-    case 'rejected_invites':
-      return t('admin.stats.operations.rejected', 'Rejected');
-    case 'confirmed_total':
-      return t('admin.stats.operations.confirmed', 'Confirmed');
-    default:
-      return stage;
-  }
-}
-
 function EmptyChart({ message }: { message: string }) {
   return (
     <div className="h-[260px] rounded-[10px] border border-dashed border-[#e2e8f0] flex items-center justify-center text-sm text-[#8e8e93]">
@@ -679,11 +714,20 @@ function EmptyChart({ message }: { message: string }) {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({
+  label,
+  value,
+  description,
+}: {
+  label: string;
+  value: string | number;
+  description: string;
+}) {
   return (
     <div className="rounded-[10px] border border-[#ececec] bg-white px-4 py-3">
       <p className="text-[12px] text-[#8e8e93]">{label}</p>
       <p className="text-[22px] font-bold leading-tight mt-1">{value}</p>
+      <p className="mt-1 text-[11px] leading-snug text-[#9ca3af]">{description}</p>
     </div>
   );
 }

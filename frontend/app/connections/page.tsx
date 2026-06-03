@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import AppShell from '../components/AppShell';
 import { useStoredUser } from '../lib/auth';
@@ -53,6 +53,21 @@ export default function ConnectionsPage() {
   });
   const [connectedUids, setConnectedUids] = useState<Set<string>>(new Set());
   const [pendingSentUids, setPendingSentUids] = useState<Set<string>>(new Set());
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [activeTags, setActiveTags] = useState<Set<string>>(new Set());
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [filterOpen]);
 
   useEffect(() => {
     if (!user?.idToken) return;
@@ -200,33 +215,90 @@ export default function ConnectionsPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide pb-1">
-        {(
-          [
-            {
-              key: 'zahteve' as const,
-              label:
-                data.pendingReceived.length > 0
-                  ? `Zahteve (${data.pendingReceived.length})`
-                  : 'Zahteve',
-            },
-            { key: 'povezave' as const, label: 'Povezave' },
-            { key: 'graf' as const, label: 'Graf' },
-          ]
-        ).map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key)}
-            className={`px-4 py-[7px] rounded-full text-[13px] font-semibold transition-colors ${
-              activeTab === key
-                ? 'bg-[#0071e3] text-white'
-                : 'bg-[#f0f0f0] text-[#3d3d3d] hover:bg-[#e5e5e5]'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-2 mb-5">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+          {(
+            [
+              {
+                key: 'zahteve' as const,
+                label:
+                  data.pendingReceived.length > 0
+                    ? `Zahteve (${data.pendingReceived.length})`
+                    : 'Zahteve',
+              },
+              { key: 'povezave' as const, label: 'Povezave' },
+              { key: 'graf' as const, label: 'Graf' },
+            ]
+          ).map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
+              className={`px-4 py-[7px] rounded-full text-[13px] font-semibold transition-colors whitespace-nowrap ${
+                activeTab === key
+                  ? 'bg-[#0071e3] text-white'
+                  : 'bg-[#f0f0f0] text-[#3d3d3d] hover:bg-[#e5e5e5]'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'graf' && allTags.length > 0 && (
+          <div ref={filterRef} className="relative flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setFilterOpen((v) => !v)}
+              className={`px-4 py-[7px] rounded-full text-[13px] font-semibold transition-colors ${
+                activeTags.size > 0
+                  ? 'bg-[#0071e3] text-white'
+                  : 'bg-[#f0f0f0] text-[#3d3d3d] hover:bg-[#e5e5e5]'
+              }`}
+            >
+              {activeTags.size > 0 ? `Filtri (${activeTags.size})` : 'Filtri'}
+            </button>
+            {filterOpen && (
+              <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-[#e5e7eb] rounded-[12px] shadow-lg p-3 flex flex-wrap gap-[5px] min-w-[180px] max-w-[280px]">
+                {allTags.map((tag, i) => {
+                  const colors = [
+                    { base: 'bg-[#eff6ff] text-[#1e40af]', ring: 'ring-[#1e40af]' },
+                    { base: 'bg-[#f0fdf4] text-[#166534]', ring: 'ring-[#166534]' },
+                    { base: 'bg-[#fdf4ff] text-[#7e22ce]', ring: 'ring-[#7e22ce]' },
+                    { base: 'bg-[#fff7ed] text-[#c2410c]', ring: 'ring-[#c2410c]' },
+                  ][i % 4];
+                  const active = activeTags.has(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() =>
+                        setActiveTags((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(tag)) next.delete(tag);
+                          else next.add(tag);
+                          return next;
+                        })
+                      }
+                      className={`px-[7px] py-[2px] rounded-full text-[9px] font-medium transition-all ${colors.base} ${active ? `ring-1 ${colors.ring}` : ''}`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+                {activeTags.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTags(new Set())}
+                    className="px-[7px] py-[2px] rounded-full text-[9px] font-medium bg-[#f0f0f0] text-[#8e8e93]"
+                  >
+                    Počisti
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {error && (
@@ -344,7 +416,9 @@ export default function ConnectionsPage() {
           idToken={user?.idToken}
           connectedUids={connectedUids}
           pendingUids={pendingSentUids}
+          activeTags={activeTags}
           onConnectAction={handleConnect}
+          onTagsLoaded={setAllTags}
         />
       )}
     </AppShell>

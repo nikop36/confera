@@ -8,6 +8,9 @@ import { clearStoredUser, useStoredUser } from '../lib/auth';
 import { useT } from '../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+const SHELL_CACHE_TTL_MS = 60_000;
+const BADGE_REFRESH_MS = 120_000;
+const NOTIFICATION_REFRESH_MS = 90_000;
 
 type NavItem = {
   key:
@@ -26,7 +29,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { key: 'news', href: '/home' },
   { key: 'profile', href: '/profile' },
-  { key: 'meetings', href: '/meetings' },
+  // { key: 'meetings', href: '/meetings' },
   { key: 'invites', href: '/invites' },
   { key: 'connections', href: '/connections' },
   { key: 'community', href: '/community' },
@@ -107,11 +110,40 @@ type SidebarNotification = {
   time: string;
   unread: boolean;
 };
+
 type ProfileRecommendationSource = {
   tags?: string[];
   interests?: string[];
   goals?: string[];
 };
+
+type CacheEntry<T> = {
+  token: string;
+  at: number;
+  data: T;
+};
+
+const shellCache: {
+  matches?: CacheEntry<MatchSuggestion[]>;
+  connections?: CacheEntry<ConnectionOverview>;
+  invites?: CacheEntry<InviteOverview>;
+  notifications?: CacheEntry<SidebarNotification[]>;
+  recommendations?: CacheEntry<ProfileRecommendationSource | undefined>;
+} = {};
+
+function readShellCache<T>(entry: CacheEntry<T> | undefined, token: string) {
+  if (!entry || entry.token !== token) return null;
+  if (Date.now() - entry.at > SHELL_CACHE_TTL_MS) return null;
+  return entry.data;
+}
+
+function clearShellCache() {
+  shellCache.matches = undefined;
+  shellCache.connections = undefined;
+  shellCache.invites = undefined;
+  shellCache.notifications = undefined;
+  shellCache.recommendations = undefined;
+}
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = useStoredUser();
@@ -141,6 +173,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     (item) => item.unread,
   ).length;
   const isAdmin = user?.role === 'admin';
+  const isParticipant = user?.role === 'participant' || (!user?.role && user != null);
+  const visibleNav = NAV.filter(({ key }) => !(key === 'events' && isParticipant));
 
   const initials = user?.displayName
     .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() ?? '??';
@@ -162,7 +196,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       const pushUnique = (value?: string) => {
         const normalized = value?.trim();
         if (!normalized) return;
-        if (uniqueLabels.some((entry) => entry.toLowerCase() === normalized.toLowerCase())) {
+        if (
+          uniqueLabels.some(
+            (entry) => entry.toLowerCase() === normalized.toLowerCase(),
+          )
+        ) {
           return;
         }
         uniqueLabels.push(normalized);
@@ -187,6 +225,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => { setMounted(true); }, []);
 
   const loadMatches = useCallback(async (idToken: string) => {
+    const cached = readShellCache(shellCache.matches, idToken);
+    if (cached) {
+      setMatches(cached);
+      return;
+    }
+
     try {
       const response = await fetch(`${API}/matches/me`, {
         headers: { Authorization: `Bearer ${idToken}` },
@@ -198,6 +242,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }
 
       const data = (await response.json()) as MatchSuggestion[];
+      shellCache.matches = { token: idToken, at: Date.now(), data };
       setMatches(data);
     } catch {
       setMatches([]);
@@ -205,12 +250,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadConnections = useCallback(async (idToken: string) => {
+    const cached = readShellCache(shellCache.connections, idToken);
+    if (cached) {
+      setPendingFriendRequests(cached.pendingCount ?? 0);
+      setConnectedUids(
+        new Set((cached.accepted ?? []).map((item) => item.counterpart.uid)),
+      );
+      setPendingSentUids(
+        new Set((cached.pendingSent ?? []).map((item) => item.counterpart.uid)),
+      );
+      return;
+    }
+
     try {
       const response = await fetch(`${API}/connections/me`, {
         headers: { Authorization: `Bearer ${idToken}` },
       });
       if (!response.ok) return;
       const data = (await response.json()) as ConnectionOverview;
+      shellCache.connections = { token: idToken, at: Date.now(), data };
       setPendingFriendRequests(data.pendingCount ?? 0);
       setConnectedUids(
         new Set((data.accepted ?? []).map((item) => item.counterpart.uid)),
@@ -224,12 +282,29 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadInvites = useCallback(async (token: string) => {
+    const cached = readShellCache(shellCache.invites, token);
+    if (cached) {
+      setPendingInvites(cached.pendingCount ?? 0);
+      const cachedCandidateAcceptedCount = (cached.processed ?? []).filter(
+        (item) => item.invitationStatus === 'accepted',
+      ).length;
+      const cachedInterviewerActiveCount = [
+        ...(cached.interviewerPending ?? []),
+        ...(cached.interviewerProcessed ?? []),
+      ].filter((item) => item.invitationStatus !== 'rejected').length;
+      setMeetingsBadgeCount(
+        cachedCandidateAcceptedCount + cachedInterviewerActiveCount,
+      );
+      return;
+    }
+
     try {
       const response = await fetch(`${API}/invites/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) return;
       const data = (await response.json()) as InviteOverview;
+      shellCache.invites = { token, at: Date.now(), data };
       setPendingInvites(data.pendingCount ?? 0);
       const candidateAcceptedCount = (data.processed ?? []).filter(
         (item) => item.invitationStatus === 'accepted',
@@ -245,6 +320,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadNotifications = useCallback(async (token: string) => {
+    const cached = readShellCache(shellCache.notifications, token);
+    if (cached) {
+      setNotifications(cached);
+      return;
+    }
+
     try {
       const response = await fetch(`${API}/notifications`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -257,6 +338,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         time: formatRelativeTime(item.createdAt),
         unread: !item.read,
       }));
+      shellCache.notifications = { token, at: Date.now(), data: mapped };
       setNotifications(mapped);
     } catch {
       // ignore notification refresh errors
@@ -265,6 +347,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const loadRecommendations = useCallback(
     async (token: string) => {
+      const cached = readShellCache(shellCache.recommendations, token);
+      if (cached !== null) {
+        buildRecommendations(cached);
+        return;
+      }
+
       try {
         const response = await fetch(`${API}/profile/me`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -274,6 +362,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           return;
         }
         const data = (await response.json()) as ProfileRecommendationSource;
+        shellCache.recommendations = { token, at: Date.now(), data };
         buildRecommendations(data);
       } catch {
         buildRecommendations();
@@ -297,7 +386,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const refresh = () => void loadConnections(idToken);
     const initial = window.setTimeout(refresh, 0);
     window.addEventListener('connections:refresh', refresh);
-    const interval = window.setInterval(refresh, 45_000);
+    const interval = window.setInterval(refresh, BADGE_REFRESH_MS);
     return () => {
       window.clearTimeout(initial);
       window.removeEventListener('connections:refresh', refresh);
@@ -306,21 +395,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [user?.idToken, loadConnections]);
 
   useEffect(() => {
-    const token = user?.idToken;
-    if (!token) return;
-    const timer = window.setTimeout(() => {
-      void loadRecommendations(token);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [user?.idToken, loadRecommendations]);
-
-  useEffect(() => {
     if (!user?.idToken) return;
     const idToken = user.idToken;
     const refresh = () => void loadInvites(idToken);
     const initial = window.setTimeout(refresh, 0);
     window.addEventListener('invites:refresh', refresh);
-    const interval = window.setInterval(refresh, 45_000);
+    const interval = window.setInterval(refresh, BADGE_REFRESH_MS);
     return () => {
       window.clearTimeout(initial);
       window.removeEventListener('invites:refresh', refresh);
@@ -336,13 +416,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }, 0);
     const interval = window.setInterval(
       () => void loadNotifications(idToken),
-      30_000,
+      NOTIFICATION_REFRESH_MS,
     );
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(interval);
     };
   }, [user?.idToken, loadNotifications]);
+
+  useEffect(() => {
+    if (!user?.idToken) return;
+    const idToken = user.idToken;
+    const initial = window.setTimeout(() => {
+      void loadRecommendations(idToken);
+    }, 0);
+    return () => window.clearTimeout(initial);
+  }, [user?.idToken, loadRecommendations]);
 
   useEffect(() => {
     if (!isNotificationsOpen) {
@@ -359,6 +448,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   function handleLogout() {
     clearStoredUser();
+    clearShellCache();
     setMatches([]);
     router.replace('/login');
   }
@@ -378,6 +468,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         return;
       }
+      shellCache.connections = undefined;
       setPendingSentUids((prev) => new Set([...prev, targetUid]));
       window.dispatchEvent(new Event('connections:refresh'));
     } finally {
@@ -486,7 +577,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Navigation */}
           <nav className="flex flex-col gap-0.5 flex-1">
-            {NAV.map(({ key, href, badge }) => {
+            {visibleNav.map(({ key, href, badge }) => {
               const active = pathname === href;
               const dynamicBadge =
                 key === 'connections'
@@ -664,19 +755,74 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </section>}
 
-          {/* Recommendations */}
           <section>
-            <h3 className="text-lg font-bold mb-[14px]">{t('shell.recommendations')}</h3>
-            <div className="grid grid-cols-2 gap-[10px]">
-              {recommendations.map((r, i) => (
-                <button
-                  key={i}
-                  className="p-4 rounded-2xl cursor-pointer border-0 text-left font-sans"
-                  style={{ background: r.bg, color: r.fg }}
+            <h3 className="text-lg font-bold mb-[14px]">
+              {t('shell.recommendations')}
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {recommendations.map((recommendation, index) => (
+                <div
+                  key={`${recommendation.label}-${index}`}
+                  className="min-h-[78px] rounded-xl p-3 flex flex-col justify-end"
+                  style={{
+                    background: recommendation.bg,
+                    color: recommendation.fg,
+                  }}
                 >
-                  <RecommIcon index={i} fg={r.fg} />
-                  <p className="text-xs font-semibold mt-2 leading-tight">{r.label}</p>
-                </button>
+                  <div className="mb-auto">
+                    {index === 0 ? (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
+                      </svg>
+                    ) : index === 1 ? (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <polygon points="12 2 15 9 22 9 16.5 13.5 18.5 21 12 16.5 5.5 21 7.5 13.5 2 9 9 9 12 2" />
+                      </svg>
+                    ) : index === 2 ? (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M3 11l9-8 9 8" />
+                        <path d="M5 10v10h14V10" />
+                        <path d="M9 20v-6h6v6" />
+                      </svg>
+                    ) : (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M12 3l8 4v5c0 5-3.4 8.4-8 9-4.6-.6-8-4-8-9V7l8-4z" />
+                      </svg>
+                    )}
+                  </div>
+                  <p className="text-[12px] font-bold leading-tight break-words">
+                    {recommendation.label}
+                  </p>
+                </div>
               ))}
             </div>
           </section>
@@ -687,16 +833,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#e5e5ea] mobile-safe-bottom">
         <div className="flex">
           {([
-            { href: '/events', label: 'Events', badge: 0, icon: (
+            { href: isParticipant ? '/home' : '/events', label: 'Events', badge: 0, icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
                 <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" />
               </svg>
             )},
-            { href: '/meetings', label: 'Meetings', badge: meetingsBadgeCount, icon: (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
-                <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
-              </svg>
-            )},
+            // { href: '/meetings', label: 'Meetings', badge: meetingsBadgeCount, icon: null },
             { href: '/connections', label: 'Connect', badge: 0, icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
@@ -891,17 +1033,6 @@ function NavIcon({
     case 'community': return <svg {...props}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" /></svg>;
     case 'events': return <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" /></svg>;
     case 'settings': return <svg {...props}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>;
-    default: return <svg {...props}><circle cx="12" cy="12" r="4" /></svg>;
-  }
-}
-
-function RecommIcon({ index, fg }: { index: number; fg: string }) {
-  const props = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: fg, strokeWidth: '1.8' };
-  switch (index) {
-    case 0: return <svg {...props}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" /></svg>;
-    case 1: return <svg {...props}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>;
-    case 2: return <svg {...props}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>;
-    case 3: return <svg {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
     default: return <svg {...props}><circle cx="12" cy="12" r="4" /></svg>;
   }
 }

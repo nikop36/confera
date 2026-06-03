@@ -82,12 +82,27 @@ export default function AdminStatisticsMatchingPage() {
         onToChange={setTo}
       />
       {error && <div className="mb-4 rounded-[12px] bg-[#fff1f2] px-4 py-3 text-sm text-[#dc2626]">{error}</div>}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-        <Card label={t('admin.stats.matching.acceptedConnections', 'Accepted connections')} value={summary?.acceptedConnectionsInRange ?? 0} />
-        <Card label={t('admin.stats.matching.meetingConversions', 'Meeting conversions')} value={summary?.meetingConversions ?? 0} />
-        <Card label={t('admin.stats.matching.interviewConversions', 'Interview conversions')} value={summary?.interviewConversions ?? 0} />
-        <Card label={t('admin.stats.matching.totalConversions', 'Total conversions')} value={summary?.totalConversions ?? 0} />
-        <Card label={t('admin.stats.matching.conversionRate', 'Conversion rate')} value={`${summary?.connectionToConversionRatePercent ?? 0}%`} />
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        <Card
+          label={t('admin.stats.matching.acceptedConnections', 'Accepted connections')}
+          value={summary?.acceptedConnectionsInRange ?? 0}
+          description={t('admin.stats.matching.acceptedConnectionsDesc', 'Accepted connection requests in the selected period.')}
+        />
+        <Card
+          label={t('admin.stats.matching.meetingConversions', 'Meeting conversions')}
+          value={summary?.meetingConversions ?? 0}
+          description={t('admin.stats.matching.meetingConversionsDesc', 'Meetings created from accepted connections.')}
+        />
+        <Card
+          label={t('admin.stats.matching.interviewConversions', 'Interview conversions')}
+          value={summary?.interviewConversions ?? 0}
+          description={t('admin.stats.matching.interviewConversionsDesc', 'Career interviews created from accepted connections.')}
+        />
+        <Card
+          label={t('admin.stats.matching.totalConversions', 'Total conversions')}
+          value={summary?.totalConversions ?? 0}
+          description={t('admin.stats.matching.totalConversionsDesc', 'Meetings and interviews combined.')}
+        />
       </div>
       <div className="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-5">
         <section className="rounded-[12px] border border-[#ececec] bg-white p-4">
@@ -121,11 +136,20 @@ export default function AdminStatisticsMatchingPage() {
   );
 }
 
-function Card({ label, value }: { label: string; value: number | string }) {
+function Card({
+  label,
+  value,
+  description,
+}: {
+  label: string;
+  value: number | string;
+  description: string;
+}) {
   return (
     <section className="rounded-[10px] border border-[#ececec] bg-white px-4 py-3">
       <p className="text-[12px] text-[#8e8e93]">{label}</p>
       <p className="text-[26px] font-bold mt-1">{value}</p>
+      <p className="mt-1 text-[11px] leading-snug text-[#9ca3af]">{description}</p>
     </section>
   );
 }

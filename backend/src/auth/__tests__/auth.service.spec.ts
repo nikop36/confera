@@ -15,6 +15,9 @@ describe('AuthService', () => {
   const mockUsersServiceCreate = jest.fn();
   const mockFindByEmailOrNull = jest.fn().mockResolvedValue(null); // default — no guest exists
   const mockUpgradeGuestToParticipant = jest.fn().mockResolvedValue(undefined);
+  const mockFindByUidOrNull = jest.fn().mockResolvedValue(null);
+  const mockMarkLoginActivity = jest.fn().mockResolvedValue(undefined);
+  const originalFetch = global.fetch;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -32,6 +35,8 @@ describe('AuthService', () => {
             createUser: mockUsersServiceCreate,
             findByEmailOrNull: mockFindByEmailOrNull,
             upgradeGuestToParticipant: mockUpgradeGuestToParticipant,
+            findByUidOrNull: mockFindByUidOrNull,
+            markLoginActivity: mockMarkLoginActivity,
           },
         },
         {
@@ -49,6 +54,9 @@ describe('AuthService', () => {
   afterEach(() => {
     jest.clearAllMocks();
     mockFindByEmailOrNull.mockResolvedValue(null); // reset to default after each test
+    mockFindByUidOrNull.mockResolvedValue(null);
+    mockMarkLoginActivity.mockResolvedValue(undefined);
+    global.fetch = originalFetch;
   });
 
   // ─── Registration ────────────────────────────────────────────────────────────
@@ -146,6 +154,35 @@ describe('AuthService', () => {
       ).rejects.toThrow();
 
       expect(mockUsersServiceCreate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('login()', () => {
+    beforeEach(() => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue({
+          idToken: 'firebase-token',
+          localId: 'firebase-uid-123',
+        }),
+      });
+    });
+
+    it('returns the Firebase token even if Firestore profile sync fails', async () => {
+      mockFindByUidOrNull.mockRejectedValue(
+        new Error('8 RESOURCE_EXHAUSTED: Quota exceeded.'),
+      );
+
+      const result = await authService.login({
+        email: 'test@example.com',
+        password: 'Strongpass1!',
+      });
+
+      expect(result).toEqual({
+        idToken: 'firebase-token',
+        uid: 'firebase-uid-123',
+      });
     });
   });
 });

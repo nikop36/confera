@@ -29,7 +29,21 @@ export class CareerSlotsService {
     eventId: string,
     callerUid: string,
   ): Promise<CareerSlotWithMeta[]> {
-    const slots = await this.careerSlotsRepository.listSlots(eventId);
+    const allSlots = await this.careerSlotsRepository.listSlots(eventId);
+
+    const caller = await this.usersRepository.findByUid(callerUid);
+    const isManager =
+      caller?.role === UserRoleEnum.ADMIN ||
+      caller?.role === UserRoleEnum.ORGANIZER;
+
+    // Non-managers only see approved slots or their own slots
+    const slots = allSlots.filter((slot) => {
+      if (isManager) return true;
+      if (slot.createdByUid === callerUid) return true;
+      return (
+        slot.approvalStatus === 'approved' || slot.approvalStatus === undefined
+      );
+    });
 
     const [creators, approvedCounts, myRequests] = await Promise.all([
       Promise.all(
@@ -65,7 +79,16 @@ export class CareerSlotsService {
     dto: CreateCareerSlotDto,
     createdByUid: string,
   ): Promise<void> {
-    await this.careerSlotsRepository.createSlot(eventId, {
+    const caller = await this.usersRepository.findByUid(createdByUid);
+    const isManager =
+      caller?.role === UserRoleEnum.ADMIN ||
+      caller?.role === UserRoleEnum.ORGANIZER;
+
+    const approvalStatus: CareerSlot['approvalStatus'] = isManager
+      ? 'approved'
+      : 'pending_approval';
+
+    const slot = await this.careerSlotsRepository.createSlot(eventId, {
       title: dto.title,
       description: dto.description,
       startAt: new Date(dto.startAt),
@@ -75,7 +98,23 @@ export class CareerSlotsService {
       requirements: dto.requirements,
       createdByUid,
       createdAt: new Date(),
+      approvalStatus,
     });
+
+    if (!isManager) {
+      const organizerUid =
+        await this.careerSlotsRepository.getEventCreatedBy(eventId);
+      if (organizerUid) {
+        const organizer = await this.usersRepository.findByUid(organizerUid);
+        await this.notificationsService.createNotification({
+          uid: organizerUid,
+          email: organizer?.email,
+          displayName: organizer?.displayName,
+          type: NotificationTypeEnum.CAREER_SLOT_APPROVAL_REQUEST,
+          message: `${caller?.displayName ?? 'An industry member'} has submitted the career slot "${slot.title}" for your approval.`,
+        });
+      }
+    }
   }
 
   async updateSlot(
@@ -138,6 +177,42 @@ export class CareerSlotsService {
     await this.careerSlotsRepository.deleteSlot(eventId, slotId);
   }
 
+  async approveSlot(eventId: string, slotId: string): Promise<void> {
+    const slot = await this.careerSlotsRepository.findSlotById(eventId, slotId);
+    if (!slot) throw new NotFoundException('Career slot not found');
+
+    await this.careerSlotsRepository.updateSlot(eventId, slotId, {
+      approvalStatus: 'approved',
+    });
+
+    const creator = await this.usersRepository.findByUid(slot.createdByUid);
+    await this.notificationsService.createNotification({
+      uid: slot.createdByUid,
+      email: creator?.email,
+      displayName: creator?.displayName,
+      type: NotificationTypeEnum.CAREER_SLOT_ORGANIZER_APPROVED,
+      message: `Your career slot "${slot.title}" has been approved by the organizer.`,
+    });
+  }
+
+  async rejectSlot(eventId: string, slotId: string): Promise<void> {
+    const slot = await this.careerSlotsRepository.findSlotById(eventId, slotId);
+    if (!slot) throw new NotFoundException('Career slot not found');
+
+    await this.careerSlotsRepository.updateSlot(eventId, slotId, {
+      approvalStatus: 'rejected',
+    });
+
+    const creator = await this.usersRepository.findByUid(slot.createdByUid);
+    await this.notificationsService.createNotification({
+      uid: slot.createdByUid,
+      email: creator?.email,
+      displayName: creator?.displayName,
+      type: NotificationTypeEnum.CAREER_SLOT_ORGANIZER_REJECTED,
+      message: `Your career slot "${slot.title}" has been rejected by the organizer.`,
+    });
+  }
+
   async requestSlot(
     eventId: string,
     slotId: string,
@@ -164,6 +239,19 @@ export class CareerSlotsService {
       subSlotIndex,
       status: 'pending',
       requestedAt: new Date(),
+    });
+
+    const [requester, creator] = await Promise.all([
+      this.usersRepository.findByUid(requesterUid),
+      this.usersRepository.findByUid(slot.createdByUid),
+    ]);
+
+    await this.notificationsService.createNotification({
+      uid: slot.createdByUid,
+      email: creator?.email,
+      displayName: creator?.displayName,
+      type: NotificationTypeEnum.CAREER_SLOT_REQUESTED,
+      message: `${requester?.displayName ?? 'Someone'} has requested a spot in your career slot "${slot.title}".`,
     });
   }
 
@@ -241,9 +329,33 @@ export class CareerSlotsService {
       respondedAt: new Date(),
     });
 
-    const requester = await this.usersRepository.findByUid(
-      request.requesterUid,
-    );
+    const [requester, eventTitle] = await Promise.all([
+      this.usersRepository.findByUid(request.requesterUid),
+      this.careerSlotsRepository.getEventTitle(eventId),
+    ]);
+
+    if (status === 'approved') {
+      const industryMember = await this.usersRepository.findByUid(
+        slot.createdByUid,
+      );
+      await this.careerSlotsRepository.writeCareerBooking({
+        id: requestId,
+        requesterUid: request.requesterUid,
+        eventId,
+        eventTitle: eventTitle ?? eventId,
+        slotId,
+        slotTitle: slot.title,
+        location: slot.location,
+        slotStartAt: slot.startAt,
+        slotEndAt: slot.endAt,
+        capacity: slot.capacity,
+        subSlotIndex: request.subSlotIndex,
+        industryMemberUid: slot.createdByUid,
+        industryMemberName: industryMember?.displayName ?? slot.createdByUid,
+        approvedAt: new Date(),
+      });
+    }
+
     const notificationType =
       status === 'approved'
         ? NotificationTypeEnum.CAREER_SLOT_APPROVED
@@ -260,5 +372,9 @@ export class CareerSlotsService {
       type: notificationType,
       message,
     });
+  }
+
+  async listMyBookings(callerUid: string) {
+    return this.careerSlotsRepository.findBookingsByRequester(callerUid);
   }
 }

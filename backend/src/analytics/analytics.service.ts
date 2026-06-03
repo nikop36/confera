@@ -4,7 +4,10 @@ import { UsersRepository } from '../users/users.repository';
 import { SchedulingRepository } from '../scheduling/scheduling.repository';
 import { CareerInterviewsRepository } from '../career-interviews/career-interviews.repository';
 import { ConnectionsRepository } from '../connections/connections.repository';
+import { EventsRepository } from '../events/events.repository';
+import { StatisticsService } from '../statistics/statistics.service';
 import type { UserRoleEnum } from '../common/enums/roles.enum';
+import { NotificationTypeEnum } from '../common/enums/notification-type.enum';
 
 type AnalyticsRange = {
   from: string;
@@ -32,6 +35,13 @@ type UsagePayload = {
   range: AnalyticsRange;
   generatedAt: string;
   metricsVersion: 'v1';
+  summary: {
+    usersTotal: number;
+    completedProfilesTotal: number;
+    profileCompletionRatePercent: number;
+    inactive7Days: number;
+    inactive30Days: number;
+  };
   series: Array<{
     date: string;
     usersCreated: number;
@@ -39,6 +49,7 @@ type UsagePayload = {
     activeUsers: number;
   }>;
   roleBreakdown: Array<{ role: string; count: number }>;
+  inactiveByRole: Array<{ role: string; count: number }>;
 };
 
 type MatchingPayload = {
@@ -60,14 +71,26 @@ type EngagementPayload = {
   generatedAt: string;
   metricsVersion: 'v1';
   summary: {
-    acceptedConnectionsTotal: number;
     notificationsInRange: number;
     unreadNotificationsInRange: number;
     readRatePercent: number;
-    acceptedInterviewInvites: number;
-    rejectedInterviewInvites: number;
-    inviteDecisionCount: number;
+    eventRegistrationsInRange: number;
+    eventCancellationsInRange: number;
+    eventCapacityUtilizationPercent: number;
+    activeEventsInRange: number;
   };
+  topEvents: Array<{
+    eventId: string;
+    title: string;
+    registeredCount: number;
+    capacity: number;
+    fillRatePercent: number;
+  }>;
+  topCancelledEvents: Array<{
+    eventId: string;
+    title: string;
+    cancellationCount: number;
+  }>;
   notes: string[];
 };
 
@@ -85,6 +108,8 @@ export class AnalyticsService {
     private readonly schedulingRepository: SchedulingRepository,
     private readonly careerInterviewsRepository: CareerInterviewsRepository,
     private readonly connectionsRepository: ConnectionsRepository,
+    private readonly eventsRepository: EventsRepository,
+    private readonly statisticsService: StatisticsService,
   ) {}
 
   async getOverview(from?: string, to?: string): Promise<OverviewPayload> {
@@ -143,6 +168,25 @@ export class AnalyticsService {
     const usersInRange = users.filter((user) =>
       isWithinRange(toDate(user.createdAt), range),
     );
+    const completedProfilesTotal = users.filter(
+      (user) => user.profileStatus === 'complete',
+    ).length;
+    const now = new Date();
+    const inactive7DayUsers = users.filter((user) =>
+      isInactiveForDays(getUserActivityDate(user), now, 7),
+    );
+    const inactive7Days = inactive7DayUsers.length;
+    const inactive30Days = users.filter((user) =>
+      isInactiveForDays(getUserActivityDate(user), now, 30),
+    ).length;
+    const inactiveInRangeUsers = users.filter((user) => {
+      const activityAt = getUserActivityDate(user);
+      const createdAt = toDate(user.createdAt);
+      return (
+        (!createdAt || createdAt < range.toDate) &&
+        (!activityAt || !isWithinRange(activityAt, range))
+      );
+    });
 
     const byDay = new Map<
       string,
@@ -174,8 +218,20 @@ export class AnalyticsService {
       range,
       generatedAt: new Date().toISOString(),
       metricsVersion: 'v1',
+      summary: {
+        usersTotal: users.length,
+        completedProfilesTotal,
+        profileCompletionRatePercent: users.length
+          ? round2((completedProfilesTotal / users.length) * 100)
+          : 0,
+        inactive7Days,
+        inactive30Days,
+      },
       series: [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date)),
       roleBreakdown: buildRoleBreakdown(usersInRange.map((user) => user.role)),
+      inactiveByRole: buildRoleBreakdown(
+        inactiveInRangeUsers.map((user) => user.role),
+      ),
     };
     this.writeCache(cacheKey, payload);
     return payload;
@@ -239,10 +295,10 @@ export class AnalyticsService {
 
     const range = resolveRange(from, to);
     const db = this.firebaseService.getFirestore();
-    const [connections, notificationsSnapshot, interviews] = await Promise.all([
-      this.connectionsRepository.listAccepted(5000),
+    const [notificationsSnapshot, events, registrations] = await Promise.all([
       db.collection('notifications').limit(5000).get(),
-      this.careerInterviewsRepository.list(),
+      this.eventsRepository.listAllEvents(),
+      this.eventsRepository.listAllRegistrations(),
     ]);
 
     const notifications = notificationsSnapshot.docs.map((doc) =>
@@ -251,6 +307,8 @@ export class AnalyticsService {
       createdAt?: unknown;
       read?: boolean;
       archived?: boolean;
+      type?: NotificationTypeEnum | string;
+      eventId?: string;
     }>;
 
     const notificationsInRange = notifications.filter((notification) =>
@@ -259,24 +317,68 @@ export class AnalyticsService {
     const unreadNotifications = notificationsInRange.filter(
       (notification) => !notification.read && !notification.archived,
     ).length;
-
-    const acceptedInvites = interviews.filter(
-      (interview) =>
-        interview.invitationStatus === 'accepted' &&
-        isWithinRange(toDate(interview.invitationRespondedAt), range),
+    const eventCancellationsInRange = notificationsInRange.filter(
+      (notification) =>
+        notification.type === NotificationTypeEnum.EVENT_CANCELLED,
     ).length;
-    const rejectedInvites = interviews.filter(
-      (interview) =>
-        interview.invitationStatus === 'rejected' &&
-        isWithinRange(toDate(interview.invitationRespondedAt), range),
+    const eventTitleById = new Map(
+      events.map((event) => [event.id, event.title]),
+    );
+    const cancellationCountByEventId = new Map<string, number>();
+    for (const notification of notificationsInRange) {
+      if (
+        notification.type !== NotificationTypeEnum.EVENT_CANCELLED ||
+        !notification.eventId
+      ) {
+        continue;
+      }
+      cancellationCountByEventId.set(
+        notification.eventId,
+        (cancellationCountByEventId.get(notification.eventId) ?? 0) + 1,
+      );
+    }
+    const eventRegistrationsInRange = registrations.filter((registration) =>
+      isWithinRange(toDate(registration.registeredAt), range),
     ).length;
+    const activeEventsInRange = events.filter(
+      (event) =>
+        isWithinRange(toDate(event.startAt), range) ||
+        isWithinRange(toDate(event.endAt), range),
+    );
+    const totalEventCapacity = activeEventsInRange.reduce(
+      (sum, event) => sum + Math.max(0, event.capacity),
+      0,
+    );
+    const totalEventRegistrations = activeEventsInRange.reduce(
+      (sum, event) => sum + Math.max(0, event.registeredCount),
+      0,
+    );
+    const topEvents = [...activeEventsInRange]
+      .sort((a, b) => b.registeredCount - a.registeredCount)
+      .slice(0, 5)
+      .map((event) => ({
+        eventId: event.id,
+        title: event.title,
+        registeredCount: event.registeredCount,
+        capacity: event.capacity,
+        fillRatePercent: event.capacity
+          ? round2((event.registeredCount / event.capacity) * 100)
+          : 0,
+      }));
+    const topCancelledEvents = [...cancellationCountByEventId.entries()]
+      .sort(([, left], [, right]) => right - left)
+      .slice(0, 5)
+      .map(([eventId, cancellationCount]) => ({
+        eventId,
+        title: eventTitleById.get(eventId) ?? eventId,
+        cancellationCount,
+      }));
 
     const payload: EngagementPayload = {
       range,
       generatedAt: new Date().toISOString(),
       metricsVersion: 'v1',
       summary: {
-        acceptedConnectionsTotal: connections.length,
         notificationsInRange: notificationsInRange.length,
         unreadNotificationsInRange: unreadNotifications,
         readRatePercent: notificationsInRange.length
@@ -286,12 +388,17 @@ export class AnalyticsService {
                 100,
             )
           : 0,
-        acceptedInterviewInvites: acceptedInvites,
-        rejectedInterviewInvites: rejectedInvites,
-        inviteDecisionCount: acceptedInvites + rejectedInvites,
+        eventRegistrationsInRange,
+        eventCancellationsInRange,
+        eventCapacityUtilizationPercent: totalEventCapacity
+          ? round2((totalEventRegistrations / totalEventCapacity) * 100)
+          : 0,
+        activeEventsInRange: activeEventsInRange.length,
       },
+      topEvents,
+      topCancelledEvents,
       notes: [
-        'Connection engagement by user is available in /connections endpoints; admin engagement summary focuses on notifications and invite responses.',
+        'Engagement focuses on user actions: notifications, event registrations, and event cancellations.',
       ],
     };
     this.writeCache(cacheKey, payload);
@@ -301,10 +408,25 @@ export class AnalyticsService {
   async getReportJson(
     from?: string,
     to?: string,
-    section: 'all' | 'overview' | 'usage' | 'matching' | 'engagement' = 'all',
+    section:
+      | 'all'
+      | 'overview'
+      | 'operations'
+      | 'usage'
+      | 'matching'
+      | 'engagement' = 'all',
   ): Promise<Record<string, unknown>> {
-    const [overview, usage, matching, engagement] = await Promise.all([
+    const [
+      overview,
+      operationsConfirmed,
+      operationsRooms,
+      usage,
+      matching,
+      engagement,
+    ] = await Promise.all([
       this.getOverview(from, to),
+      this.statisticsService.getConfirmedMeetingsStats(from, to),
+      this.statisticsService.getRoomOccupancyStats(from, to),
       this.getUsageTrend(from, to),
       this.getMatchingPerformance(from, to),
       this.getEngagement(from, to),
@@ -318,12 +440,15 @@ export class AnalyticsService {
         range: overview.range,
       },
       sections: {
-        overview: {
-          summary: overview.summary,
+        operations: {
+          confirmed: operationsConfirmed,
+          roomOccupancy: operationsRooms,
         },
         usage: {
+          summary: usage.summary,
           series: usage.series,
           roleBreakdown: usage.roleBreakdown,
+          inactiveByRole: usage.inactiveByRole,
         },
         matching: {
           summary: matching.summary,
@@ -331,11 +456,22 @@ export class AnalyticsService {
         },
         engagement: {
           summary: engagement.summary,
+          topEvents: engagement.topEvents,
           notes: engagement.notes,
         },
       },
     };
     if (section === 'all') return report;
+    if (section === 'overview') {
+      return {
+        metadata: report.metadata,
+        sections: {
+          overview: {
+            summary: overview.summary,
+          },
+        },
+      };
+    }
     return {
       metadata: report.metadata,
       sections: {
@@ -347,10 +483,25 @@ export class AnalyticsService {
   async getReportCsv(
     from?: string,
     to?: string,
-    section: 'all' | 'overview' | 'usage' | 'matching' | 'engagement' = 'all',
+    section:
+      | 'all'
+      | 'overview'
+      | 'operations'
+      | 'usage'
+      | 'matching'
+      | 'engagement' = 'all',
   ) {
-    const [overview, usage, matching, engagement] = await Promise.all([
+    const [
+      overview,
+      operationsConfirmed,
+      operationsRooms,
+      usage,
+      matching,
+      engagement,
+    ] = await Promise.all([
       this.getOverview(from, to),
+      this.statisticsService.getConfirmedMeetingsStats(from, to),
+      this.statisticsService.getRoomOccupancyStats(from, to),
       this.getUsageTrend(from, to),
       this.getMatchingPerformance(from, to),
       this.getEngagement(from, to),
@@ -358,7 +509,7 @@ export class AnalyticsService {
 
     const rows: string[][] = [['section', 'group', 'metric', 'date', 'value']];
 
-    if (section === 'all' || section === 'overview') {
+    if (section === 'overview') {
       rows.push([
         'overview',
         'summary',
@@ -410,6 +561,132 @@ export class AnalyticsService {
       ]);
     }
 
+    if (section === 'all' || section === 'operations') {
+      rows.push([
+        'operations',
+        'confirmed_summary',
+        'confirmed_total_count',
+        '',
+        String(operationsConfirmed.summary.confirmedTotalCount),
+      ]);
+      rows.push([
+        'operations',
+        'confirmed_summary',
+        'confirmed_meetings_count',
+        '',
+        String(operationsConfirmed.summary.confirmedMeetingsCount),
+      ]);
+      rows.push([
+        'operations',
+        'confirmed_summary',
+        'confirmed_career_interviews_count',
+        '',
+        String(operationsConfirmed.summary.confirmedCareerInterviewsCount),
+      ]);
+      rows.push([
+        'operations',
+        'confirmed_summary',
+        'pending_interview_invites_count',
+        '',
+        String(operationsConfirmed.summary.pendingInterviewInvitesCount),
+      ]);
+      rows.push([
+        'operations',
+        'confirmed_summary',
+        'accepted_interview_invites_count',
+        '',
+        String(operationsConfirmed.summary.acceptedInterviewInvitesCount),
+      ]);
+      rows.push([
+        'operations',
+        'confirmed_summary',
+        'rejected_interview_invites_count',
+        '',
+        String(operationsConfirmed.summary.rejectedInterviewInvitesCount),
+      ]);
+      rows.push([
+        'operations',
+        'confirmed_summary',
+        'invite_acceptance_rate_percent',
+        '',
+        String(operationsConfirmed.summary.inviteAcceptanceRatePercent),
+      ]);
+      rows.push([
+        'operations',
+        'room_summary',
+        'rooms_count',
+        '',
+        String(operationsRooms.summary.roomsCount),
+      ]);
+      rows.push([
+        'operations',
+        'room_summary',
+        'active_rooms_count',
+        '',
+        String(operationsRooms.summary.activeRoomsCount),
+      ]);
+      rows.push([
+        'operations',
+        'room_summary',
+        'total_slots',
+        '',
+        String(operationsRooms.summary.totalSlots),
+      ]);
+      rows.push([
+        'operations',
+        'room_summary',
+        'average_occupancy_percent',
+        '',
+        String(operationsRooms.summary.averageOccupancyPercent),
+      ]);
+      rows.push([
+        'operations',
+        'room_summary',
+        'average_capacity_utilization_percent',
+        '',
+        String(operationsRooms.summary.averageCapacityUtilizationPercent),
+      ]);
+      for (const point of operationsConfirmed.series) {
+        rows.push([
+          'operations',
+          'daily_confirmed',
+          'meetings',
+          point.date,
+          String(point.meetings),
+        ]);
+        rows.push([
+          'operations',
+          'daily_confirmed',
+          'interviews',
+          point.date,
+          String(point.interviews),
+        ]);
+        rows.push([
+          'operations',
+          'daily_confirmed',
+          'total',
+          point.date,
+          String(point.total),
+        ]);
+      }
+      for (const room of operationsRooms.rooms) {
+        rows.push([
+          'operations',
+          'rooms',
+          `${room.roomName}_occupancy_percent`,
+          '',
+          String(room.occupancyRatePercent),
+        ]);
+        rows.push([
+          'operations',
+          'rooms',
+          `${room.roomName}_capacity_utilization_percent`,
+          '',
+          String(room.capacityUtilizationPercent),
+        ]);
+      }
+    }
+
     if (section === 'all' || section === 'matching') {
       rows.push([
         'matching',
@@ -442,20 +719,13 @@ export class AnalyticsService {
       rows.push([
         'matching',
         'summary',
-        'conversion_rate_percent',
+        'connection_to_conversion_rate_percent',
         '',
         String(matching.summary.connectionToConversionRatePercent),
       ]);
     }
 
     if (section === 'all' || section === 'engagement') {
-      rows.push([
-        'engagement',
-        'summary',
-        'accepted_connections_total',
-        '',
-        String(engagement.summary.acceptedConnectionsTotal),
-      ]);
       rows.push([
         'engagement',
         'summary',
@@ -480,27 +750,71 @@ export class AnalyticsService {
       rows.push([
         'engagement',
         'summary',
-        'accepted_interview_invites',
+        'event_registrations_in_range',
         '',
-        String(engagement.summary.acceptedInterviewInvites),
+        String(engagement.summary.eventRegistrationsInRange),
       ]);
       rows.push([
         'engagement',
         'summary',
-        'rejected_interview_invites',
+        'event_cancellations_in_range',
         '',
-        String(engagement.summary.rejectedInterviewInvites),
+        String(engagement.summary.eventCancellationsInRange),
       ]);
       rows.push([
         'engagement',
         'summary',
-        'invite_decision_count',
+        'event_capacity_utilization_percent',
         '',
-        String(engagement.summary.inviteDecisionCount),
+        String(engagement.summary.eventCapacityUtilizationPercent),
       ]);
+      for (const event of engagement.topEvents) {
+        rows.push([
+          'engagement',
+          'top_events',
+          event.title,
+          '',
+          String(event.registeredCount),
+        ]);
+      }
     }
 
     if (section === 'all' || section === 'usage') {
+      rows.push([
+        'usage',
+        'summary',
+        'users_total',
+        '',
+        String(usage.summary.usersTotal),
+      ]);
+      rows.push([
+        'usage',
+        'summary',
+        'completed_profiles_total',
+        '',
+        String(usage.summary.completedProfilesTotal),
+      ]);
+      rows.push([
+        'usage',
+        'summary',
+        'profile_completion_rate_percent',
+        '',
+        String(usage.summary.profileCompletionRatePercent),
+      ]);
+      rows.push([
+        'usage',
+        'summary',
+        'inactive_7_days',
+        '',
+        String(usage.summary.inactive7Days),
+      ]);
+      rows.push([
+        'usage',
+        'summary',
+        'inactive_30_days',
+        '',
+        String(usage.summary.inactive30Days),
+      ]);
       rows.push([
         'usage',
         'summary',
@@ -535,6 +849,15 @@ export class AnalyticsService {
         rows.push([
           'usage',
           'role_breakdown',
+          role.role,
+          '',
+          String(role.count),
+        ]);
+      }
+      for (const role of usage.inactiveByRole) {
+        rows.push([
+          'usage',
+          'inactive_by_role',
           role.role,
           '',
           String(role.count),
@@ -602,6 +925,11 @@ function toDate(value: unknown): Date | null {
 function isWithinRange(value: Date | null, range: AnalyticsRange) {
   if (!value) return false;
   return value >= range.fromDate && value < range.toDate;
+}
+
+function isInactiveForDays(value: Date | null, now: Date, days: number) {
+  if (!value) return true;
+  return now.getTime() - value.getTime() >= days * 24 * 60 * 60 * 1000;
 }
 
 function round2(value: number) {

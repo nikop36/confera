@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -7,6 +8,7 @@ import { UsersRepository } from '../users/users.repository';
 import { User, UserProfile } from '../common/interfaces/user.interface';
 import { MatchingIndexService } from '../matching/matching-index.service';
 import { FirebaseService } from '../firebase/firebase.service';
+import type { ReportProfileDto } from './dto/report-profile.dto';
 
 @Injectable()
 export class ProfileService {
@@ -48,5 +50,28 @@ export class ProfileService {
         );
       }
     }
+  }
+
+  async reportProfile(
+    targetUid: string,
+    reporterUid: string,
+    dto: ReportProfileDto,
+  ) {
+    if (targetUid === reporterUid) {
+      throw new BadRequestException('You cannot report your own profile');
+    }
+
+    const target = await this.usersRepository.findByUid(targetUid);
+    if (!target) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    const customReason = dto.customReason?.trim();
+    return this.usersRepository.upsertProfileReport({
+      targetUid,
+      reporterUid,
+      reason: dto.reason,
+      customReason: customReason || undefined,
+    });
   }
 }

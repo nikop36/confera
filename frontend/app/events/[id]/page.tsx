@@ -101,6 +101,8 @@ export default function ConferenceProgramPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const [registeringEvent, setRegisteringEvent] = useState(false);
+  const [registerEventError, setRegisterEventError] = useState('');
   const [registeringIds, setRegisteringIds] = useState<
     Record<string, boolean>
   >({});
@@ -160,6 +162,39 @@ export default function ConferenceProgramPage() {
       }
     } catch {
       // non-fatal
+    }
+  }
+
+  async function handleEventRegister() {
+    if (!user?.idToken || !conference) return;
+    const isRegistered = conference.isRegistered;
+    setRegisteringEvent(true);
+    setRegisterEventError('');
+    try {
+      const res = await fetch(`${API}/events/${eventId}/register`, {
+        method: isRegistered ? 'DELETE' : 'POST',
+        headers: { Authorization: `Bearer ${user.idToken}` },
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { message?: string | string[] };
+        const msg = Array.isArray(body.message) ? body.message[0] : body.message;
+        throw new Error(msg ?? t('events.error.register'));
+      }
+      setConference((prev) =>
+        prev
+          ? {
+              ...prev,
+              isRegistered: !isRegistered,
+              registeredCount: isRegistered
+                ? Math.max(0, prev.registeredCount - 1)
+                : prev.registeredCount + 1,
+            }
+          : prev,
+      );
+    } catch (err) {
+      setRegisterEventError(err instanceof Error ? err.message : t('events.error.register'));
+    } finally {
+      setRegisteringEvent(false);
     }
   }
 
@@ -281,6 +316,40 @@ export default function ConferenceProgramPage() {
     await loadData();
   }
 
+  async function handlePresenterResponse(
+    sessionId: string,
+    status: 'confirmed' | 'declined',
+  ) {
+    if (!user?.idToken) return;
+    try {
+      const res = await fetch(
+        `${API}/events/${eventId}/sessions/${sessionId}/presenter-response`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${user.idToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status }),
+        },
+      );
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          message?: string | string[];
+        };
+        const msg = Array.isArray(body.message)
+          ? body.message[0]
+          : body.message;
+        throw new Error(msg ?? t('events.error.generic'));
+      }
+      await loadData();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t('events.error.generic'),
+      );
+    }
+  }
+
   async function handleSessionDelete(sessionId: string) {
     if (
       !user?.idToken ||
@@ -386,15 +455,25 @@ export default function ConferenceProgramPage() {
                 </span>
               </div>
             </div>
-            <div className="flex-shrink-0">
-              {conference.isRegistered ? (
-                <span className="bg-[#ecfdf3] text-[#166534] text-[11px] font-semibold px-3 py-[6px] rounded-full">
-                  ✓ {t('eventDetail.registered', 'Registered')}
-                </span>
-              ) : (
-                <span className="bg-[#f3f4f6] text-[#6b7280] text-[11px] font-semibold px-3 py-[6px] rounded-full">
-                  {t('eventDetail.notRegistered', 'Not registered')}
-                </span>
+            <div className="flex-shrink-0 flex flex-col items-end gap-1">
+              <button
+                type="button"
+                onClick={() => void handleEventRegister()}
+                disabled={registeringEvent}
+                className={`text-[13px] font-semibold px-4 py-[8px] rounded-full border-0 cursor-pointer font-sans transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  conference.isRegistered
+                    ? 'bg-[#ecfdf3] text-[#166534] hover:bg-[#d1fae5]'
+                    : 'bg-[#0071e3] text-white hover:bg-[#0064cc]'
+                }`}
+              >
+                {registeringEvent
+                  ? '...'
+                  : conference.isRegistered
+                    ? `✓ ${t('eventDetail.registered', 'Registered')}`
+                    : t('events.register', 'Register')}
+              </button>
+              {registerEventError && (
+                <p className="text-[11px] text-[#dc2626] max-w-[180px] text-right">{registerEventError}</p>
               )}
             </div>
           </div>
@@ -493,6 +572,9 @@ export default function ConferenceProgramPage() {
                                         isAdminOrOrganizer={isAdminOrOrganizer}
                                         onEdit={() => setModalSession(item.data)}
                                         onDelete={() => void handleSessionDelete(item.data.id)}
+                                        currentUserUid={user?.uid}
+                                        onPresenterConfirm={() => void handlePresenterResponse(item.data.id, 'confirmed')}
+                                        onPresenterDecline={() => void handlePresenterResponse(item.data.id, 'declined')}
                                       />
                                     )}
                                   </div>

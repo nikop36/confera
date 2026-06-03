@@ -5,6 +5,9 @@ import { UsersRepository } from '../users.repository';
 describe('UsersService', () => {
   let service: UsersService;
   const mockListUsers = jest.fn();
+  const mockFindByUid = jest.fn();
+  const mockDeleteAccountData = jest.fn();
+  const mockListProfileReports = jest.fn();
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -14,8 +17,10 @@ describe('UsersService', () => {
           provide: UsersRepository,
           useValue: {
             listUsers: mockListUsers,
-            findByUid: jest.fn(),
+            findByUid: mockFindByUid,
             saveUser: jest.fn(),
+            deleteAccountData: mockDeleteAccountData,
+            listProfileReports: mockListProfileReports,
           },
         },
       ],
@@ -72,6 +77,39 @@ describe('UsersService', () => {
       mockListUsers.mockResolvedValue([]);
       const result = await service.listCommunityUsers();
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('deleteUserAsAdmin', () => {
+    it('deletes another user profile', async () => {
+      mockFindByUid.mockResolvedValue({
+        uid: 'user-1',
+        email: 'user@example.com',
+        displayName: 'User One',
+        role: 'participant',
+        profileStatus: 'complete',
+        createdAt: new Date(),
+      });
+
+      await service.deleteUserAsAdmin('user-1', 'admin-1');
+
+      expect(mockDeleteAccountData).toHaveBeenCalledWith('user-1');
+    });
+
+    it('does not allow admins to delete themselves from the admin panel', async () => {
+      await expect(
+        service.deleteUserAsAdmin('admin-1', 'admin-1'),
+      ).rejects.toThrow('Admins cannot delete their own account here');
+      expect(mockDeleteAccountData).not.toHaveBeenCalled();
+    });
+
+    it('throws when the user does not exist', async () => {
+      mockFindByUid.mockResolvedValue(null);
+
+      await expect(
+        service.deleteUserAsAdmin('missing-user', 'admin-1'),
+      ).rejects.toThrow('User not found');
+      expect(mockDeleteAccountData).not.toHaveBeenCalled();
     });
   });
 });

@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
@@ -20,6 +21,8 @@ function isFirebaseError(err: unknown): err is FirebaseError {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly usersService: UsersService,
@@ -136,19 +139,31 @@ export class AuthService {
     const idToken = data.idToken ?? '';
     const uid = data.localId ?? '';
 
-    const existing = await this.usersService.findByUidOrNull(uid);
-    if (!existing) {
-      await this.usersService.createUser({
-        uid,
-        email: dto.email,
-        displayName: dto.email.split('@')[0],
-        role: UserRoleEnum.PARTICIPANT,
-        profileStatus: 'incomplete',
-        createdAt: new Date(),
-      });
-    }
-    await this.usersService.markLoginActivity(uid);
+    await this.syncUserAfterLogin(uid, dto.email);
 
     return { idToken, uid };
+  }
+
+  private async syncUserAfterLogin(uid: string, email: string): Promise<void> {
+    try {
+      const existing = await this.usersService.findByUidOrNull(uid);
+      if (!existing) {
+        await this.usersService.createUser({
+          uid,
+          email,
+          displayName: email.split('@')[0],
+          role: UserRoleEnum.PARTICIPANT,
+          profileStatus: 'incomplete',
+          createdAt: new Date(),
+        });
+      }
+      await this.usersService.markLoginActivity(uid);
+    } catch (error) {
+      this.logger.warn(
+        `Firebase login succeeded, but user profile sync failed for ${uid}: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+    }
   }
 }

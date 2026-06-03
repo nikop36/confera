@@ -26,6 +26,16 @@ type PublicProfile = {
   roleProfile?: Record<string, unknown>;
 };
 
+const REPORT_REASONS = [
+  'spam',
+  'harassment',
+  'inappropriate_content',
+  'fake_profile',
+  'other',
+] as const;
+
+type ReportReason = (typeof REPORT_REASONS)[number];
+
 const AVATAR_GRADIENTS = [
   { from: '#a8edea', to: '#fed6e3', text: '#3d3d3d' },
   { from: '#667eea', to: '#764ba2', text: '#ffffff' },
@@ -79,6 +89,12 @@ export default function PublicProfilePage() {
   const [isConnected, setIsConnected] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReason>('spam');
+  const [customReason, setCustomReason] = useState('');
+  const [reporting, setReporting] = useState(false);
+  const [reportMessage, setReportMessage] = useState('');
+  const [reportError, setReportError] = useState('');
 
   const [tagMap, setTagMap] = useState<Record<string, string>>({});
 
@@ -140,6 +156,40 @@ export default function PublicProfilePage() {
       }
     } finally {
       setConnecting(false);
+    }
+  }
+
+  async function handleReport() {
+    if (!viewer?.idToken || !profile) return;
+    setReporting(true);
+    setReportError('');
+    setReportMessage('');
+
+    try {
+      const res = await fetch(`${API}/profile/${profile.uid}/report`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${viewer.idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reason: reportReason,
+          customReason: customReason.trim() || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { message?: string | string[] };
+        const message = Array.isArray(body.message) ? body.message[0] : body.message;
+        throw new Error(message ?? t('profilePublic.reportError', 'Could not send report.'));
+      }
+      setReportMessage(t('profilePublic.reportSent', 'Report sent.'));
+      setReportOpen(false);
+      setCustomReason('');
+      setReportReason('spam');
+    } catch (err) {
+      setReportError(err instanceof Error ? err.message : t('profilePublic.reportError', 'Could not send report.'));
+    } finally {
+      setReporting(false);
     }
   }
 
@@ -247,16 +297,26 @@ export default function PublicProfilePage() {
               initials(profile.displayName) || '??'
             )}
           </div>
+        </div>
 
-          <div className="flex items-center w-full pl-3">
-            <div className="flex-1" />
-            <div className="flex justify-end">
+        {/* Name + checkmark + email + bio */}
+        <div className="mb-[18px]">
+          <div className="mb-[5px] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-[7px]">
+              <h2 className="text-xl font-bold">{profile.displayName}</h2>
+              <span className="w-[18px] h-[18px] rounded-full bg-[#0071e3] flex items-center justify-center shrink-0">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </span>
+            </div>
+            <div className="flex items-center justify-start gap-4 sm:justify-end">
               {!isOwnProfile && viewer && (
                 <button
                   type="button"
                   disabled={isConnected || isPending || connecting}
                   onClick={() => void handleConnect()}
-                  className={`px-[18px] py-[6px] rounded-full text-[13px] font-semibold border-0 cursor-pointer font-sans transition-colors ${
+                  className={`min-h-9 min-w-[124px] px-5 py-[7px] rounded-full text-[13px] font-semibold border-0 cursor-pointer font-sans transition-colors ${
                     isConnected
                       ? 'bg-[#ecfdf3] text-[#166534] cursor-default'
                       : isPending
@@ -273,6 +333,20 @@ export default function PublicProfilePage() {
                         : t('personcard.connect', 'Connect')}
                 </button>
               )}
+              {!isOwnProfile && viewer && (
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(true)}
+                  aria-label={t('profilePublic.reportProfile', 'Report profile')}
+                  title={t('profilePublic.reportProfile', 'Report profile')}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#fecaca] bg-white text-[#dc2626] shadow-sm transition-colors hover:bg-[#fff1f2]"
+                >
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                    <path d="M4 22V15" />
+                  </svg>
+                </button>
+              )}
               {isOwnProfile && (
                 <Link
                   href="/profile"
@@ -284,21 +358,12 @@ export default function PublicProfilePage() {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Name + checkmark + email + bio */}
-        <div className="mb-[18px]">
-          <div className="flex items-center gap-[7px] mb-[5px]">
-            <h2 className="text-xl font-bold">{profile.displayName}</h2>
-            <span className="w-[18px] h-[18px] rounded-full bg-[#0071e3] flex items-center justify-center shrink-0">
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </span>
-          </div>
           <p className="text-xs text-[#8e8e93] mb-2">{profile.email}</p>
           {profile.bio && (
             <p className="text-sm text-[#6e6e73] leading-relaxed">{profile.bio}</p>
+          )}
+          {reportMessage && (
+            <p className="mt-2 text-xs font-semibold text-[#166534]">{reportMessage}</p>
           )}
         </div>
 
@@ -362,6 +427,75 @@ export default function PublicProfilePage() {
           </div>
         )}
 
+        {reportOpen && profile && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4">
+            <div className="w-full max-w-[430px] rounded-[16px] bg-white p-5 shadow-xl">
+              <h2 className="text-[18px] font-semibold">
+                {t('profilePublic.reportConfirmTitle', 'Report {{name}}?').replace('{{name}}', profile.displayName)}
+              </h2>
+              <p className="mt-2 text-sm text-[#6b7280]">
+                {t('profilePublic.reportConfirmDesc', 'Select why you want to report this profile. The admin team will review it.')}
+              </p>
+
+              <label className="mt-4 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#6e6e73]">
+                {t('profilePublic.reportReason', 'Reason')}
+              </label>
+              <select
+                value={reportReason}
+                onChange={(event) => setReportReason(event.target.value as ReportReason)}
+                className="mt-1 w-full rounded-[10px] border border-[#d1d5db] bg-white px-3 py-2 text-sm outline-none focus:border-[#111827]"
+              >
+                {REPORT_REASONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {reportReasonLabel(reason, t)}
+                  </option>
+                ))}
+              </select>
+
+              <label className="mt-4 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#6e6e73]">
+                {t('profilePublic.reportCustomReason', 'Additional details')}
+              </label>
+              <textarea
+                value={customReason}
+                onChange={(event) => setCustomReason(event.target.value)}
+                maxLength={500}
+                placeholder={t('profilePublic.reportCustomPlaceholder', 'Optional context for the admin team...')}
+                className="mt-1 min-h-[92px] w-full resize-none rounded-[10px] border border-[#d1d5db] px-3 py-2 text-sm outline-none focus:border-[#111827]"
+              />
+
+              {reportError && (
+                <p className="mt-3 rounded-[10px] bg-[#fff1f2] px-3 py-2 text-sm text-[#dc2626]">
+                  {reportError}
+                </p>
+              )}
+
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(false)}
+                  className="rounded-[10px] border border-[#d1d5db] bg-white px-4 py-2 text-sm font-semibold text-[#374151] hover:bg-[#f9fafb]"
+                >
+                  {t('common.no', 'No')}
+                </button>
+                <button
+                  type="button"
+                  disabled={reporting}
+                  onClick={() => void handleReport()}
+                  className="rounded-[10px] border border-[#dc2626] bg-[#dc2626] px-4 py-2 text-sm font-semibold text-white hover:bg-[#b91c1c] disabled:opacity-50"
+                >
+                  {reporting
+                    ? t('profilePublic.reporting', 'Reporting...')
+                    : t('common.yes', 'Yes')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
     </AppShell>
   );
+}
+
+function reportReasonLabel(reason: ReportReason, t: ReturnType<typeof useT>) {
+  return t(`profilePublic.reportReason.${reason}`, reason);
 }

@@ -52,6 +52,20 @@ export class CareerSlotsRepository {
     await this.slotsCol(eventId).doc(slotId).update(data);
   }
 
+  async getEventCreatedBy(eventId: string): Promise<string | null> {
+    const db = this.firebaseService.getFirestore();
+    const doc = await db.collection('events').doc(eventId).get();
+    if (!doc.exists) return null;
+    return (doc.data()?.['createdBy'] as string) ?? null;
+  }
+
+  async getEventTitle(eventId: string): Promise<string | null> {
+    const db = this.firebaseService.getFirestore();
+    const doc = await db.collection('events').doc(eventId).get();
+    if (!doc.exists) return null;
+    return (doc.data()?.['title'] as string) ?? null;
+  }
+
   async deleteSlot(eventId: string, slotId: string): Promise<void> {
     await this.slotsCol(eventId).doc(slotId).delete();
   }
@@ -121,6 +135,68 @@ export class CareerSlotsRepository {
     await this.requestsCol(eventId, slotId).doc(requestId).update(data);
   }
 
+  async writeCareerBooking(data: {
+    id: string;
+    requesterUid: string;
+    eventId: string;
+    eventTitle: string;
+    slotId: string;
+    slotTitle: string;
+    location: string;
+    slotStartAt: Date;
+    slotEndAt: Date;
+    capacity: number;
+    subSlotIndex: number;
+    industryMemberUid: string;
+    industryMemberName: string;
+    approvedAt: Date;
+  }): Promise<void> {
+    const db = this.firebaseService.getFirestore();
+    await db.collection('careerBookings').doc(data.id).set(data);
+  }
+
+  async findBookingsByRequester(requesterUid: string): Promise<
+    Array<{
+      id: string;
+      requesterUid: string;
+      eventId: string;
+      eventTitle: string;
+      slotId: string;
+      slotTitle: string;
+      location: string;
+      slotStartAt: Date;
+      slotEndAt: Date;
+      capacity: number;
+      subSlotIndex: number;
+      industryMemberUid: string;
+      industryMemberName: string;
+    }>
+  > {
+    const db = this.firebaseService.getFirestore();
+    const snap = await db
+      .collection('careerBookings')
+      .where('requesterUid', '==', requesterUid)
+      .get();
+    return snap.docs.map((doc) => {
+      const d = doc.data();
+      return {
+        id: doc.id,
+        requesterUid: d['requesterUid'] as string,
+        eventId: d['eventId'] as string,
+        eventTitle: d['eventTitle'] as string,
+        slotId: d['slotId'] as string,
+        slotTitle: d['slotTitle'] as string,
+        location: d['location'] as string,
+        slotStartAt: (d['slotStartAt'] as FirebaseFirestore.Timestamp).toDate(),
+        slotEndAt: (d['slotEndAt'] as FirebaseFirestore.Timestamp).toDate(),
+        capacity: d['capacity'] as number,
+        subSlotIndex: d['subSlotIndex'] as number,
+        industryMemberUid: d['industryMemberUid'] as string,
+        industryMemberName: d['industryMemberName'] as string,
+      };
+    });
+  }
+
   async countApproved(eventId: string, slotId: string): Promise<number> {
     const snap = await this.requestsCol(eventId, slotId)
       .where('status', '==', 'approved')
@@ -130,7 +206,7 @@ export class CareerSlotsRepository {
 
   private mapSlotDoc(doc: FirebaseFirestore.DocumentSnapshot): CareerSlot {
     const data = doc.data()!;
-    return {
+    const slot: CareerSlot = {
       id: doc.id,
       title: data['title'] as string,
       description: data['description'] as string,
@@ -144,6 +220,12 @@ export class CareerSlotsRepository {
       createdByUid: data['createdByUid'] as string,
       createdAt: (data['createdAt'] as FirebaseFirestore.Timestamp).toDate(),
     };
+    if (data['approvalStatus']) {
+      slot.approvalStatus = data[
+        'approvalStatus'
+      ] as CareerSlot['approvalStatus'];
+    }
+    return slot;
   }
 
   private mapRequestDoc(

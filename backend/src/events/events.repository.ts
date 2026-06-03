@@ -106,6 +106,32 @@ export class EventsRepository {
     }));
   }
 
+  async listAllEvents(): Promise<Event[]> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db
+      .collection('events')
+      .orderBy('startAt', 'asc')
+      .get();
+    return snapshot.docs.map((doc) => this.mapDoc(doc));
+  }
+
+  async listAllRegistrations(): Promise<
+    Array<EventRegistration & { eventId: string }>
+  > {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db.collectionGroup('registrations').get();
+    return snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        eventId: doc.ref.parent.parent?.id ?? '',
+        uid: data['uid'] as string,
+        registeredAt: (
+          data['registeredAt'] as FirebaseFirestore.Timestamp
+        ).toDate(),
+      };
+    });
+  }
+
   async createEvent(data: Omit<Event, 'id'>): Promise<Event> {
     const db = this.firebaseService.getFirestore();
     const ref = await db.collection('events').add(data);

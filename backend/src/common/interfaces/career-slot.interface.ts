@@ -11,6 +11,7 @@ export interface CareerSlot {
   requirements?: string[];
   createdByUid: string;
   createdAt: Date;
+  approvalStatus?: 'pending_approval' | 'approved' | 'rejected';
 }
 
 export interface CareerSlotRequest {
@@ -27,6 +28,7 @@ export interface CareerSlotWithMeta extends CareerSlot {
   approvedCount: number;
   myRequestStatus: CareerSlotRequestStatus | null;
   mySubSlotIndex: number | null;
+  approvalStatus?: 'pending_approval' | 'approved' | 'rejected';
 }
 
 export interface CareerSlotRequestWithName extends CareerSlotRequest {

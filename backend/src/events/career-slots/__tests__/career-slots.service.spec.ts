@@ -21,6 +21,10 @@ const mockCreateRequest = jest.fn();
 const mockUpdateRequest = jest.fn();
 const mockCountApproved = jest.fn();
 const mockFindApprovedBySubSlotIndex = jest.fn();
+const mockGetEventCreatedBy = jest.fn();
+const mockGetEventTitle = jest.fn();
+const mockWriteCareerBooking = jest.fn();
+const mockFindBookingsByRequester = jest.fn();
 const mockFindByUid = jest.fn();
 const mockCreateNotification = jest.fn();
 
@@ -46,6 +50,10 @@ describe('CareerSlotsService', () => {
             updateRequest: mockUpdateRequest,
             countApproved: mockCountApproved,
             findApprovedBySubSlotIndex: mockFindApprovedBySubSlotIndex,
+            getEventCreatedBy: mockGetEventCreatedBy,
+            getEventTitle: mockGetEventTitle,
+            writeCareerBooking: mockWriteCareerBooking,
+            findBookingsByRequester: mockFindBookingsByRequester,
           },
         },
         {

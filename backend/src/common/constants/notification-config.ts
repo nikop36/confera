@@ -23,6 +23,7 @@ export const NOTIFICATION_CONFIG: Record<
   [NotificationTypeEnum.CAREER_INTERVIEW_CANCELLED]: { sendEmail: true },
 
   // Career slot — email + system
+  [NotificationTypeEnum.CAREER_SLOT_REQUESTED]: { sendEmail: true },
   [NotificationTypeEnum.CAREER_SLOT_APPROVED]: { sendEmail: true },
   [NotificationTypeEnum.CAREER_SLOT_DECLINED]: { sendEmail: true },
 
@@ -41,6 +42,14 @@ export const NOTIFICATION_CONFIG: Record<
   [NotificationTypeEnum.GUEST_CONFIRMATION]: { sendEmail: true },
   [NotificationTypeEnum.GUEST_CONFIRMED]: { sendEmail: false },
   [NotificationTypeEnum.GUEST_EVENT_INVITE]: { sendEmail: true },
+
+  [NotificationTypeEnum.SESSION_PRESENTER_INVITED]: { sendEmail: true },
+  [NotificationTypeEnum.SESSION_PRESENTER_CONFIRMED]: { sendEmail: true },
+  [NotificationTypeEnum.SESSION_PRESENTER_DECLINED]: { sendEmail: true },
+
+  [NotificationTypeEnum.CAREER_SLOT_APPROVAL_REQUEST]: { sendEmail: true },
+  [NotificationTypeEnum.CAREER_SLOT_ORGANIZER_APPROVED]: { sendEmail: true },
+  [NotificationTypeEnum.CAREER_SLOT_ORGANIZER_REJECTED]: { sendEmail: true },
 };
 
 export function shouldSendEmail(type: NotificationTypeEnum): boolean {

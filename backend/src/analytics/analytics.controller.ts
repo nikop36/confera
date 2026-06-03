@@ -77,7 +77,8 @@ export class AnalyticsController {
   @ApiQuery({
     name: 'section',
     required: false,
-    description: 'all (default), overview, usage, matching, engagement',
+    description:
+      'all (default), overview, operations, usage, matching, engagement',
   })
   @ApiResponse({ status: 200, description: 'Report payload/export' })
   @Roles('admin')
@@ -89,6 +90,7 @@ export class AnalyticsController {
     section:
       | 'all'
       | 'overview'
+      | 'operations'
       | 'usage'
       | 'matching'
       | 'engagement'

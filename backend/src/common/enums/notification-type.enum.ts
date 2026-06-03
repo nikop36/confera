@@ -10,6 +10,7 @@ export enum NotificationTypeEnum {
   CAREER_INTERVIEW_ASSIGNED = 'career_interview_assigned',
   CAREER_INTERVIEW_RESCHEDULED = 'career_interview_rescheduled',
   CAREER_INTERVIEW_CANCELLED = 'career_interview_cancelled',
+  CAREER_SLOT_REQUESTED = 'career_slot_requested',
   CAREER_SLOT_APPROVED = 'career_slot_approved',
   CAREER_SLOT_DECLINED = 'career_slot_declined',
   EVENT_AUTO_REGISTERED = 'event_auto_registered',
@@ -21,4 +22,12 @@ export enum NotificationTypeEnum {
   GUEST_CONFIRMATION = 'guest_confirmation', // first time — email + system
   GUEST_CONFIRMED = 'guest_confirmed',
   GUEST_EVENT_INVITE = 'guest_event_invite', // confirmed guest, new event — email + system
+
+  SESSION_PRESENTER_INVITED = 'session_presenter_invited',
+  SESSION_PRESENTER_CONFIRMED = 'session_presenter_confirmed',
+  SESSION_PRESENTER_DECLINED = 'session_presenter_declined',
+
+  CAREER_SLOT_APPROVAL_REQUEST = 'career_slot_approval_request',
+  CAREER_SLOT_ORGANIZER_APPROVED = 'career_slot_organizer_approved',
+  CAREER_SLOT_ORGANIZER_REJECTED = 'career_slot_organizer_rejected',
 }

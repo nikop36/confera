@@ -3,6 +3,8 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { User, UserProfile } from '../common/interfaces/user.interface';
 import { UserRoleEnum } from '../common/enums/roles.enum';
 import { FieldValue } from 'firebase-admin/firestore';
+import type { ProfileReport } from '../common/interfaces/profile-report.interface';
+import type { ProfileReportReason } from '../profile/dto/report-profile.dto';
 
 @Injectable()
 export class UsersRepository {
@@ -64,6 +66,46 @@ export class UsersRepository {
 
     return snapshot.docs.map(
       (doc) => ({ uid: doc.id, ...doc.data() }) as User & UserProfile,
+    );
+  }
+
+  async upsertProfileReport(data: {
+    targetUid: string;
+    reporterUid: string;
+    reason: ProfileReportReason;
+    customReason?: string;
+  }): Promise<ProfileReport> {
+    const db = this.firebaseService.getFirestore();
+    const now = new Date();
+    const id = `${data.targetUid}_${data.reporterUid}`;
+    const ref = db.collection('profileReports').doc(id);
+    const existing = await ref.get();
+
+    const report = {
+      targetUid: data.targetUid,
+      reporterUid: data.reporterUid,
+      reason: data.reason,
+      customReason: data.customReason,
+      createdAt: existing.exists
+        ? ((existing.data()?.createdAt as Date | undefined) ?? now)
+        : now,
+      updatedAt: now,
+    };
+
+    await ref.set(report, { merge: true });
+    return { id, ...report };
+  }
+
+  async listProfileReports(limit = 2000): Promise<ProfileReport[]> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db
+      .collection('profileReports')
+      .orderBy('updatedAt', 'desc')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() }) as ProfileReport,
     );
   }
 
@@ -164,6 +206,8 @@ export class UsersRepository {
       this.deleteCollectionByField('connectionRequests', 'recipientUid', uid),
       this.deleteCollectionByField('notifications', 'userUid', uid),
       this.deleteCollectionByField('roleRequests', 'requesterUid', uid),
+      this.deleteCollectionByField('profileReports', 'targetUid', uid),
+      this.deleteCollectionByField('profileReports', 'reporterUid', uid),
     ]);
   }
 
