@@ -333,9 +333,31 @@ export class CareerSlotsService {
       respondedAt: new Date(),
     });
 
-    const requester = await this.usersRepository.findByUid(
-      request.requesterUid,
-    );
+    const [requester, eventTitle] = await Promise.all([
+      this.usersRepository.findByUid(request.requesterUid),
+      this.careerSlotsRepository.getEventTitle(eventId),
+    ]);
+
+    if (status === 'approved') {
+      const industryMember = await this.usersRepository.findByUid(slot.createdByUid);
+      await this.careerSlotsRepository.writeCareerBooking({
+        id: requestId,
+        requesterUid: request.requesterUid,
+        eventId,
+        eventTitle: eventTitle ?? eventId,
+        slotId,
+        slotTitle: slot.title,
+        location: slot.location,
+        slotStartAt: slot.startAt,
+        slotEndAt: slot.endAt,
+        capacity: slot.capacity,
+        subSlotIndex: request.subSlotIndex,
+        industryMemberUid: slot.createdByUid,
+        industryMemberName: industryMember?.displayName ?? slot.createdByUid,
+        approvedAt: new Date(),
+      });
+    }
+
     const notificationType =
       status === 'approved'
         ? NotificationTypeEnum.CAREER_SLOT_APPROVED
@@ -352,5 +374,9 @@ export class CareerSlotsService {
       type: notificationType,
       message,
     });
+  }
+
+  async listMyBookings(callerUid: string) {
+    return this.careerSlotsRepository.findBookingsByRequester(callerUid);
   }
 }

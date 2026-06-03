@@ -162,3 +162,18 @@ export class CareerSlotsController {
     await this.careerSlotsService.rejectSlot(eventId, slotId);
   }
 }
+
+@ApiTags('career-bookings')
+@Controller('career-bookings')
+@UseGuards(FirebaseAuthGuard, RolesGuard)
+@ApiBearerAuth()
+export class CareerBookingsController {
+  constructor(private readonly careerSlotsService: CareerSlotsService) {}
+
+  @Get('me')
+  @ApiOperation({ summary: 'List all approved career slot bookings for the current user' })
+  @ApiResponse({ status: 200, description: 'Bookings returned' })
+  async getMyBookings(@CurrentUser() user: FirebaseUser) {
+    return this.careerSlotsService.listMyBookings(user.uid);
+  }
+}

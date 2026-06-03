@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
+import TagPicker, { type Tag, TagPills } from '../components/TagPicker';
 import { useStoredUser } from '../lib/auth';
 import { useT } from '../lib/i18n';
 
@@ -32,20 +33,28 @@ const GRADIENTS = [
   'linear-gradient(135deg, #f472b6, #fb7185)',
 ];
 
-const CHIP_COLORS = [
-  { bg: '#eff6ff', color: '#1e40af' },
-  { bg: '#f0fdf4', color: '#166534' },
-  { bg: '#fdf4ff', color: '#7e22ce' },
-  { bg: '#fff7ed', color: '#c2410c' },
-];
-
 export default function HomePage() {
   const user = useStoredUser();
   const t = useT();
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const tagMap = useMemo(
+    () => new Map(tags.map((tg) => [tg.slug, tg.label])),
+    [tags],
+  );
+
+  const filtered = useMemo(
+    () =>
+      selectedTags.length === 0
+        ? events
+        : events.filter((e) => selectedTags.some((s) => e.tags?.includes(s))),
+    [events, selectedTags],
+  );
 
   useEffect(() => {
     if (!user?.idToken) return;
@@ -55,9 +64,10 @@ export default function HomePage() {
       setLoading(true);
       setError('');
       try {
-        const [eventsRes, recsRes] = await Promise.allSettled([
+        const [eventsRes, recsRes, tagsRes] = await Promise.allSettled([
           fetch(`${API}/events`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`${API}/events/recommendations/me`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API}/tags`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
         if (eventsRes.status === 'rejected' || !eventsRes.value.ok) {
@@ -72,9 +82,12 @@ export default function HomePage() {
           recs.forEach((r) => scoreMap.set(r.id, r.score));
         }
 
-        const merged = rawEvents.map((e) => ({ ...e, score: scoreMap.get(e.id) }));
+        if (tagsRes.status === 'fulfilled' && tagsRes.value.ok) {
+          const data = (await tagsRes.value.json()) as Tag[];
+          setTags(data);
+        }
 
-        // Recommended first (by score desc), then rest by date
+        const merged = rawEvents.map((e) => ({ ...e, score: scoreMap.get(e.id) }));
         merged.sort((a, b) => {
           if (a.score !== undefined && b.score !== undefined) return b.score - a.score;
           if (a.score !== undefined) return -1;
@@ -95,11 +108,11 @@ export default function HomePage() {
 
   return (
     <AppShell>
-      <div className="mb-6">
+      <div className="mb-5">
         <h2 className="text-[22px] font-bold">{t('nav.news', 'Dogodki')}</h2>
         {!loading && (
           <p className="text-[13px] text-[#8e8e93] mt-1">
-            {events.length} {t('events.total', 'events')}
+            {filtered.length} {t('events.total', 'events')}
           </p>
         )}
       </div>
@@ -107,6 +120,26 @@ export default function HomePage() {
       {error && (
         <div className="mb-4 rounded-[12px] bg-[#fff1f2] px-4 py-3 text-sm text-[#dc2626]">
           {error}
+        </div>
+      )}
+
+      {tags.length > 0 && (
+        <div className="mb-4">
+          <TagPicker
+            token={user?.idToken ?? ''}
+            value={selectedTags}
+            onChange={setSelectedTags}
+            tags={tags}
+          />
+          {selectedTags.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedTags([])}
+              className="mt-2 text-[11px] font-semibold px-[9px] py-[3px] rounded-full border border-transparent text-[#8e8e93] hover:text-[#0d0d0d] bg-transparent cursor-pointer font-sans"
+            >
+              {t('events.clearFilter', 'Počisti filter')}
+            </button>
+          )}
         </div>
       )}
 
@@ -122,21 +155,23 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-      ) : events.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="rounded-[14px] border border-[#f0f0f0] px-5 py-6 text-sm text-[#8e8e93]">
-          {t('events.empty', 'No events yet.')}
+          {selectedTags.length > 0 ? t('events.noneForTags', 'Ni dogodkov z izbranimi oznakami.') : t('events.empty', 'No events yet.')}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {events.map((event, i) => {
+          {filtered.map((event, i) => {
             const isRecommended = event.score !== undefined;
+            const eventTagPills = (event.tags ?? []).map((slug) => ({
+              slug,
+              label: tagMap.get(slug) ?? slug,
+            }));
             return (
               <div
                 key={event.id}
                 className={`rounded-[18px] overflow-hidden bg-white cursor-pointer transition-shadow hover:shadow-sm ${
-                  isRecommended
-                    ? 'border-2 border-[#0071e3]'
-                    : 'border border-[#f0f0f0]'
+                  isRecommended ? 'border-2 border-[#0071e3]' : 'border border-[#f0f0f0]'
                 }`}
                 role="button"
                 tabIndex={0}
@@ -191,22 +226,7 @@ export default function HomePage() {
                   {event.description && (
                     <p className="text-[12px] text-[#b0b0b0] line-clamp-1 mb-[6px]">{event.description}</p>
                   )}
-                  {(event.tags ?? []).length > 0 && (
-                    <div className="flex flex-wrap gap-[3px]">
-                      {(event.tags ?? []).map((tag, ti) => {
-                        const c = CHIP_COLORS[ti % 4];
-                        return (
-                          <span
-                            key={tag}
-                            style={{ background: c.bg, color: c.color }}
-                            className="px-[7px] py-[2px] rounded-full text-[9px] font-medium"
-                          >
-                            {tag}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {eventTagPills.length > 0 && <TagPills tags={eventTagPills} />}
                 </div>
               </div>
             );
