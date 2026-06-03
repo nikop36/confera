@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useT } from '../lib/i18n';
 
 export type CareerSlotItem = {
@@ -128,6 +129,39 @@ export default function CareerSlotCard({
     return requests.find((r) => r.subSlotIndex === index && r.status === 'approved');
   }
 
+  function pendingForSubSlot(index: number): SubSlotRequest[] {
+    return requests.filter((r) => r.subSlotIndex === index && r.status === 'pending');
+  }
+
+  async function handleRespond(requestId: string, status: 'approved' | 'declined') {
+    setActing(true);
+    setActError('');
+    try {
+      const res = await fetch(
+        `${API}/events/${eventId}/career-slots/${slot.id}/requests/${requestId}`,
+        {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        },
+      );
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { message?: string | string[] };
+        const msg = Array.isArray(body.message) ? body.message[0] : body.message;
+        throw new Error(msg ?? t('careerCard.error.action', 'Action failed.'));
+      }
+      setRequests((prev) => prev.map((r) => r.id === requestId ? { ...r, status } : r));
+      setRequestsLoaded(false);
+      onRefresh();
+    } catch (err) {
+      setActError(err instanceof Error ? err.message : t('careerCard.error.action', 'Action failed.'));
+    } finally {
+      setActing(false);
+    }
+  }
+
+  const pendingTotal = requests.filter((r) => r.status === 'pending').length;
+
   return (
     <div className="h-full flex flex-col rounded-[8px] border-l-[3px] border-[#f59e0b] bg-[#fffbeb] p-2 overflow-hidden">
       {/* Header */}
@@ -146,13 +180,26 @@ export default function CareerSlotCard({
             {t('careerCard.type', 'Career')}
           </span>
         </div>
-        <p className="text-[10px] text-[#6b7280]">{slot.creatorDisplayName}</p>
-        <p className="text-[10px] text-[#8e8e93]">
-          {slot.approvedCount} / {slot.capacity} {t('eventDetail.seats', 'seats')}
-          {slot.myRequestStatus && (
-            <> · <StatusBadge status={slot.myRequestStatus} /></>
+        <Link
+          href={`/profile/${slot.createdByUid}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-[10px] text-[#6b7280] hover:underline hover:text-[#0d0d0d] no-underline w-fit"
+        >
+          {slot.creatorDisplayName}
+        </Link>
+        <div className="flex items-center gap-1 flex-wrap">
+          <p className="text-[10px] text-[#8e8e93]">
+            {slot.approvedCount} / {slot.capacity} {t('eventDetail.seats', 'seats')}
+          </p>
+          {canManage && pendingTotal > 0 && (
+            <span className="text-[9px] font-semibold text-[#92400e] bg-[#fef3c7] px-[5px] py-[1px] rounded-full">
+              {pendingTotal} pending
+            </span>
           )}
-        </p>
+          {slot.myRequestStatus && (
+            <StatusBadge status={slot.myRequestStatus} />
+          )}
+        </div>
       </div>
 
       {/* Expanded sub-slots */}
@@ -176,33 +223,77 @@ export default function CareerSlotCard({
 
           {subSlots.map(({ index, startLabel, endLabel }) => {
             const approved = approvedForSubSlot(index);
+            const pending = pendingForSubSlot(index);
             const isMySlot = slot.mySubSlotIndex === index && slot.myRequestStatus === 'approved';
             const isPending = slot.mySubSlotIndex === index && slot.myRequestStatus === 'pending';
-            const isTakenByOther = !!approved && approved.requesterUid !== currentUserUid;
 
             return (
-              <div key={index} className="flex items-center justify-between gap-1">
-                <span className="text-[10px] text-[#374151] font-semibold whitespace-nowrap">
-                  {startLabel}–{endLabel}
-                </span>
-                {canManage && approved ? (
-                  <span className="text-[10px] text-[#166534] truncate">{approved.requesterDisplayName}</span>
-                ) : isMySlot ? (
-                  <span className="text-[10px] font-semibold text-[#166534]">✓ {t('careerCard.mySlot', 'My slot')}</span>
-                ) : isPending ? (
-                  <span className="text-[10px] text-[#92400e]">{t('meetings.pending', 'Pending')}</span>
-                ) : isTakenByOther ? (
-                  <span className="text-[10px] text-[#8e8e93]">{t('careerCard.taken', 'Taken')}</span>
-                ) : slot.myRequestStatus ? null : (
-                  <button
-                    type="button"
-                    disabled={acting}
-                    onClick={(e) => { e.stopPropagation(); void handleSignUp(index); }}
-                    className="text-[10px] font-semibold text-white bg-[#f59e0b] hover:bg-[#d97706] disabled:opacity-50 px-2 py-[2px] rounded-full border-0 cursor-pointer font-sans transition-colors"
-                  >
-                    {t('careerCard.apply', 'Apply')}
-                  </button>
-                )}
+              <div key={index} className="flex flex-col gap-[3px]">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[10px] text-[#374151] font-semibold whitespace-nowrap">
+                    {startLabel}–{endLabel}
+                  </span>
+                  {approved ? (
+                    <span className="text-[10px] font-semibold text-[#166534]">
+                      ✓{' '}
+                      {canManage ? (
+                        <Link
+                          href={`/profile/${approved.requesterUid}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="hover:underline no-underline text-[#166534]"
+                        >
+                          {approved.requesterDisplayName}
+                        </Link>
+                      ) : t('careerCard.taken', 'Taken')}
+                    </span>
+                  ) : isMySlot ? (
+                    <span className="text-[10px] font-semibold text-[#166534]">✓ {t('careerCard.mySlot', 'My slot')}</span>
+                  ) : isPending ? (
+                    <span className="text-[10px] text-[#92400e]">{t('meetings.pending', 'Pending')}</span>
+                  ) : !canManage && !slot.myRequestStatus ? (
+                    <button
+                      type="button"
+                      disabled={acting}
+                      onClick={(e) => { e.stopPropagation(); void handleSignUp(index); }}
+                      className="text-[10px] font-semibold text-white bg-[#f59e0b] hover:bg-[#d97706] disabled:opacity-50 px-2 py-[2px] rounded-full border-0 cursor-pointer font-sans transition-colors"
+                    >
+                      {t('careerCard.apply', 'Apply')}
+                    </button>
+                  ) : !canManage ? null : (
+                    <span className="text-[10px] text-[#9ca3af]">Prosto</span>
+                  )}
+                </div>
+
+                {/* Pending requests — only visible to manager */}
+                {canManage && pending.map((req) => (
+                  <div key={req.id} className="flex items-center justify-between gap-1 pl-2 bg-[#fef9e7] rounded-[4px] px-2 py-[3px]">
+                    <Link
+                      href={`/profile/${req.requesterUid}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[10px] text-[#374151] truncate hover:underline no-underline"
+                    >
+                      {req.requesterDisplayName}
+                    </Link>
+                    <div className="flex gap-1 shrink-0">
+                      <button
+                        type="button"
+                        disabled={acting}
+                        onClick={(e) => { e.stopPropagation(); void handleRespond(req.id, 'approved'); }}
+                        className="text-[10px] font-bold text-white bg-[#16a34a] hover:bg-[#15803d] disabled:opacity-50 px-2 py-[2px] rounded-full border-0 cursor-pointer font-sans"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        disabled={acting}
+                        onClick={(e) => { e.stopPropagation(); void handleRespond(req.id, 'declined'); }}
+                        className="text-[10px] font-bold text-white bg-[#dc2626] hover:bg-[#b91c1c] disabled:opacity-50 px-2 py-[2px] rounded-full border-0 cursor-pointer font-sans"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             );
           })}

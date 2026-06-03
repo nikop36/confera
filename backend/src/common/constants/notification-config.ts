@@ -23,6 +23,7 @@ export const NOTIFICATION_CONFIG: Record<
   [NotificationTypeEnum.CAREER_INTERVIEW_CANCELLED]: { sendEmail: true },
 
   // Career slot — email + system
+  [NotificationTypeEnum.CAREER_SLOT_REQUESTED]: { sendEmail: true },
   [NotificationTypeEnum.CAREER_SLOT_APPROVED]: { sendEmail: true },
   [NotificationTypeEnum.CAREER_SLOT_DECLINED]: { sendEmail: true },
 

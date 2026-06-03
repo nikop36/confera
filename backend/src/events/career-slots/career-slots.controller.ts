@@ -84,6 +84,7 @@ export class CareerSlotsController {
   }
 
   @Post(':slotId/request')
+  @Roles('participant', 'admin')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Request a spot in a career slot' })
   @ApiResponse({ status: 201, description: 'Request submitted' })

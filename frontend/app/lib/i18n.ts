@@ -10,13 +10,13 @@ const LOCALE_UPDATED_EVENT = 'confera:locale-updated';
 type Dictionary = Record<string, string>;
 
 const SL: Dictionary = {
-  'nav.news': 'Novice',
+  'nav.news': 'Dogodki',
   'nav.profile': 'Profil',
   'nav.meetings': 'Srečanja',
   'nav.invites': 'Povabila',
   'nav.connections': 'Prijatelji',
   'nav.community': 'Skupnost',
-  'nav.events': 'Dogodki',
+  'nav.events': 'Program',
   'nav.settings': 'Nastavitve',
   'common.logout': 'Odjava',
   'common.adminPanel': 'Administracija',

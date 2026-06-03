@@ -1,173 +1,218 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
+import { useStoredUser } from '../lib/auth';
 import { useT } from '../lib/i18n';
 
-const TAB_KEYS = ['home.tab.recent', 'home.tab.friends', 'home.tab.popular'] as const;
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
-const POSTS = [
-  {
-    authorKey: 'home.post.1.author',
-    authorFallback: 'Confera Organization',
-    time: '1h',
-    textKey: 'home.post.1.text',
-    textFallback:
-      'Welcome! Confera 2026 starts in 3 days. Meeting schedules will be published tomorrow — check your invites and complete your profile for better recommendations.',
-    bg: '#ecf4fd',
-    hasImages: true,
-  },
-  {
-    authorKey: 'home.post.2.author',
-    authorFallback: 'Dr. Petra Kos',
-    time: '3h',
-    textKey: 'home.post.2.text',
-    textFallback:
-      'I am looking forward to meetings with researchers in AI and public administration. If you are interested in exchanging experience, contact me through the meeting system.',
-    bg: '#fff8f0',
-    hasImages: false,
-  },
-] as const;
+type Event = {
+  id: string;
+  title: string;
+  description?: string;
+  startAt: string;
+  location?: string;
+  capacity?: number;
+  registeredCount?: number;
+  tags?: string[];
+  score?: number;
+};
 
-const IMAGE_GRADIENTS = [
-  'linear-gradient(135deg,#667eea,#764ba2)',
-  'linear-gradient(135deg,#f093fb,#f5576c)',
-  'linear-gradient(135deg,#4facfe,#00f2fe)',
+type RecommendedEvent = {
+  id: string;
+  score: number;
+};
+
+const GRADIENTS = [
+  'linear-gradient(135deg, #7c6cf6, #c084fc)',
+  'linear-gradient(135deg, #fb923c, #fbbf24)',
+  'linear-gradient(135deg, #22d3ee, #6ee7b7)',
+  'linear-gradient(135deg, #f472b6, #fb7185)',
+];
+
+const CHIP_COLORS = [
+  { bg: '#eff6ff', color: '#1e40af' },
+  { bg: '#f0fdf4', color: '#166534' },
+  { bg: '#fdf4ff', color: '#7e22ce' },
+  { bg: '#fff7ed', color: '#c2410c' },
 ];
 
 export default function HomePage() {
+  const user = useStoredUser();
   const t = useT();
-  const [activeTab, setActiveTab] = useState(1);
-  const [liked, setLiked] = useState<Record<number, boolean>>({});
+  const router = useRouter();
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!user?.idToken) return;
+    const token = user.idToken;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+      try {
+        const [eventsRes, recsRes] = await Promise.allSettled([
+          fetch(`${API}/events`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API}/events/recommendations/me`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+
+        if (eventsRes.status === 'rejected' || !eventsRes.value.ok) {
+          throw new Error(t('events.error.load', 'Failed to load events'));
+        }
+
+        const rawEvents = (await eventsRes.value.json()) as Event[];
+
+        const scoreMap = new Map<string, number>();
+        if (recsRes.status === 'fulfilled' && recsRes.value.ok) {
+          const recs = (await recsRes.value.json()) as RecommendedEvent[];
+          recs.forEach((r) => scoreMap.set(r.id, r.score));
+        }
+
+        const merged = rawEvents.map((e) => ({ ...e, score: scoreMap.get(e.id) }));
+
+        // Recommended first (by score desc), then rest by date
+        merged.sort((a, b) => {
+          if (a.score !== undefined && b.score !== undefined) return b.score - a.score;
+          if (a.score !== undefined) return -1;
+          if (b.score !== undefined) return 1;
+          return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
+        });
+
+        setEvents(merged);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('common.error.generic', 'An error occurred'));
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void load();
+  }, [user?.idToken, t]);
 
   return (
     <AppShell>
+      <div className="mb-6">
+        <h2 className="text-[22px] font-bold">{t('nav.news', 'Dogodki')}</h2>
+        {!loading && (
+          <p className="text-[13px] text-[#8e8e93] mt-1">
+            {events.length} {t('events.total', 'events')}
+          </p>
+        )}
+      </div>
 
-      {/* Header */}
-      <div className="flex items-baseline justify-between mb-5">
-        <h2 className="text-[22px] font-bold">{t('home.title', 'News')}</h2>
-        <div className="flex gap-5">
-          {TAB_KEYS.map((tabKey, i) => (
-            <button
-              key={tabKey}
-              onClick={() => setActiveTab(i)}
-              className={`bg-transparent border-0 cursor-pointer font-sans text-sm pb-0.5 border-b-2 transition-colors ${
-                activeTab === i
-                  ? 'font-bold text-[#0d0d0d] border-[#0d0d0d]'
-                  : 'font-normal text-[#8e8e93] border-transparent'
-              }`}
-            >
-              {t(tabKey)}
-            </button>
+      {error && (
+        <div className="mb-4 rounded-[12px] bg-[#fff1f2] px-4 py-3 text-sm text-[#dc2626]">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex flex-col gap-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="rounded-[18px] overflow-hidden animate-pulse">
+              <div className="h-[96px] bg-[#f0f0f0]" />
+              <div className="px-[14px] py-3 border border-t-0 border-[#f0f0f0] rounded-b-[18px]">
+                <div className="h-[14px] bg-[#f0f0f0] rounded w-2/3 mb-2" />
+                <div className="h-[11px] bg-[#f0f0f0] rounded w-1/3" />
+              </div>
+            </div>
           ))}
         </div>
-      </div>
-
-      {/* Posts */}
-      <div className="flex flex-col gap-[14px]">
-        {POSTS.map((post, i) => (
-          <article key={i} className="rounded-[18px] p-5" style={{ background: post.bg }}>
-
-            {/* Author row */}
-            <div className="flex items-center justify-between mb-[14px]">
-              <div className="flex items-center gap-[10px]">
-                <div
-                  className="w-[38px] h-[38px] rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
-                  style={{
-                    background: i === 0 ? '#0d0d0d' : 'linear-gradient(135deg,#a8edea,#fed6e3)',
-                    color: i === 0 ? '#fff' : '#3d3d3d',
-                  }}
-                >
-                  {t(post.authorKey, post.authorFallback).split(' ').map(w => w[0]).slice(0, 2).join('')}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">{t(post.authorKey, post.authorFallback)}</p>
-                  <p className="text-xs text-[#8e8e93]">{post.time} {t('common.ago', 'ago')}</p>
-                </div>
-              </div>
-              <button className="bg-transparent border-0 cursor-pointer text-[#8e8e93] p-1">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Text */}
-            <p className={`text-sm leading-[1.65] text-[#1d1d1f] ${post.hasImages ? 'mb-[14px]' : 'mb-4'}`}>
-              {t(post.textKey, post.textFallback)}
-            </p>
-
-            {/* Image grid */}
-            {post.hasImages && (
-              <div className="grid grid-cols-3 gap-[6px] mb-4 rounded-xl overflow-hidden">
-                {IMAGE_GRADIENTS.map((g, j) => (
-                  <div
-                    key={j}
-                    className={`h-[110px] ${j === 0 ? 'rounded-l-[10px]' : j === 2 ? 'rounded-r-[10px]' : ''}`}
-                    style={{ background: g }}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Reactions */}
-            <div className="flex items-center gap-5">
-              <span className="flex items-center gap-[5px] text-[13px] text-[#8e8e93]">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
-                </svg>
-                {i === 0 ? '1.2k' : '348'}
-              </span>
-              <button
-                onClick={() => setLiked(prev => ({ ...prev, [i]: !prev[i] }))}
-                className={`flex items-center gap-[5px] text-[13px] bg-transparent border-0 cursor-pointer font-sans p-0 ${
-                  liked[i] ? 'text-[#e05c5c] font-semibold' : 'text-[#8e8e93] font-normal'
-                }`}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill={liked[i] ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                </svg>
-                {t('home.like', 'Like')}
-              </button>
-              <button className="flex items-center gap-[5px] text-[13px] text-[#8e8e93] bg-transparent border-0 cursor-pointer font-sans p-0">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-                {t('home.comment', 'Comment')}
-              </button>
-            </div>
-          </article>
-        ))}
-
-        {/* Share input */}
-        <div className="bg-[#f7f7f7] rounded-[18px] p-[18px]">
-          <div className="flex items-center gap-[10px] mb-[14px]">
-            <div className="w-[34px] h-[34px] rounded-full bg-[#e0e0e0] shrink-0" />
-            <input
-              type="text"
-              placeholder={t('home.sharePlaceholder', 'Share an update with participants...')}
-              className="flex-1 bg-transparent border-0 outline-none text-sm text-[#8e8e93] font-sans"
-            />
-          </div>
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex gap-3 flex-wrap">
-              {[
-                { label: t('home.file', 'File'), icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg> },
-                { label: t('home.image', 'Image'), icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg> },
-                { label: t('home.location', 'Location'), icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg> },
-              ].map(({ label, icon }) => (
-                <button key={label} className="flex items-center gap-[5px] text-xs text-[#8e8e93] bg-transparent border-0 cursor-pointer font-sans">
-                  {icon} {label}
-                </button>
-              ))}
-            </div>
-            <button className="px-5 py-[7px] rounded-full bg-[#0d0d0d] text-white text-[13px] font-semibold border-0 cursor-pointer font-sans">
-              {t('home.send', 'Send')}
-            </button>
-          </div>
+      ) : events.length === 0 ? (
+        <div className="rounded-[14px] border border-[#f0f0f0] px-5 py-6 text-sm text-[#8e8e93]">
+          {t('events.empty', 'No events yet.')}
         </div>
-      </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {events.map((event, i) => {
+            const isRecommended = event.score !== undefined;
+            return (
+              <div
+                key={event.id}
+                className={`rounded-[18px] overflow-hidden bg-white cursor-pointer transition-shadow hover:shadow-sm ${
+                  isRecommended
+                    ? 'border-2 border-[#0071e3]'
+                    : 'border border-[#f0f0f0]'
+                }`}
+                role="button"
+                tabIndex={0}
+                onClick={() => router.push(`/events/${event.id}`)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    router.push(`/events/${event.id}`);
+                  }
+                }}
+              >
+                <div className="h-[96px] relative" style={{ background: GRADIENTS[i % 4] }}>
+                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 96" fill="none" preserveAspectRatio="xMidYMid slice">
+                    <circle cx="340" cy="8" r="80" fill="rgba(255,255,255,0.1)" />
+                    <circle cx="20" cy="88" r="55" fill="rgba(255,255,255,0.07)" />
+                  </svg>
 
+                  {isRecommended && (
+                    <div className="absolute top-[10px] left-[12px] flex items-center gap-1 bg-white/25 backdrop-blur-sm rounded-full px-2.5 py-1">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="1">
+                        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17 5.8 21.3l2.4-7.4L2 9.4h7.6z" />
+                      </svg>
+                      <span className="text-[10px] font-bold text-white">Priporočeno</span>
+                    </div>
+                  )}
+
+                  <div className="absolute bottom-[10px] left-[14px] text-white">
+                    <p className="text-[11px] font-semibold opacity-85">
+                      {new Date(event.startAt).toLocaleDateString('sl-SI', { weekday: 'short', day: 'numeric', month: 'short' })}
+                      {' · '}
+                      {new Date(event.startAt).toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+
+                  {event.capacity != null && event.registeredCount != null && (
+                    <div className="absolute bottom-[10px] right-[12px] bg-white/20 rounded-lg px-2 py-0.5 text-[10px] font-semibold text-white">
+                      {event.registeredCount}/{event.capacity}
+                    </div>
+                  )}
+                </div>
+
+                <div className="px-[14px] py-3">
+                  <p className="text-[14px] font-semibold mb-[3px]">{event.title}</p>
+                  {event.location && (
+                    <p className="text-[12px] text-[#8e8e93] flex items-center gap-1 mb-[5px]">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+                      </svg>
+                      {event.location}
+                    </p>
+                  )}
+                  {event.description && (
+                    <p className="text-[12px] text-[#b0b0b0] line-clamp-1 mb-[6px]">{event.description}</p>
+                  )}
+                  {(event.tags ?? []).length > 0 && (
+                    <div className="flex flex-wrap gap-[3px]">
+                      {(event.tags ?? []).map((tag, ti) => {
+                        const c = CHIP_COLORS[ti % 4];
+                        return (
+                          <span
+                            key={tag}
+                            style={{ background: c.bg, color: c.color }}
+                            className="px-[7px] py-[2px] rounded-full text-[9px] font-medium"
+                          >
+                            {tag}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </AppShell>
   );
 }

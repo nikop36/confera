@@ -107,9 +107,16 @@ export default function PersonCard({
           {initials(person.displayName)}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-semibold text-[#0d0d0d] leading-[1.3] truncate">
-            {person.displayName}
-          </p>
+          <div className="flex items-center gap-[5px] mb-[1px]">
+            <p className="text-[12px] font-semibold text-[#0d0d0d] leading-[1.3] truncate">
+              {person.displayName}
+            </p>
+            {person.score !== undefined && (
+              <span className="shrink-0 px-[6px] py-[1px] rounded-full text-[9px] font-semibold bg-[#ecfdf5] text-[#059669]">
+                Ujemanje
+              </span>
+            )}
+          </div>
           {person.affiliation && (
             <p className="text-[10px] text-[#8e8e93] truncate">
               {person.affiliation}

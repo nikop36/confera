@@ -165,6 +165,19 @@ export class CareerSlotsService {
       status: 'pending',
       requestedAt: new Date(),
     });
+
+    const [requester, creator] = await Promise.all([
+      this.usersRepository.findByUid(requesterUid),
+      this.usersRepository.findByUid(slot.createdByUid),
+    ]);
+
+    await this.notificationsService.createNotification({
+      uid: slot.createdByUid,
+      email: creator?.email,
+      displayName: creator?.displayName,
+      type: NotificationTypeEnum.CAREER_SLOT_REQUESTED,
+      message: `${requester?.displayName ?? 'Someone'} has requested a spot in your career slot "${slot.title}".`,
+    });
   }
 
   async listRequests(

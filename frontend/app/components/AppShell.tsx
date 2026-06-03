@@ -40,21 +40,6 @@ const SUGGESTIONS = [
   { name: 'Nina Hauptman', org: 'Public Administration', hue: 155 },
 ];
 
-const RECOMMENDATION_COLORS = [
-  { bg: '#1d1d1f', fg: '#ffffff' },
-  { bg: '#ff6b6b', fg: '#ffffff' },
-  { bg: '#dbeafe', fg: '#1e40af' },
-  { bg: '#7c3aed', fg: '#ffffff' },
-];
-
-const RECOMMENDATION_FALLBACK = [
-  'Artificial intelligence',
-  'Industry collaboration',
-  'Public administration',
-  'Sustainability',
-  'Research',
-  'Innovation',
-];
 
 type MatchSuggestion = {
   uid: string;
@@ -107,11 +92,6 @@ type SidebarNotification = {
   time: string;
   unread: boolean;
 };
-type ProfileRecommendationSource = {
-  tags?: string[];
-  interests?: string[];
-  goals?: string[];
-};
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const user = useStoredUser();
@@ -129,14 +109,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<SidebarNotification[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
-  const [recommendations, setRecommendations] = useState<
-    Array<{ label: string; bg: string; fg: string }>
-  >(
-    RECOMMENDATION_FALLBACK.slice(0, 4).map((label, index) => ({
-      label,
-      ...RECOMMENDATION_COLORS[index % RECOMMENDATION_COLORS.length],
-    })),
-  );
   const unreadNotificationsCount = notifications.filter(
     (item) => item.unread,
   ).length;
@@ -155,33 +127,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       hue: [200, 280, 155][index] ?? 210,
     }))
     : SUGGESTIONS.map((entry) => ({ ...entry, uid: '' }));
-
-  const buildRecommendations = useCallback(
-    (source?: ProfileRecommendationSource) => {
-      const uniqueLabels: string[] = [];
-      const pushUnique = (value?: string) => {
-        const normalized = value?.trim();
-        if (!normalized) return;
-        if (uniqueLabels.some((entry) => entry.toLowerCase() === normalized.toLowerCase())) {
-          return;
-        }
-        uniqueLabels.push(normalized);
-      };
-
-      (source?.tags ?? []).forEach(pushUnique);
-      (source?.interests ?? []).forEach(pushUnique);
-      (source?.goals ?? []).forEach(pushUnique);
-      RECOMMENDATION_FALLBACK.forEach(pushUnique);
-
-      setRecommendations(
-        uniqueLabels.slice(0, 4).map((label, index) => ({
-          label,
-          ...RECOMMENDATION_COLORS[index % RECOMMENDATION_COLORS.length],
-        })),
-      );
-    },
-    [],
-  );
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true); }, []);
@@ -263,25 +208,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const loadRecommendations = useCallback(
-    async (token: string) => {
-      try {
-        const response = await fetch(`${API}/profile/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) {
-          buildRecommendations();
-          return;
-        }
-        const data = (await response.json()) as ProfileRecommendationSource;
-        buildRecommendations(data);
-      } catch {
-        buildRecommendations();
-      }
-    },
-    [buildRecommendations],
-  );
-
   useEffect(() => {
     if (!user?.idToken) return;
     const idToken = user.idToken;
@@ -304,15 +230,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       window.clearInterval(interval);
     };
   }, [user?.idToken, loadConnections]);
-
-  useEffect(() => {
-    const token = user?.idToken;
-    if (!token) return;
-    const timer = window.setTimeout(() => {
-      void loadRecommendations(token);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [user?.idToken, loadRecommendations]);
 
   useEffect(() => {
     if (!user?.idToken) return;
@@ -664,23 +581,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </section>}
 
-          {/* Recommendations */}
-          <section>
-            <h3 className="text-lg font-bold mb-[14px]">{t('shell.recommendations')}</h3>
-            <div className="grid grid-cols-2 gap-[10px]">
-              {recommendations.map((r, i) => (
-                <button
-                  key={i}
-                  className="p-4 rounded-2xl cursor-pointer border-0 text-left font-sans"
-                  style={{ background: r.bg, color: r.fg }}
-                >
-                  <RecommIcon index={i} fg={r.fg} />
-                  <p className="text-xs font-semibold mt-2 leading-tight">{r.label}</p>
-                </button>
-              ))}
-            </div>
-          </section>
-
         </aside>
       </div>
       {/* ── MOBILE BOTTOM TAB BAR ── */}
@@ -891,17 +791,6 @@ function NavIcon({
     case 'community': return <svg {...props}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" /></svg>;
     case 'events': return <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" /></svg>;
     case 'settings': return <svg {...props}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>;
-    default: return <svg {...props}><circle cx="12" cy="12" r="4" /></svg>;
-  }
-}
-
-function RecommIcon({ index, fg }: { index: number; fg: string }) {
-  const props = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: fg, strokeWidth: '1.8' };
-  switch (index) {
-    case 0: return <svg {...props}><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" /></svg>;
-    case 1: return <svg {...props}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>;
-    case 2: return <svg {...props}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>;
-    case 3: return <svg {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
     default: return <svg {...props}><circle cx="12" cy="12" r="4" /></svg>;
   }
 }
