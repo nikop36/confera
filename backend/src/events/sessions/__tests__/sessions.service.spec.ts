@@ -1,5 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { SessionsService } from '../sessions.service';
 import {
   SessionsRepository,
@@ -8,6 +13,7 @@ import {
 } from '../sessions.repository';
 import { UsersRepository } from '../../../users/users.repository';
 import { NotificationsService } from '../../../notifications/notifications.service';
+import { NotificationTypeEnum } from '../../../common/enums/notification-type.enum';
 
 describe('SessionsService', () => {
   let service: SessionsService;
@@ -102,6 +108,53 @@ describe('SessionsService', () => {
         expect.objectContaining({ capacity: null }),
       );
     });
+
+    it('creates a pending presenter invitation and notifies the presenter', async () => {
+      mockCreateSession.mockResolvedValue({
+        id: 's1',
+        title: 'AI Talk',
+      });
+      mockFindByUid.mockResolvedValue({
+        uid: 'presenter-uid',
+        email: 'presenter@example.com',
+        displayName: 'Presenter Person',
+      });
+      mockCreateNotification.mockResolvedValue(undefined);
+
+      await service.createSession(
+        'event1',
+        {
+          title: 'AI Talk',
+          description: 'About AI',
+          speakers: [],
+          presenterUid: 'presenter-uid',
+          presenterName: 'Presenter Person',
+          startAt: '2026-06-15T09:00:00.000Z',
+          endAt: '2026-06-15T10:00:00.000Z',
+          location: 'Dvorana A',
+          tags: ['ai'],
+        },
+        'admin-uid',
+      );
+
+      expect(mockCreateSession).toHaveBeenCalledWith(
+        'event1',
+        expect.objectContaining({
+          presenterUid: 'presenter-uid',
+          presenterName: 'Presenter Person',
+          presenterStatus: 'pending',
+          tags: ['ai'],
+        }),
+      );
+      expect(mockCreateNotification).toHaveBeenCalledWith({
+        uid: 'presenter-uid',
+        email: 'presenter@example.com',
+        displayName: 'Presenter Person',
+        type: NotificationTypeEnum.SESSION_PRESENTER_INVITED,
+        message:
+          'You have been invited as a presenter for the session "AI Talk".',
+      });
+    });
   });
 
   describe('updateSession', () => {
@@ -184,6 +237,150 @@ describe('SessionsService', () => {
       await service.registerForSession('event1', 's1', 'user1');
 
       expect(mockRegisterAtomic).toHaveBeenCalledWith('event1', 's1', 'user1');
+    });
+  });
+
+  describe('respondToPresenterInvite', () => {
+    it('throws NotFoundException when session does not exist', async () => {
+      mockFindById.mockResolvedValue(null);
+
+      await expect(
+        service.respondToPresenterInvite(
+          'event1',
+          'missing',
+          'presenter-uid',
+          'confirmed',
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws BadRequestException when session has no invited presenter', async () => {
+      mockFindById.mockResolvedValue({
+        id: 's1',
+        title: 'AI Talk',
+        createdBy: 'admin-uid',
+      });
+
+      await expect(
+        service.respondToPresenterInvite(
+          'event1',
+          's1',
+          'presenter-uid',
+          'confirmed',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws ForbiddenException when another user responds', async () => {
+      mockFindById.mockResolvedValue({
+        id: 's1',
+        title: 'AI Talk',
+        createdBy: 'admin-uid',
+        presenterUid: 'presenter-uid',
+        presenterStatus: 'pending',
+      });
+
+      await expect(
+        service.respondToPresenterInvite(
+          'event1',
+          's1',
+          'other-uid',
+          'confirmed',
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('throws ConflictException when invitation was already answered', async () => {
+      mockFindById.mockResolvedValue({
+        id: 's1',
+        title: 'AI Talk',
+        createdBy: 'admin-uid',
+        presenterUid: 'presenter-uid',
+        presenterStatus: 'confirmed',
+      });
+
+      await expect(
+        service.respondToPresenterInvite(
+          'event1',
+          's1',
+          'presenter-uid',
+          'declined',
+        ),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('confirms a presenter invitation and notifies the session creator', async () => {
+      mockFindById.mockResolvedValue({
+        id: 's1',
+        title: 'AI Talk',
+        createdBy: 'admin-uid',
+        presenterUid: 'presenter-uid',
+        presenterStatus: 'pending',
+      });
+      mockUpdateSession.mockResolvedValue(undefined);
+      mockFindByUid
+        .mockResolvedValueOnce({
+          uid: 'presenter-uid',
+          displayName: 'Presenter Person',
+        })
+        .mockResolvedValueOnce({
+          uid: 'admin-uid',
+          email: 'admin@example.com',
+          displayName: 'Admin Person',
+        });
+      mockCreateNotification.mockResolvedValue(undefined);
+
+      await service.respondToPresenterInvite(
+        'event1',
+        's1',
+        'presenter-uid',
+        'confirmed',
+      );
+
+      expect(mockUpdateSession).toHaveBeenCalledWith('event1', 's1', {
+        presenterStatus: 'confirmed',
+      });
+      expect(mockCreateNotification).toHaveBeenCalledWith({
+        uid: 'admin-uid',
+        email: 'admin@example.com',
+        displayName: 'Admin Person',
+        type: NotificationTypeEnum.SESSION_PRESENTER_CONFIRMED,
+        message:
+          'Presenter Person has confirmed their role for the session "AI Talk".',
+      });
+    });
+
+    it('declines a presenter invitation, cancels the session, and notifies the creator', async () => {
+      mockFindById.mockResolvedValue({
+        id: 's1',
+        title: 'AI Talk',
+        createdBy: 'admin-uid',
+        presenterUid: 'presenter-uid',
+        presenterStatus: 'pending',
+      });
+      mockUpdateSession.mockResolvedValue(undefined);
+      mockFindByUid.mockResolvedValue(undefined);
+      mockCreateNotification.mockResolvedValue(undefined);
+
+      await service.respondToPresenterInvite(
+        'event1',
+        's1',
+        'presenter-uid',
+        'declined',
+      );
+
+      expect(mockUpdateSession).toHaveBeenCalledWith('event1', 's1', {
+        presenterStatus: 'declined',
+        status: 'cancelled',
+      });
+      expect(mockCreateNotification).toHaveBeenCalledWith({
+        uid: 'admin-uid',
+        email: undefined,
+        displayName: undefined,
+        type: NotificationTypeEnum.SESSION_PRESENTER_DECLINED,
+        message:
+          'The presenter has declined their role for the session "AI Talk".',
+      });
     });
   });
 
