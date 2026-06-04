@@ -38,6 +38,15 @@ type UploadedFilePayload = {
   originalname: string;
 };
 
+const IMPORT_UPLOAD_LIMITS = {
+  fileSize: 1_048_576,
+  fieldSize: 16_384,
+  files: 1,
+  fields: 0,
+  parts: 1,
+  headerPairs: 20,
+};
+
 @ApiTags('export')
 @Controller('events')
 @UseGuards(FirebaseAuthGuard, RolesGuard)
@@ -78,7 +87,7 @@ export class EventsExportController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
-      limits: { fileSize: 1048576 },
+      limits: IMPORT_UPLOAD_LIMITS,
     }),
   )
   @HttpCode(HttpStatus.OK)
