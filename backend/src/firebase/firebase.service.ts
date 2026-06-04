@@ -16,7 +16,7 @@ export class FirebaseService implements OnApplicationBootstrap {
           clientEmail: this.configService.get<string>('FIREBASE_CLIENT_EMAIL'),
           privateKey: this.configService
             .get<string>('FIREBASE_PRIVATE_KEY')
-            ?.replaceAll(/\\n/g, '\n'),
+            ?.replaceAll('\\n', '\n'),
         }),
       });
     }

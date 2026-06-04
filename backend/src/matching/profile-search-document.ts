@@ -9,7 +9,7 @@ function list(values?: string[]) {
 
 export function buildProfileSearchText(profile: SearchableProfile) {
   const tagText = profile.tags?.length
-    ? profile.tags.map((s) => s.replaceAll(/-/g, ' ')).join(', ')
+    ? profile.tags.map((s) => s.replaceAll('-', ' ')).join(', ')
     : 'Ni navedeno';
   return [
     `Ime: ${profile.displayName}`,
