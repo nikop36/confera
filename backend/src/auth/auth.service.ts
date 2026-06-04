@@ -35,7 +35,7 @@ export class AuthService {
     // Check for existing guest record before touching Firebase Auth
     const existingGuest = await this.usersService.findByEmailOrNull(dto.email);
 
-    if (existingGuest && existingGuest.role === UserRoleEnum.GUEST) {
+    if (existingGuest?.role === UserRoleEnum.GUEST) {
       if (existingGuest.guestStatus !== 'confirmed') {
         throw new ConflictException(
           'An invitation has been sent to this email. Please confirm it before registering.',
@@ -76,10 +76,6 @@ export class AuthService {
         displayName: dto.displayName,
       });
     } catch (err) {
-      //console.log('Firebase error code:', (err as any).code);
-      //console.log('Firebase error message:', (err as any).message);
-      //console.log('Full error:', err);
-
       if (isFirebaseError(err) && err.code === 'auth/email-already-exists') {
         throw new ConflictException('Email already registered');
       }
@@ -90,7 +86,6 @@ export class AuthService {
       uid: userRecord.uid,
       email: dto.email,
       displayName: dto.displayName,
-      // TODO: resolve role from inviteToken once InvitesModule is built
       role: UserRoleEnum.PARTICIPANT,
       profileStatus: 'incomplete',
       createdAt: new Date(),

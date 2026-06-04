@@ -38,17 +38,17 @@ function parseArrayField(value: string, fieldName: string): string[] {
   return items;
 }
 
+function toStringValue(value: unknown, fieldName: string): string {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number') return String(value).trim();
+  throw new BadRequestException(`Field "${fieldName}" has to be text`);
+}
+
 // Takes a raw parsed row and returns only safe, validated fields
 export function sanitizeImportRow(
   raw: Record<string, unknown>,
 ): Partial<UserProfile> {
   const result: Partial<UserProfile> = {};
-
-  function toStringValue(value: unknown, fieldName: string): string {
-    if (typeof value === 'string') return value.trim();
-    if (typeof value === 'number') return String(value).trim();
-    throw new BadRequestException(`Polje "${fieldName}" mora biti besedilo`);
-  }
 
   for (const field of IMPORTABLE_FIELDS) {
     const value = raw[field];

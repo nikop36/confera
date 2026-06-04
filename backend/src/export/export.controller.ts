@@ -51,8 +51,8 @@ export class ExportController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async exportProfile(
     @CurrentUser() user: FirebaseUser,
-    @Query('format') format: string = 'csv',
     @Res() res: Response,
+    @Query('format') format: string = 'csv',
   ) {
     if (format !== 'csv' && format !== 'excel') {
       throw new BadRequestException('The format must be "csv" or "excel"');

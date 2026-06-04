@@ -4,8 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { SchedulingRepository } from './scheduling.repository';
-import { SchedulingConflictError } from './scheduling.repository';
+import {
+  SchedulingRepository,
+  SchedulingConflictError,
+} from './scheduling.repository';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { GenerateTimeSlotsDto } from './dto/generate-time-slots.dto';
 import { AssignMeetingDto } from './dto/assign-meeting.dto';
@@ -343,7 +345,7 @@ export class SchedulingService {
       this.schedulingRepository.findTimeSlotById(dto.slotId),
     ]);
 
-    if (!room || !room.active) {
+    if (!room?.active) {
       throw new NotFoundException('Room not found');
     }
     if (!slot) {
@@ -396,7 +398,7 @@ function atMidnight(date: Date): Date {
 }
 
 function addDays(date: Date, days: number): Date {
-  const copy = new Date(date.getTime());
+  const copy = new Date(date);
   copy.setDate(copy.getDate() + days);
   return copy;
 }

@@ -118,7 +118,7 @@ export class CareerInterviewsService {
         'Selected interviewer does not have interviewer role permissions',
       );
     }
-    if (!room || !room.active) throw new NotFoundException('Room not found');
+    if (!room?.active) throw new NotFoundException('Room not found');
     if (!slot) throw new NotFoundException('Time slot not found');
 
     const connected = await this.connectionsRepository.findAcceptedBetweenUsers(

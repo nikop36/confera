@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import { DatabaseService } from '../database/database.service';
 import { Event } from '../common/interfaces/event.interface';
 import { EmbeddingService } from '../matching/embedding.service';

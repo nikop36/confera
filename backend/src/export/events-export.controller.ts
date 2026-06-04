@@ -55,9 +55,9 @@ export class EventsExportController {
   @ApiResponse({ status: 404, description: 'Event not found' })
   async exportRegistrations(
     @Param('id') id: string,
-    @Query('format') format: string = 'csv',
     @CurrentUser() user: FirebaseUser,
     @Res() res: Response,
+    @Query('format') format: string = 'csv',
   ) {
     if (format !== 'csv' && format !== 'excel') {
       throw new BadRequestException('Format must be "csv" or "excel"');

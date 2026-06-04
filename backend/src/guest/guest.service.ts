@@ -11,7 +11,7 @@ import { AddGuestDto } from './dto/guest.dto';
 import { NotificationTypeEnum } from '../common/enums/notification-type.enum';
 import { GuestInvitationsRepository } from './guest.repository';
 import { UserRoleEnum } from '../common/enums/roles.enum';
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'node:crypto';
 
 @Injectable()
 export class GuestsService {

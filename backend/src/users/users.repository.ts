@@ -158,7 +158,7 @@ export class UsersRepository {
     const db = this.firebaseService.getFirestore();
 
     const existing = await this.findByEmail(email);
-    if (!existing || existing.role !== UserRoleEnum.GUEST) return;
+    if (existing?.role !== UserRoleEnum.GUEST) return;
 
     const batch = db.batch();
 

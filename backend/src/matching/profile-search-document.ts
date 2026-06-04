@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import { User, UserProfile } from '../common/interfaces/user.interface';
 
 export type SearchableProfile = User & UserProfile;
@@ -9,7 +9,7 @@ function list(values?: string[]) {
 
 export function buildProfileSearchText(profile: SearchableProfile) {
   const tagText = profile.tags?.length
-    ? profile.tags.map((s) => s.replace(/-/g, ' ')).join(', ')
+    ? profile.tags.map((s) => s.replaceAll(/-/g, ' ')).join(', ')
     : 'Ni navedeno';
   return [
     `Ime: ${profile.displayName}`,

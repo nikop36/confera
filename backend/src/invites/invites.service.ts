@@ -89,17 +89,23 @@ export class InvitesService {
             email: '',
           },
       interviewer: interview.interviewerUid
-        ? userMap.get(interview.interviewerUid)
-          ? {
-              uid: interview.interviewerUid,
-              displayName: userMap.get(interview.interviewerUid)?.displayName,
-              email: userMap.get(interview.interviewerUid)?.email,
+        ? (() => {
+            const user = userMap.get(interview.interviewerUid);
+
+            if (user) {
+              return {
+                uid: interview.interviewerUid,
+                displayName: user.displayName,
+                email: user.email,
+              };
             }
-          : {
+
+            return {
               uid: interview.interviewerUid,
               displayName: 'Unknown user',
               email: '',
-            }
+            };
+          })()
         : {
             uid: '',
             displayName: 'Not assigned',

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 
 const EMBEDDING_DIMENSIONS = 384;
 

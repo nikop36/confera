@@ -237,7 +237,7 @@ function rankEvents(
   });
 
   return scored
-    .sort((a, b) => {
+    .toSorted((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       return a.event.id.localeCompare(b.event.id);
     })

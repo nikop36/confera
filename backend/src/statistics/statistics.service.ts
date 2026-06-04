@@ -350,7 +350,7 @@ export class StatisticsService {
       };
     }
     const prevFrom = new Date(fromDate.getTime() - windowMs);
-    const prevTo = new Date(fromDate.getTime());
+    const prevTo = new Date(fromDate);
     const slots = await this.schedulingRepository.listTimeSlotsInRange(
       prevFrom,
       prevTo,
@@ -367,12 +367,15 @@ export class StatisticsService {
       (interview) => interview.slotId && slotMap.has(interview.slotId),
     );
     const previousTotal = prevMeetings.length + prevInterviews.length;
-    const deltaTotalPercent =
-      previousTotal === 0
-        ? currentTotal > 0
-          ? 100
-          : 0
-        : round2(((currentTotal - previousTotal) / previousTotal) * 100);
+    let deltaTotalPercent: number;
+
+    if (previousTotal === 0) {
+      deltaTotalPercent = currentTotal > 0 ? 100 : 0;
+    } else {
+      deltaTotalPercent = round2(
+        ((currentTotal - previousTotal) / previousTotal) * 100,
+      );
+    }
 
     return {
       confirmedTotalCount: previousTotal,

@@ -45,11 +45,7 @@ export class NotificationsService {
       shouldSendEmail(params.type) || params.sendEmail === true;
 
     if (willSendEmail) {
-      if (!params.email) {
-        this.logger.warn(
-          `Email skipped for type ${params.type} — no email address provided`,
-        );
-      } else {
+      if (params.email) {
         try {
           await this.emailService.sendNotificationEmail({
             to: params.email,
@@ -59,9 +55,15 @@ export class NotificationsService {
           });
         } catch (err) {
           this.logger.error(
-            `Email failed for uid ${params.uid} type ${params.type}: ${err instanceof Error ? err.message : String(err)}`,
+            `Email failed for uid ${params.uid} type ${params.type}: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
           );
         }
+      } else {
+        this.logger.warn(
+          `Email skipped for type ${params.type} — no email address provided`,
+        );
       }
     }
 
