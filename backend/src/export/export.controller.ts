@@ -20,7 +20,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { memoryStorage } from 'multer';
 import { ExportService } from './export.service';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -31,15 +30,6 @@ type UploadedFilePayload = {
   size: number;
   mimetype: string;
   originalname: string;
-};
-
-const IMPORT_UPLOAD_LIMITS = {
-  fileSize: 1_048_576,
-  fieldSize: 16_384,
-  files: 1,
-  fields: 0,
-  parts: 1,
-  headerPairs: 20,
 };
 
 @ApiTags('export')
@@ -80,8 +70,14 @@ export class ExportController {
   @Post('import/profile')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: memoryStorage(), // keep file in memory
-      limits: IMPORT_UPLOAD_LIMITS,
+      limits: {
+        fileSize: 1000000,
+        fieldSize: 16384,
+        files: 1,
+        fields: 0,
+        parts: 1,
+        headerPairs: 20,
+      },
     }),
   )
   @ApiOperation({ summary: 'Import profile from CSV or Excel file' })

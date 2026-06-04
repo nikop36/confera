@@ -3,6 +3,21 @@ import { ExportService } from '../export.service';
 import { UsersRepository } from '../../users/users.repository';
 import { BadRequestException } from '@nestjs/common';
 
+type UploadedFileFixture = Parameters<ExportService['importProfile']>[1];
+
+function createUploadedFileFixture(
+  buffer: Buffer,
+  mimetype = 'text/csv',
+  originalname = 'test.csv',
+): UploadedFileFixture {
+  return {
+    buffer,
+    mimetype,
+    originalname,
+    size: buffer.length,
+  };
+}
+
 describe('Profile Import — Integration', () => {
   let exportService: ExportService;
   const mockUpdateProfile = jest.fn() as jest.MockedFunction<
@@ -34,12 +49,7 @@ describe('Profile Import — Integration', () => {
         'bio,affiliation,interests,meetingType\n' + 'Researcher,FRI,AI|ML,both',
       );
 
-      const file = {
-        buffer: csv,
-        mimetype: 'text/csv',
-        originalname: 'test.csv',
-        size: csv.length,
-      } as Express.Multer.File;
+      const file = createUploadedFileFixture(csv);
 
       const result = await exportService.importProfile('uid-123', file);
 
@@ -67,12 +77,7 @@ describe('Profile Import — Integration', () => {
         'bio,role,uid,email\n' + 'Researcher,admin,fake-uid,hacker@evil.com',
       );
 
-      const file = {
-        buffer: csv,
-        mimetype: 'text/csv',
-        originalname: 'test.csv',
-        size: csv.length,
-      } as Express.Multer.File;
+      const file = createUploadedFileFixture(csv);
 
       await exportService.importProfile('uid-123', file);
 
@@ -86,12 +91,7 @@ describe('Profile Import — Integration', () => {
     it('should throw BadRequestException for invalid meetingType', async () => {
       const csv = Buffer.from('meetingType\nflying');
 
-      const file = {
-        buffer: csv,
-        mimetype: 'text/csv',
-        originalname: 'test.csv',
-        size: csv.length,
-      } as Express.Multer.File;
+      const file = createUploadedFileFixture(csv);
 
       await expect(
         exportService.importProfile('uid-123', file),
@@ -101,12 +101,7 @@ describe('Profile Import — Integration', () => {
     it('should throw BadRequestException when no valid fields present', async () => {
       const csv = Buffer.from('role,uid\nadmin,fake');
 
-      const file = {
-        buffer: csv,
-        mimetype: 'text/csv',
-        originalname: 'test.csv',
-        size: csv.length,
-      } as Express.Multer.File;
+      const file = createUploadedFileFixture(csv);
 
       await expect(
         exportService.importProfile('uid-123', file),
@@ -116,12 +111,7 @@ describe('Profile Import — Integration', () => {
     it('should throw BadRequestException for file over 1MB', async () => {
       const largeBuffer = Buffer.alloc(2 * 1024 * 1024, 'a');
 
-      const file = {
-        buffer: largeBuffer,
-        mimetype: 'text/csv',
-        originalname: 'test.csv',
-        size: largeBuffer.length,
-      } as Express.Multer.File;
+      const file = createUploadedFileFixture(largeBuffer);
 
       await expect(
         exportService.importProfile('uid-123', file),
@@ -129,12 +119,11 @@ describe('Profile Import — Integration', () => {
     });
 
     it('should throw BadRequestException for wrong file type', async () => {
-      const file = {
-        buffer: Buffer.from('some data'),
-        mimetype: 'application/pdf',
-        originalname: 'test.pdf',
-        size: 100,
-      } as Express.Multer.File;
+      const file = createUploadedFileFixture(
+        Buffer.from('some data'),
+        'application/pdf',
+        'test.pdf',
+      );
 
       await expect(
         exportService.importProfile('uid-123', file),

@@ -13,7 +13,6 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
 import type { Response } from 'express';
 import {
   ApiBearerAuth,
@@ -36,15 +35,6 @@ type UploadedFilePayload = {
   size: number;
   mimetype: string;
   originalname: string;
-};
-
-const IMPORT_UPLOAD_LIMITS = {
-  fileSize: 1_048_576,
-  fieldSize: 16_384,
-  files: 1,
-  fields: 0,
-  parts: 1,
-  headerPairs: 20,
 };
 
 @ApiTags('export')
@@ -86,8 +76,14 @@ export class EventsExportController {
   @Roles('admin', 'organizer')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: memoryStorage(),
-      limits: IMPORT_UPLOAD_LIMITS,
+      limits: {
+        fileSize: 1000000,
+        fieldSize: 16384,
+        files: 1,
+        fields: 0,
+        parts: 1,
+        headerPairs: 20,
+      },
     }),
   )
   @HttpCode(HttpStatus.OK)
