@@ -1,37 +1,46 @@
 import * as ExcelJS from 'exceljs';
 import { BadRequestException } from '@nestjs/common';
 
+function primitiveCellToString(value: unknown): string | null {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value).trim();
+  }
+  if (value instanceof Date) return value.toISOString();
+  return null;
+}
+
+function richTextCellToString(value: object): string | null {
+  if (!('richText' in value)) return null;
+  return (value.richText as Array<{ text: string }>)
+    .map((entry) => entry.text)
+    .join('')
+    .trim();
+}
+
+function formulaResultToString(value: object): string | null {
+  if (!('result' in value)) return null;
+  return primitiveCellToString(value.result) ?? '';
+}
+
+function cellToString(value: ExcelJS.CellValue): string {
+  const primitive = primitiveCellToString(value);
+  if (primitive !== null) return primitive;
+  if (typeof value !== 'object') return '';
+
+  const richText = richTextCellToString(value);
+  if (richText !== null) return richText;
+
+  const formulaResult = formulaResultToString(value);
+  if (formulaResult !== null) return formulaResult;
+
+  return '';
+}
+
 export async function parseExcel(
   buffer: Buffer,
 ): Promise<Record<string, unknown>[]> {
-  function cellToString(value: ExcelJS.CellValue): string {
-    if (value === null || value === undefined) return '';
-    if (typeof value === 'string') return value.trim();
-    if (typeof value === 'number' || typeof value === 'boolean') {
-      return String(value).trim();
-    }
-    if (value instanceof Date) return value.toISOString();
-    // ExcelJS rich text object
-    if (typeof value === 'object' && 'richText' in value) {
-      return (value.richText as Array<{ text: string }>)
-        .map((r) => r.text)
-        .join('')
-        .trim();
-    }
-    // Formula result
-    if (typeof value === 'object' && 'result' in value) {
-      const result = value.result;
-      if (result === null || result === undefined) return '';
-      if (typeof result === 'string') return result.trim();
-      if (typeof result === 'number' || typeof result === 'boolean') {
-        return String(result).trim();
-      }
-      if (result instanceof Date) return result.toISOString();
-      return '';
-    }
-    return '';
-  }
-
   try {
     const workbook = new ExcelJS.Workbook();
     const arrayBuffer = buffer.buffer.slice(

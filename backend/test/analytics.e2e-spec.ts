@@ -74,10 +74,16 @@ describe('AnalyticsController (e2e-like routes)', () => {
       summary: { usersTotal: 3 },
     });
 
-    await request(app.getHttpServer())
+    const response = await request(app.getHttpServer())
       .get('/analytics/overview')
       .set('Authorization', 'Bearer test-token')
       .expect(200);
+
+    expect(response.body).toEqual({ summary: { usersTotal: 3 } });
+    expect(analyticsServiceMock.getOverview).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+    );
   });
 
   it('GET /analytics/report?format=csv', async () => {
@@ -103,9 +109,12 @@ describe('AnalyticsController (e2e-like routes)', () => {
       role: 'organizer',
     });
 
-    await request(app.getHttpServer())
+    const response = await request(app.getHttpServer())
       .get('/analytics/overview')
       .set('Authorization', 'Bearer test-token')
       .expect(403);
+
+    expect(response.status).toBe(403);
+    expect(analyticsServiceMock.getOverview).not.toHaveBeenCalled();
   });
 });

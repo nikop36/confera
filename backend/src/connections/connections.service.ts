@@ -17,6 +17,25 @@ import {
   GraphEdgeDto,
 } from './dto/graph-response.dto';
 
+type GraphUserProfile = NonNullable<
+  Awaited<ReturnType<UsersRepository['findByUid']>>
+>;
+
+type MatchesResult = PromiseSettledResult<
+  Awaited<ReturnType<MatchingIndexService['findMatches']>>
+>;
+
+type MeetingsResult = PromiseSettledResult<
+  Awaited<ReturnType<SchedulingRepository['listMeetingsByParticipant']>>
+>;
+
+type PeerConnection = {
+  uid: string;
+  connectedUids: string[];
+};
+
+type PeerConnectionsResult = PromiseSettledResult<PeerConnection[]>;
+
 @Injectable()
 export class ConnectionsService {
   constructor(
@@ -226,156 +245,251 @@ export class ConnectionsService {
         ),
       ]);
 
-    const peers =
-      peersResult.status === 'fulfilled'
-        ? peersResult.value.filter((p): p is NonNullable<typeof p> =>
-            Boolean(p),
-          )
-        : [];
+    const peers = this.getFulfilledProfiles(peersResult);
+    const peerConnectionGraph = this.buildPeerConnectionGraph(
+      user.uid,
+      peerUids,
+      peerConnectionsResult,
+    );
+    const fofNodes = await this.buildFofNodes(peerConnectionGraph.fofUids);
 
-    const selfNode: GraphNodeDto = {
+    return {
+      nodes: [
+        this.toGraphNode(profile, 'self', false),
+        ...peers.map((peer) => this.toGraphNode(peer, 'connection', true)),
+        ...fofNodes,
+      ],
+      edges: [
+        ...this.buildConnectionEdges(user.uid, peerUids),
+        ...this.buildMatchEdges(user.uid, peerUids, matchesResult),
+        ...this.buildInteractionEdges(user.uid, peerUids, meetingsResult),
+        ...peerConnectionGraph.edges,
+        ...this.buildFofEdges(fofNodes, peerConnectionsResult),
+      ],
+    };
+  }
+
+  private getFulfilledProfiles(
+    result: PromiseSettledResult<
+      Array<Awaited<ReturnType<UsersRepository['findByUid']>>>
+    >,
+  ): GraphUserProfile[] {
+    if (result.status !== 'fulfilled') return [];
+    return result.value.filter((profile): profile is GraphUserProfile =>
+      Boolean(profile),
+    );
+  }
+
+  private toGraphNode(
+    profile: GraphUserProfile,
+    type: GraphNodeDto['type'],
+    isConnected: boolean,
+  ): GraphNodeDto {
+    return {
       id: profile.uid,
-      type: 'self',
+      type,
       displayName: profile.displayName,
       role: profile.role,
       affiliation: profile.affiliation,
-      isConnected: false,
+      isConnected,
       tags: profile.tags ?? [],
     };
+  }
 
-    const peerNodes: GraphNodeDto[] = peers.map((p) => ({
-      id: p.uid,
-      type: 'connection',
-      displayName: p.displayName,
-      role: p.role,
-      affiliation: p.affiliation,
-      isConnected: true,
-      tags: p.tags ?? [],
+  private buildConnectionEdges(
+    userUid: string,
+    peerUids: string[],
+  ): GraphEdgeDto[] {
+    return peerUids.map((uid) => ({
+      id: `conn-${userUid}-${uid}`,
+      source: userUid,
+      target: uid,
+      edgeType: 'connection',
     }));
+  }
 
+  private buildMatchEdges(
+    userUid: string,
+    peerUids: string[],
+    result: MatchesResult,
+  ): GraphEdgeDto[] {
+    if (result.status !== 'fulfilled') return [];
+
+    const peerSet = new Set(peerUids);
+    return result.value
+      .filter((match) => peerSet.has(match.uid))
+      .map((match) => ({
+        id: `match-${userUid}-${match.uid}`,
+        source: userUid,
+        target: match.uid,
+        edgeType: 'match' as const,
+        weight: match.score,
+        reasons: match.reasons,
+      }));
+  }
+
+  private buildInteractionEdges(
+    userUid: string,
+    peerUids: string[],
+    result: MeetingsResult,
+  ): GraphEdgeDto[] {
+    if (result.status !== 'fulfilled') return [];
+
+    const peerSet = new Set(peerUids);
+    const countMap = new Map<string, number>();
+    for (const meeting of result.value) {
+      this.countMeetingInteractions(
+        meeting.participantUids,
+        userUid,
+        peerSet,
+        countMap,
+      );
+    }
+    return [...countMap].map(([uid, count]) => ({
+      id: `interaction-${userUid}-${uid}`,
+      source: userUid,
+      target: uid,
+      edgeType: 'interaction',
+      count,
+    }));
+  }
+
+  private countMeetingInteractions(
+    participantUids: string[],
+    userUid: string,
+    peerSet: Set<string>,
+    countMap: Map<string, number>,
+  ) {
+    for (const uid of participantUids) {
+      if (uid !== userUid && peerSet.has(uid)) {
+        countMap.set(uid, (countMap.get(uid) ?? 0) + 1);
+      }
+    }
+  }
+
+  private buildPeerConnectionGraph(
+    userUid: string,
+    peerUids: string[],
+    result: PeerConnectionsResult,
+  ): { edges: GraphEdgeDto[]; fofUids: Set<string> } {
     const edges: GraphEdgeDto[] = [];
-
-    // Connection edges — one per accepted peer
-    for (const uid of peerUids) {
-      edges.push({
-        id: `conn-${user.uid}-${uid}`,
-        source: user.uid,
-        target: uid,
-        edgeType: 'connection',
-      });
-    }
-
-    // Match edges — only for peers that appear in AI results
-    if (matchesResult.status === 'fulfilled') {
-      const peerSet = new Set(peerUids);
-      for (const match of matchesResult.value) {
-        if (!peerSet.has(match.uid)) continue;
-        edges.push({
-          id: `match-${user.uid}-${match.uid}`,
-          source: user.uid,
-          target: match.uid,
-          edgeType: 'match',
-          weight: match.score,
-          reasons: match.reasons,
-        });
-      }
-    }
-
-    // Interaction edges — count shared meetings per peer
-    if (meetingsResult.status === 'fulfilled') {
-      const peerSet = new Set(peerUids);
-      const countMap = new Map<string, number>();
-      for (const meeting of meetingsResult.value) {
-        for (const uid of meeting.participantUids) {
-          if (uid !== user.uid && peerSet.has(uid)) {
-            countMap.set(uid, (countMap.get(uid) ?? 0) + 1);
-          }
-        }
-      }
-      for (const [uid, count] of countMap) {
-        edges.push({
-          id: `interaction-${user.uid}-${uid}`,
-          source: user.uid,
-          target: uid,
-          edgeType: 'interaction',
-          count,
-        });
-      }
-    }
-
-    // Peer-to-peer edges + collect FOF UIDs (connected to peers but not to self)
     const fofUids = new Set<string>();
-    if (peerConnectionsResult.status === 'fulfilled') {
-      const peerSet = new Set(peerUids);
-      const seen = new Set<string>();
-      for (const { uid: uidA, connectedUids } of peerConnectionsResult.value) {
-        for (const uidB of connectedUids) {
-          if (uidB === user.uid) continue;
-          if (!peerSet.has(uidB)) {
-            fofUids.add(uidB); // reachable through a peer, not directly connected
-            continue;
-          }
-          const key = [uidA, uidB].sort((a, b) => a.localeCompare(b)).join('|');
-          if (seen.has(key)) continue;
-          seen.add(key);
-          edges.push({
-            id: `peer-conn-${key}`,
-            source: uidA,
-            target: uidB,
-            edgeType: 'connection',
-          });
-        }
-      }
-    }
+    if (result.status !== 'fulfilled') return { edges, fofUids };
 
-    // Fetch FOF profiles and build FOF nodes + peer→fof edges
+    const peerSet = new Set(peerUids);
+    const seen = new Set<string>();
+    for (const peerConnection of result.value) {
+      this.appendPeerConnectionEdges(
+        peerConnection,
+        userUid,
+        peerSet,
+        seen,
+        edges,
+        fofUids,
+      );
+    }
+    return { edges, fofUids };
+  }
+
+  private appendPeerConnectionEdges(
+    peerConnection: PeerConnection,
+    userUid: string,
+    peerSet: Set<string>,
+    seen: Set<string>,
+    edges: GraphEdgeDto[],
+    fofUids: Set<string>,
+  ) {
+    for (const connectedUid of peerConnection.connectedUids) {
+      if (connectedUid === userUid) continue;
+      if (!peerSet.has(connectedUid)) {
+        fofUids.add(connectedUid);
+        continue;
+      }
+      this.appendUniqueConnectionEdge(
+        peerConnection.uid,
+        connectedUid,
+        'peer-conn',
+        seen,
+        edges,
+      );
+    }
+  }
+
+  private async buildFofNodes(fofUids: Set<string>): Promise<GraphNodeDto[]> {
     const fofProfiles = await Promise.allSettled(
       [...fofUids].map((uid) => this.usersRepository.findByUid(uid)),
     );
-    const fofNodes: GraphNodeDto[] = fofProfiles
+    return this.getFulfilledProfileResults(fofProfiles).map((profile) =>
+      this.toGraphNode(profile, 'fof', false),
+    );
+  }
+
+  private getFulfilledProfileResults(
+    results: Array<
+      PromiseSettledResult<Awaited<ReturnType<UsersRepository['findByUid']>>>
+    >,
+  ): GraphUserProfile[] {
+    return results
       .filter(
-        (
-          r,
-        ): r is PromiseFulfilledResult<
-          NonNullable<
-            Awaited<ReturnType<typeof this.usersRepository.findByUid>>
-          >
-        > => r.status === 'fulfilled' && Boolean(r.value),
+        (result): result is PromiseFulfilledResult<GraphUserProfile> =>
+          result.status === 'fulfilled' && Boolean(result.value),
       )
-      .map((r) => ({
-        id: r.value.uid,
-        type: 'fof' as const,
-        displayName: r.value.displayName,
-        role: r.value.role,
-        affiliation: r.value.affiliation,
-        isConnected: false,
-        tags: r.value.tags ?? [],
-      }));
+      .map((result) => result.value);
+  }
 
-    const fofNodeIds = new Set(fofNodes.map((n) => n.id));
-    if (peerConnectionsResult.status === 'fulfilled') {
-      const seen = new Set<string>();
-      for (const {
-        uid: peerUid,
-        connectedUids,
-      } of peerConnectionsResult.value) {
-        for (const fofUid of connectedUids) {
-          if (!fofNodeIds.has(fofUid)) continue;
-          const key = [peerUid, fofUid]
-            .sort((a, b) => a.localeCompare(b))
-            .join('|');
-          if (seen.has(key)) continue;
-          seen.add(key);
-          edges.push({
-            id: `fof-conn-${key}`,
-            source: peerUid,
-            target: fofUid,
-            edgeType: 'connection',
-          });
-        }
-      }
+  private buildFofEdges(
+    fofNodes: GraphNodeDto[],
+    result: PeerConnectionsResult,
+  ): GraphEdgeDto[] {
+    if (result.status !== 'fulfilled') return [];
+
+    const fofNodeIds = new Set(fofNodes.map((node) => node.id));
+    const seen = new Set<string>();
+    const edges: GraphEdgeDto[] = [];
+    for (const peerConnection of result.value) {
+      this.appendFofEdges(peerConnection, fofNodeIds, seen, edges);
     }
+    return edges;
+  }
 
-    return { nodes: [selfNode, ...peerNodes, ...fofNodes], edges };
+  private appendFofEdges(
+    peerConnection: PeerConnection,
+    fofNodeIds: Set<string>,
+    seen: Set<string>,
+    edges: GraphEdgeDto[],
+  ) {
+    for (const fofUid of peerConnection.connectedUids) {
+      if (!fofNodeIds.has(fofUid)) continue;
+      this.appendUniqueConnectionEdge(
+        peerConnection.uid,
+        fofUid,
+        'fof-conn',
+        seen,
+        edges,
+      );
+    }
+  }
+
+  private appendUniqueConnectionEdge(
+    source: string,
+    target: string,
+    prefix: string,
+    seen: Set<string>,
+    edges: GraphEdgeDto[],
+  ) {
+    const key = this.pairKey(source, target);
+    if (seen.has(key)) return;
+
+    seen.add(key);
+    edges.push({
+      id: `${prefix}-${key}`,
+      source,
+      target,
+      edgeType: 'connection',
+    });
+  }
+
+  private pairKey(left: string, right: string): string {
+    return [left, right].sort((a, b) => a.localeCompare(b)).join('|');
   }
 }

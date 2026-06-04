@@ -31,6 +31,24 @@ type RegistrationRow = {
   email: string;
 };
 
+type ImportedRegistrationRow = {
+  email: string;
+};
+
+type ImportCounters = {
+  registeredCount: number;
+  invitedCount: number;
+  skippedCount: number;
+};
+
+type EventRecord = NonNullable<
+  Awaited<ReturnType<EventsRepository['findById']>>
+>;
+
+type UserRecord = NonNullable<
+  Awaited<ReturnType<UsersRepository['findByUid']>>
+>;
+
 @Injectable()
 export class EventsExportService {
   constructor(
@@ -102,120 +120,176 @@ export class EventsExportService {
 
     if (!event) throw new NotFoundException('Event not found');
 
-    let registeredCount = 0;
-    let invitedCount = 0;
-    let skippedCount = 0;
+    const counters: ImportCounters = {
+      registeredCount: 0,
+      invitedCount: 0,
+      skippedCount: 0,
+    };
 
     for (const raw of rows) {
-      const email =
-        typeof raw['email'] === 'string' ? raw['email'].trim() : null;
-      const displayName =
-        typeof raw['displayName'] === 'string'
-          ? raw['displayName'].trim()
-          : null;
-
-      if (!email || !displayName) {
-        skippedCount++;
+      const importRow = toImportedRegistrationRow(raw);
+      if (!importRow) {
+        counters.skippedCount++;
         continue;
       }
 
-      const user = await this.usersRepository.findByEmail(email);
-      if (!user) {
-        skippedCount++;
-        continue;
-      }
-
-      if (user.role === UserRoleEnum.GUEST && user.guestStatus === 'pending') {
-        skippedCount++;
-        continue;
-      }
-
-      if (
-        user.role === UserRoleEnum.GUEST &&
-        user.guestStatus === 'confirmed'
-      ) {
-        // Confirmed guest — create a new invitation and send invite email
-        const existingInvitation =
-          await this.guestInvitationsRepository.findByGuestAndEvent(
-            user.uid,
-            eventId,
-          );
-
-        if (!existingInvitation) {
-          const token = randomBytes(32).toString('hex');
-          await this.guestInvitationsRepository.create({
-            guestUid: user.uid,
-            eventId,
-            invitedBy: callerUid,
-            status: 'pending',
-            confirmationToken: token,
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            createdAt: new Date(),
-          });
-
-          await this.notificationsService.createNotification({
-            uid: user.uid,
-            type: NotificationTypeEnum.GUEST_EVENT_INVITE,
-            message: `${organizer?.displayName ?? 'An organizer'} has invited you to "${event.title}".`,
-            email: user.email,
-            displayName: user.displayName,
-            eventId,
-            confirmationToken: token,
-          });
-
-          invitedCount++;
-        } else {
-          skippedCount++;
-        }
-        continue;
-      }
-
-      const isConnected = await this.connectionsRepository.areConnected(
+      const shouldStop = await this.importRegistrationRow(
+        importRow,
+        event,
+        organizer,
+        eventId,
         callerUid,
-        user.uid,
+        rows.length,
+        counters,
       );
-
-      if (isConnected) {
-        try {
-          await this.eventsRepository.registerAtomic(eventId, user.uid);
-          registeredCount++;
-        } catch (err) {
-          if (err instanceof EventFullError) {
-            skippedCount +=
-              rows.length - registeredCount - invitedCount - skippedCount;
-            break;
-          }
-          throw err;
-        }
-
-        await this.notificationsService.createNotification({
-          uid: user.uid,
-          type: NotificationTypeEnum.EVENT_AUTO_REGISTERED,
-          message: `${organizer?.displayName ?? 'An organizer'} has registered you for "${event.title}". You can cancel if this was a mistake.`,
-          email: user.email,
-          displayName: user.displayName,
-          eventId,
-        });
-      } else {
-        invitedCount++;
-
-        await this.notificationsService.createNotification({
-          uid: user.uid,
-          type: NotificationTypeEnum.EVENT_INVITE,
-          message: `${organizer?.displayName ?? 'An organizer'} has invited you to "${event.title}".`,
-          email: user.email,
-          displayName: user.displayName,
-          eventId,
-        });
-      }
+      if (shouldStop) break;
     }
 
     return {
       message: 'Import completed',
-      registeredCount,
-      invitedCount,
-      skippedCount,
+      registeredCount: counters.registeredCount,
+      invitedCount: counters.invitedCount,
+      skippedCount: counters.skippedCount,
     };
+  }
+
+  private async importRegistrationRow(
+    row: ImportedRegistrationRow,
+    event: EventRecord,
+    organizer: UserRecord | null,
+    eventId: string,
+    callerUid: string,
+    totalRows: number,
+    counters: ImportCounters,
+  ): Promise<boolean> {
+    const user = await this.usersRepository.findByEmail(row.email);
+    if (!user || isPendingGuest(user)) {
+      counters.skippedCount++;
+      return false;
+    }
+
+    if (isConfirmedGuest(user)) {
+      await this.importConfirmedGuest(
+        user,
+        event,
+        organizer,
+        eventId,
+        callerUid,
+        counters,
+      );
+      return false;
+    }
+
+    const isConnected = await this.connectionsRepository.areConnected(
+      callerUid,
+      user.uid,
+    );
+    if (!isConnected) {
+      await this.inviteUser(user, event, organizer, eventId, counters);
+      return false;
+    }
+
+    return this.registerConnectedUser(
+      user,
+      event,
+      organizer,
+      eventId,
+      totalRows,
+      counters,
+    );
+  }
+
+  private async importConfirmedGuest(
+    user: UserRecord,
+    event: EventRecord,
+    organizer: UserRecord | null,
+    eventId: string,
+    callerUid: string,
+    counters: ImportCounters,
+  ) {
+    const existingInvitation =
+      await this.guestInvitationsRepository.findByGuestAndEvent(
+        user.uid,
+        eventId,
+      );
+    if (existingInvitation) {
+      counters.skippedCount++;
+      return;
+    }
+
+    const token = randomBytes(32).toString('hex');
+    await this.guestInvitationsRepository.create({
+      guestUid: user.uid,
+      eventId,
+      invitedBy: callerUid,
+      status: 'pending',
+      confirmationToken: token,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      createdAt: new Date(),
+    });
+
+    await this.notificationsService.createNotification({
+      uid: user.uid,
+      type: NotificationTypeEnum.GUEST_EVENT_INVITE,
+      message: `${organizer?.displayName ?? 'An organizer'} has invited you to "${event.title}".`,
+      email: user.email,
+      displayName: user.displayName,
+      eventId,
+      confirmationToken: token,
+    });
+    counters.invitedCount++;
+  }
+
+  private async inviteUser(
+    user: UserRecord,
+    event: EventRecord,
+    organizer: UserRecord | null,
+    eventId: string,
+    counters: ImportCounters,
+  ) {
+    counters.invitedCount++;
+    await this.notificationsService.createNotification({
+      uid: user.uid,
+      type: NotificationTypeEnum.EVENT_INVITE,
+      message: `${organizer?.displayName ?? 'An organizer'} has invited you to "${event.title}".`,
+      email: user.email,
+      displayName: user.displayName,
+      eventId,
+    });
+  }
+
+  private async registerConnectedUser(
+    user: UserRecord,
+    event: EventRecord,
+    organizer: UserRecord | null,
+    eventId: string,
+    totalRows: number,
+    counters: ImportCounters,
+  ): Promise<boolean> {
+    try {
+      await this.eventsRepository.registerAtomic(eventId, user.uid);
+      counters.registeredCount++;
+    } catch (err) {
+      if (err instanceof EventFullError) {
+        counters.skippedCount +=
+          totalRows -
+          counters.registeredCount -
+          counters.invitedCount -
+          counters.skippedCount;
+        return true;
+      }
+      throw err;
+    }
+
+    await this.notificationsService.createNotification({
+      uid: user.uid,
+      type: NotificationTypeEnum.EVENT_AUTO_REGISTERED,
+      message: `${organizer?.displayName ?? 'An organizer'} has registered you for "${event.title}". You can cancel if this was a mistake.`,
+      email: user.email,
+      displayName: user.displayName,
+      eventId,
+    });
+    return false;
   }
 
   private async assertCallerCanManageEvent(
@@ -262,4 +336,23 @@ export class EventsExportService {
     }
     return parseExcel(file.buffer);
   }
+}
+
+function toImportedRegistrationRow(
+  raw: Record<string, unknown>,
+): ImportedRegistrationRow | null {
+  const email = typeof raw['email'] === 'string' ? raw['email'].trim() : null;
+  const displayName =
+    typeof raw['displayName'] === 'string' ? raw['displayName'].trim() : null;
+
+  if (!email || !displayName) return null;
+  return { email };
+}
+
+function isPendingGuest(user: UserRecord): boolean {
+  return user.role === UserRoleEnum.GUEST && user.guestStatus === 'pending';
+}
+
+function isConfirmedGuest(user: UserRecord): boolean {
+  return user.role === UserRoleEnum.GUEST && user.guestStatus === 'confirmed';
 }

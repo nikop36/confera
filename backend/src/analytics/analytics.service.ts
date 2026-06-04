@@ -510,359 +510,23 @@ export class AnalyticsService {
     const rows: string[][] = [['section', 'group', 'metric', 'date', 'value']];
 
     if (section === 'overview') {
-      rows.push([
-        'overview',
-        'summary',
-        'users_total',
-        '',
-        String(overview.summary.usersTotal),
-      ]);
-      rows.push([
-        'overview',
-        'summary',
-        'users_created_in_range',
-        '',
-        String(overview.summary.usersCreatedInRange),
-      ]);
-      rows.push([
-        'overview',
-        'summary',
-        'profiles_completed_in_range',
-        '',
-        String(overview.summary.profilesCompletedInRange),
-      ]);
-      rows.push([
-        'overview',
-        'summary',
-        'profile_completion_rate_percent',
-        '',
-        String(overview.summary.profileCompletionRatePercent),
-      ]);
-      rows.push([
-        'overview',
-        'summary',
-        'confirmed_meetings',
-        '',
-        String(overview.summary.confirmedMeetings),
-      ]);
-      rows.push([
-        'overview',
-        'summary',
-        'confirmed_career_interviews',
-        '',
-        String(overview.summary.confirmedCareerInterviews),
-      ]);
-      rows.push([
-        'overview',
-        'summary',
-        'accepted_connections_total',
-        '',
-        String(overview.summary.acceptedConnectionsTotal),
-      ]);
+      appendOverviewCsvRows(rows, overview);
     }
 
     if (section === 'all' || section === 'operations') {
-      rows.push([
-        'operations',
-        'confirmed_summary',
-        'confirmed_total_count',
-        '',
-        String(operationsConfirmed.summary.confirmedTotalCount),
-      ]);
-      rows.push([
-        'operations',
-        'confirmed_summary',
-        'confirmed_meetings_count',
-        '',
-        String(operationsConfirmed.summary.confirmedMeetingsCount),
-      ]);
-      rows.push([
-        'operations',
-        'confirmed_summary',
-        'confirmed_career_interviews_count',
-        '',
-        String(operationsConfirmed.summary.confirmedCareerInterviewsCount),
-      ]);
-      rows.push([
-        'operations',
-        'confirmed_summary',
-        'pending_interview_invites_count',
-        '',
-        String(operationsConfirmed.summary.pendingInterviewInvitesCount),
-      ]);
-      rows.push([
-        'operations',
-        'confirmed_summary',
-        'accepted_interview_invites_count',
-        '',
-        String(operationsConfirmed.summary.acceptedInterviewInvitesCount),
-      ]);
-      rows.push([
-        'operations',
-        'confirmed_summary',
-        'rejected_interview_invites_count',
-        '',
-        String(operationsConfirmed.summary.rejectedInterviewInvitesCount),
-      ]);
-      rows.push([
-        'operations',
-        'confirmed_summary',
-        'invite_acceptance_rate_percent',
-        '',
-        String(operationsConfirmed.summary.inviteAcceptanceRatePercent),
-      ]);
-      rows.push([
-        'operations',
-        'room_summary',
-        'rooms_count',
-        '',
-        String(operationsRooms.summary.roomsCount),
-      ]);
-      rows.push([
-        'operations',
-        'room_summary',
-        'active_rooms_count',
-        '',
-        String(operationsRooms.summary.activeRoomsCount),
-      ]);
-      rows.push([
-        'operations',
-        'room_summary',
-        'total_slots',
-        '',
-        String(operationsRooms.summary.totalSlots),
-      ]);
-      rows.push([
-        'operations',
-        'room_summary',
-        'average_occupancy_percent',
-        '',
-        String(operationsRooms.summary.averageOccupancyPercent),
-      ]);
-      rows.push([
-        'operations',
-        'room_summary',
-        'average_capacity_utilization_percent',
-        '',
-        String(operationsRooms.summary.averageCapacityUtilizationPercent),
-      ]);
-      for (const point of operationsConfirmed.series) {
-        rows.push([
-          'operations',
-          'daily_confirmed',
-          'meetings',
-          point.date,
-          String(point.meetings),
-        ]);
-        rows.push([
-          'operations',
-          'daily_confirmed',
-          'interviews',
-          point.date,
-          String(point.interviews),
-        ]);
-        rows.push([
-          'operations',
-          'daily_confirmed',
-          'total',
-          point.date,
-          String(point.total),
-        ]);
-      }
-      for (const room of operationsRooms.rooms) {
-        rows.push([
-          'operations',
-          'rooms',
-          `${room.roomName}_occupancy_percent`,
-          '',
-          String(room.occupancyRatePercent),
-        ]);
-        rows.push([
-          'operations',
-          'rooms',
-          `${room.roomName}_capacity_utilization_percent`,
-          '',
-          String(room.capacityUtilizationPercent),
-        ]);
-      }
+      appendOperationsCsvRows(rows, operationsConfirmed, operationsRooms);
     }
 
     if (section === 'all' || section === 'matching') {
-      rows.push([
-        'matching',
-        'summary',
-        'accepted_connections_in_range',
-        '',
-        String(matching.summary.acceptedConnectionsInRange),
-      ]);
-      rows.push([
-        'matching',
-        'summary',
-        'meeting_conversions',
-        '',
-        String(matching.summary.meetingConversions),
-      ]);
-      rows.push([
-        'matching',
-        'summary',
-        'interview_conversions',
-        '',
-        String(matching.summary.interviewConversions),
-      ]);
-      rows.push([
-        'matching',
-        'summary',
-        'total_conversions',
-        '',
-        String(matching.summary.totalConversions),
-      ]);
-      rows.push([
-        'matching',
-        'summary',
-        'connection_to_conversion_rate_percent',
-        '',
-        String(matching.summary.connectionToConversionRatePercent),
-      ]);
+      appendMatchingCsvRows(rows, matching);
     }
 
     if (section === 'all' || section === 'engagement') {
-      rows.push([
-        'engagement',
-        'summary',
-        'notifications_in_range',
-        '',
-        String(engagement.summary.notificationsInRange),
-      ]);
-      rows.push([
-        'engagement',
-        'summary',
-        'unread_notifications_in_range',
-        '',
-        String(engagement.summary.unreadNotificationsInRange),
-      ]);
-      rows.push([
-        'engagement',
-        'summary',
-        'read_rate_percent',
-        '',
-        String(engagement.summary.readRatePercent),
-      ]);
-      rows.push([
-        'engagement',
-        'summary',
-        'event_registrations_in_range',
-        '',
-        String(engagement.summary.eventRegistrationsInRange),
-      ]);
-      rows.push([
-        'engagement',
-        'summary',
-        'event_cancellations_in_range',
-        '',
-        String(engagement.summary.eventCancellationsInRange),
-      ]);
-      rows.push([
-        'engagement',
-        'summary',
-        'event_capacity_utilization_percent',
-        '',
-        String(engagement.summary.eventCapacityUtilizationPercent),
-      ]);
-      for (const event of engagement.topEvents) {
-        rows.push([
-          'engagement',
-          'top_events',
-          event.title,
-          '',
-          String(event.registeredCount),
-        ]);
-      }
+      appendEngagementCsvRows(rows, engagement);
     }
 
     if (section === 'all' || section === 'usage') {
-      rows.push([
-        'usage',
-        'summary',
-        'users_total',
-        '',
-        String(usage.summary.usersTotal),
-      ]);
-      rows.push([
-        'usage',
-        'summary',
-        'completed_profiles_total',
-        '',
-        String(usage.summary.completedProfilesTotal),
-      ]);
-      rows.push([
-        'usage',
-        'summary',
-        'profile_completion_rate_percent',
-        '',
-        String(usage.summary.profileCompletionRatePercent),
-      ]);
-      rows.push([
-        'usage',
-        'summary',
-        'inactive_7_days',
-        '',
-        String(usage.summary.inactive7Days),
-      ]);
-      rows.push([
-        'usage',
-        'summary',
-        'inactive_30_days',
-        '',
-        String(usage.summary.inactive30Days),
-      ]);
-      rows.push([
-        'usage',
-        'summary',
-        'series_points',
-        '',
-        String(usage.series.length),
-      ]);
-      for (const point of usage.series) {
-        rows.push([
-          'usage',
-          'daily',
-          'users_created',
-          point.date,
-          String(point.usersCreated),
-        ]);
-        rows.push([
-          'usage',
-          'daily',
-          'profiles_completed',
-          point.date,
-          String(point.profilesCompleted),
-        ]);
-        rows.push([
-          'usage',
-          'daily',
-          'active_users',
-          point.date,
-          String(point.activeUsers),
-        ]);
-      }
-      for (const role of usage.roleBreakdown) {
-        rows.push([
-          'usage',
-          'role_breakdown',
-          role.role,
-          '',
-          String(role.count),
-        ]);
-      }
-      for (const role of usage.inactiveByRole) {
-        rows.push([
-          'usage',
-          'inactive_by_role',
-          role.role,
-          '',
-          String(role.count),
-        ]);
-      }
+      appendUsageCsvRows(rows, usage);
     }
 
     return `${rows.map(toCsvRow).join('\n')}\n`;
@@ -883,6 +547,401 @@ export class AnalyticsService {
       value,
       expiresAt: Date.now() + this.cacheTtlMs,
     });
+  }
+}
+
+type OperationsConfirmedPayload = Awaited<
+  ReturnType<StatisticsService['getConfirmedMeetingsStats']>
+>;
+
+type OperationsRoomsPayload = Awaited<
+  ReturnType<StatisticsService['getRoomOccupancyStats']>
+>;
+
+function appendMetricRow(
+  rows: string[][],
+  section: string,
+  group: string,
+  metric: string,
+  value: string | number,
+  date = '',
+) {
+  rows.push([section, group, metric, date, String(value)]);
+}
+
+function appendOverviewCsvRows(rows: string[][], overview: OverviewPayload) {
+  appendMetricRow(
+    rows,
+    'overview',
+    'summary',
+    'users_total',
+    overview.summary.usersTotal,
+  );
+  appendMetricRow(
+    rows,
+    'overview',
+    'summary',
+    'users_created_in_range',
+    overview.summary.usersCreatedInRange,
+  );
+  appendMetricRow(
+    rows,
+    'overview',
+    'summary',
+    'profiles_completed_in_range',
+    overview.summary.profilesCompletedInRange,
+  );
+  appendMetricRow(
+    rows,
+    'overview',
+    'summary',
+    'profile_completion_rate_percent',
+    overview.summary.profileCompletionRatePercent,
+  );
+  appendMetricRow(
+    rows,
+    'overview',
+    'summary',
+    'confirmed_meetings',
+    overview.summary.confirmedMeetings,
+  );
+  appendMetricRow(
+    rows,
+    'overview',
+    'summary',
+    'confirmed_career_interviews',
+    overview.summary.confirmedCareerInterviews,
+  );
+  appendMetricRow(
+    rows,
+    'overview',
+    'summary',
+    'accepted_connections_total',
+    overview.summary.acceptedConnectionsTotal,
+  );
+}
+
+function appendOperationsCsvRows(
+  rows: string[][],
+  confirmed: OperationsConfirmedPayload,
+  rooms: OperationsRoomsPayload,
+) {
+  appendMetricRow(
+    rows,
+    'operations',
+    'confirmed_summary',
+    'confirmed_total_count',
+    confirmed.summary.confirmedTotalCount,
+  );
+  appendMetricRow(
+    rows,
+    'operations',
+    'confirmed_summary',
+    'confirmed_meetings_count',
+    confirmed.summary.confirmedMeetingsCount,
+  );
+  appendMetricRow(
+    rows,
+    'operations',
+    'confirmed_summary',
+    'confirmed_career_interviews_count',
+    confirmed.summary.confirmedCareerInterviewsCount,
+  );
+  appendMetricRow(
+    rows,
+    'operations',
+    'confirmed_summary',
+    'pending_interview_invites_count',
+    confirmed.summary.pendingInterviewInvitesCount,
+  );
+  appendMetricRow(
+    rows,
+    'operations',
+    'confirmed_summary',
+    'accepted_interview_invites_count',
+    confirmed.summary.acceptedInterviewInvitesCount,
+  );
+  appendMetricRow(
+    rows,
+    'operations',
+    'confirmed_summary',
+    'rejected_interview_invites_count',
+    confirmed.summary.rejectedInterviewInvitesCount,
+  );
+  appendMetricRow(
+    rows,
+    'operations',
+    'confirmed_summary',
+    'invite_acceptance_rate_percent',
+    confirmed.summary.inviteAcceptanceRatePercent,
+  );
+  appendMetricRow(
+    rows,
+    'operations',
+    'room_summary',
+    'rooms_count',
+    rooms.summary.roomsCount,
+  );
+  appendMetricRow(
+    rows,
+    'operations',
+    'room_summary',
+    'active_rooms_count',
+    rooms.summary.activeRoomsCount,
+  );
+  appendMetricRow(
+    rows,
+    'operations',
+    'room_summary',
+    'total_slots',
+    rooms.summary.totalSlots,
+  );
+  appendMetricRow(
+    rows,
+    'operations',
+    'room_summary',
+    'average_occupancy_percent',
+    rooms.summary.averageOccupancyPercent,
+  );
+  appendMetricRow(
+    rows,
+    'operations',
+    'room_summary',
+    'average_capacity_utilization_percent',
+    rooms.summary.averageCapacityUtilizationPercent,
+  );
+  appendOperationsSeriesRows(rows, confirmed);
+  appendRoomRows(rows, rooms);
+}
+
+function appendOperationsSeriesRows(
+  rows: string[][],
+  confirmed: OperationsConfirmedPayload,
+) {
+  for (const point of confirmed.series) {
+    appendMetricRow(
+      rows,
+      'operations',
+      'daily_confirmed',
+      'meetings',
+      point.meetings,
+      point.date,
+    );
+    appendMetricRow(
+      rows,
+      'operations',
+      'daily_confirmed',
+      'interviews',
+      point.interviews,
+      point.date,
+    );
+    appendMetricRow(
+      rows,
+      'operations',
+      'daily_confirmed',
+      'total',
+      point.total,
+      point.date,
+    );
+  }
+}
+
+function appendRoomRows(rows: string[][], rooms: OperationsRoomsPayload) {
+  for (const room of rooms.rooms) {
+    appendMetricRow(
+      rows,
+      'operations',
+      'rooms',
+      `${room.roomName}_occupancy_percent`,
+      room.occupancyRatePercent,
+    );
+    appendMetricRow(
+      rows,
+      'operations',
+      'rooms',
+      `${room.roomName}_capacity_utilization_percent`,
+      room.capacityUtilizationPercent,
+    );
+  }
+}
+
+function appendMatchingCsvRows(rows: string[][], matching: MatchingPayload) {
+  appendMetricRow(
+    rows,
+    'matching',
+    'summary',
+    'accepted_connections_in_range',
+    matching.summary.acceptedConnectionsInRange,
+  );
+  appendMetricRow(
+    rows,
+    'matching',
+    'summary',
+    'meeting_conversions',
+    matching.summary.meetingConversions,
+  );
+  appendMetricRow(
+    rows,
+    'matching',
+    'summary',
+    'interview_conversions',
+    matching.summary.interviewConversions,
+  );
+  appendMetricRow(
+    rows,
+    'matching',
+    'summary',
+    'total_conversions',
+    matching.summary.totalConversions,
+  );
+  appendMetricRow(
+    rows,
+    'matching',
+    'summary',
+    'connection_to_conversion_rate_percent',
+    matching.summary.connectionToConversionRatePercent,
+  );
+}
+
+function appendEngagementCsvRows(
+  rows: string[][],
+  engagement: EngagementPayload,
+) {
+  appendMetricRow(
+    rows,
+    'engagement',
+    'summary',
+    'notifications_in_range',
+    engagement.summary.notificationsInRange,
+  );
+  appendMetricRow(
+    rows,
+    'engagement',
+    'summary',
+    'unread_notifications_in_range',
+    engagement.summary.unreadNotificationsInRange,
+  );
+  appendMetricRow(
+    rows,
+    'engagement',
+    'summary',
+    'read_rate_percent',
+    engagement.summary.readRatePercent,
+  );
+  appendMetricRow(
+    rows,
+    'engagement',
+    'summary',
+    'event_registrations_in_range',
+    engagement.summary.eventRegistrationsInRange,
+  );
+  appendMetricRow(
+    rows,
+    'engagement',
+    'summary',
+    'event_cancellations_in_range',
+    engagement.summary.eventCancellationsInRange,
+  );
+  appendMetricRow(
+    rows,
+    'engagement',
+    'summary',
+    'event_capacity_utilization_percent',
+    engagement.summary.eventCapacityUtilizationPercent,
+  );
+  for (const event of engagement.topEvents) {
+    appendMetricRow(
+      rows,
+      'engagement',
+      'top_events',
+      event.title,
+      event.registeredCount,
+    );
+  }
+}
+
+function appendUsageCsvRows(rows: string[][], usage: UsagePayload) {
+  appendMetricRow(
+    rows,
+    'usage',
+    'summary',
+    'users_total',
+    usage.summary.usersTotal,
+  );
+  appendMetricRow(
+    rows,
+    'usage',
+    'summary',
+    'completed_profiles_total',
+    usage.summary.completedProfilesTotal,
+  );
+  appendMetricRow(
+    rows,
+    'usage',
+    'summary',
+    'profile_completion_rate_percent',
+    usage.summary.profileCompletionRatePercent,
+  );
+  appendMetricRow(
+    rows,
+    'usage',
+    'summary',
+    'inactive_7_days',
+    usage.summary.inactive7Days,
+  );
+  appendMetricRow(
+    rows,
+    'usage',
+    'summary',
+    'inactive_30_days',
+    usage.summary.inactive30Days,
+  );
+  appendMetricRow(
+    rows,
+    'usage',
+    'summary',
+    'series_points',
+    usage.series.length,
+  );
+  appendUsageSeriesRows(rows, usage);
+  appendUsageRoleRows(rows, usage);
+}
+
+function appendUsageSeriesRows(rows: string[][], usage: UsagePayload) {
+  for (const point of usage.series) {
+    appendMetricRow(
+      rows,
+      'usage',
+      'daily',
+      'users_created',
+      point.usersCreated,
+      point.date,
+    );
+    appendMetricRow(
+      rows,
+      'usage',
+      'daily',
+      'profiles_completed',
+      point.profilesCompleted,
+      point.date,
+    );
+    appendMetricRow(
+      rows,
+      'usage',
+      'daily',
+      'active_users',
+      point.activeUsers,
+      point.date,
+    );
+  }
+}
+
+function appendUsageRoleRows(rows: string[][], usage: UsagePayload) {
+  for (const role of usage.roleBreakdown) {
+    appendMetricRow(rows, 'usage', 'role_breakdown', role.role, role.count);
+  }
+  for (const role of usage.inactiveByRole) {
+    appendMetricRow(rows, 'usage', 'inactive_by_role', role.role, role.count);
   }
 }
 
