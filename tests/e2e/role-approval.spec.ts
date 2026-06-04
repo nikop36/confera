@@ -1,9 +1,17 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const TEST_EMAIL = process.env.TEST_EMAIL!;
 const TEST_PASSWORD = process.env.TEST_PASSWORD!;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD!;
+
+async function login(page: Page, email: string, password: string) {
+  await page.goto('/login');
+  await page.locator('#email').fill(email);
+  await page.locator('#password').fill(password);
+  await page.click('button[type="submit"]');
+  await page.waitForURL((url) => !url.pathname.includes('/login'));
+}
 
 test.describe('Role flow', () => {
   test('user requests organizer role and admin approves', async ({ browser }) => {
@@ -11,10 +19,15 @@ test.describe('Role flow', () => {
     const userContext = await browser.newContext();
     const userPage = await userContext.newPage();
 
-    await userPage.goto('/login');
-    await userPage.getByLabel('E-Pošta').fill(TEST_EMAIL);
-    await userPage.getByLabel('Geslo', { exact: true }).locator('input').fill(TEST_PASSWORD);
-    await userPage.click('button[type="submit"]');
+     // ADMIN CONTEXT
+    const adminContext = await browser.newContext();
+    const adminPage = await adminContext.newPage();
+    
+    // ─── Both users log in concurrently ──────────────────────────────────────
+    await Promise.all([
+      login(adminPage, ADMIN_EMAIL, ADMIN_PASSWORD),
+      login(userPage, TEST_EMAIL, TEST_PASSWORD),
+    ]);
 
     // User requests organizer role 
     await userPage.goto('/profile');
@@ -26,16 +39,6 @@ test.describe('Role flow', () => {
     await expect(
         userPage.getByText('Your request was submitted. An administrator will review it.')
     ).toBeVisible();
-
-
-    // ADMIN CONTEXT
-    const adminContext = await browser.newContext();
-    const adminPage = await adminContext.newPage();
-
-    await adminPage.goto('/login');
-    await adminPage.getByLabel('E-Pošta').fill(ADMIN_EMAIL);
-    await adminPage.getByLabel('Geslo', { exact: true }).locator('input').fill(ADMIN_PASSWORD);
-    await adminPage.click('button[type="submit"]');
 
     // Admin approves request
     await adminPage.goto('/admin/role-requests');

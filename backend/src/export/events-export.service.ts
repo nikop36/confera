@@ -118,26 +118,32 @@ export class EventsExportService {
 
     if (!event) throw new NotFoundException('Event not found');
 
+    // Extract valid rows upfront
+    const importRows = rows
+      .map(toImportedRegistrationRow)
+      .filter((r): r is ImportedRegistrationRow => r !== null);
+
+    // Batch fetch all users in parallel — eliminates sequential findByEmail calls
+    const userResults = await Promise.all(
+      importRows.map((r) => this.usersRepository.findByEmail(r.email)),
+    );
+
     const counters: ImportCounters = {
       registeredCount: 0,
       invitedCount: 0,
-      skippedCount: 0,
+      skippedCount: rows.length - importRows.length, // invalid rows already skipped
     };
 
-    for (const raw of rows) {
-      const importRow = toImportedRegistrationRow(raw);
-      if (!importRow) {
-        counters.skippedCount++;
-        continue;
-      }
-
+    for (let i = 0; i < importRows.length; i++) {
+      const user = userResults[i];
       const shouldStop = await this.importRegistrationRow(
-        importRow,
+        importRows[i],
+        user ?? null,
         event,
         organizer,
         eventId,
         callerUid,
-        rows.length,
+        importRows.length,
         counters,
       );
       if (shouldStop) break;
@@ -153,6 +159,7 @@ export class EventsExportService {
 
   private async importRegistrationRow(
     row: ImportedRegistrationRow,
+    user: UserRecord | null,
     event: EventRecord,
     organizer: UserRecord | null,
     eventId: string,
@@ -160,7 +167,6 @@ export class EventsExportService {
     totalRows: number,
     counters: ImportCounters,
   ): Promise<boolean> {
-    const user = await this.usersRepository.findByEmail(row.email);
     if (!user || isPendingGuest(user)) {
       counters.skippedCount++;
       return false;
@@ -294,10 +300,12 @@ export class EventsExportService {
     eventId: string,
     callerUid: string,
   ): Promise<void> {
-    const event = await this.eventsRepository.findById(eventId);
-    if (!event) throw new NotFoundException('Event not found');
+    const [event, caller] = await Promise.all([
+      this.eventsRepository.findById(eventId),
+      this.usersRepository.findByUid(callerUid),
+    ]);
 
-    const caller = await this.usersRepository.findByUid(callerUid);
+    if (!event) throw new NotFoundException('Event not found');
     if (!caller) throw new NotFoundException('User not found');
 
     if (caller.role === UserRoleEnum.ADMIN) return;

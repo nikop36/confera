@@ -21,7 +21,11 @@ export class RoleRequestsService {
   ) {}
 
   async createRoleRequest(user: FirebaseUser, dto: CreateRoleRequestDto) {
-    const existingUser = await this.usersRepository.findByUid(user.uid);
+    const [existingUser, existingRequest] = await Promise.all([
+      this.usersRepository.findByUid(user.uid),
+      this.roleRequestsRepository.findPendingByUid(user.uid),
+    ]);
+
     if (!existingUser) throw new NotFoundException('User not found');
 
     if (existingUser.role !== UserRoleEnum.PARTICIPANT) {
@@ -34,9 +38,6 @@ export class RoleRequestsService {
       throw new BadRequestException('You already have this role');
     }
 
-    const existingRequest = await this.roleRequestsRepository.findPendingByUid(
-      user.uid,
-    );
     if (existingRequest) {
       throw new BadRequestException('You already have a pending role request');
     }
@@ -63,21 +64,14 @@ export class RoleRequestsService {
   async approveRequest(requestId: string, adminUser: FirebaseUser) {
     const request = await this.roleRequestsRepository.findById(requestId);
     if (!request) throw new NotFoundException('Request not found');
-
     if (request.status !== 'pending') {
       throw new BadRequestException('Request has already been reviewed');
     }
 
-    await this.roleRequestsRepository.updateStatus(
-      requestId,
-      'approved',
-      adminUser.uid,
-    );
-
-    await this.usersRepository.updateUserRole(
-      request.uid,
-      request.requestedRole,
-    );
+    await Promise.all([
+      this.roleRequestsRepository.updateStatus(requestId, 'approved', adminUser.uid),
+      this.usersRepository.updateUserRole(request.uid, request.requestedRole),
+    ]);
 
     await this.notificationsService.createNotification({
       uid: request.uid,
@@ -90,7 +84,6 @@ export class RoleRequestsService {
   async rejectRequest(requestId: string, adminUser: FirebaseUser) {
     const request = await this.roleRequestsRepository.findById(requestId);
     if (!request) throw new NotFoundException('Request not found');
-
     if (request.status !== 'pending') {
       throw new BadRequestException('Request has already been reviewed');
     }
