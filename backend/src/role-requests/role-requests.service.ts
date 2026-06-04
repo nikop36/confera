@@ -69,7 +69,11 @@ export class RoleRequestsService {
     }
 
     await Promise.all([
-      this.roleRequestsRepository.updateStatus(requestId, 'approved', adminUser.uid),
+      this.roleRequestsRepository.updateStatus(
+        requestId,
+        'approved',
+        adminUser.uid,
+      ),
       this.usersRepository.updateUserRole(request.uid, request.requestedRole),
     ]);
 
