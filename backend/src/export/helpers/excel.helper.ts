@@ -27,7 +27,7 @@ function formulaResultToString(value: object): string | null {
 function cellToString(value: ExcelJS.CellValue): string {
   const primitive = primitiveCellToString(value);
   if (primitive !== null) return primitive;
-  if (typeof value !== 'object') return '';
+  if (typeof value !== 'object' || value === null) return '';
 
   const richText = richTextCellToString(value);
   if (richText !== null) return richText;
