@@ -1,11 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { EventsService } from '../events.service';
-import {
-  EventsRepository,
-  EventFullError,
-  EventNotFoundError,
-} from '../events.repository';
+import { EventsRepository, EventFullError } from '../events.repository';
 import { ConnectionsRepository } from '../../connections/connections.repository';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { UsersRepository } from '../../users/users.repository';
@@ -23,6 +19,7 @@ describe('EventsService', () => {
   const mockRegisterAtomic = jest.fn();
   const mockCancelRegistration = jest.fn();
   const mockListRegistrations = jest.fn();
+  const mockListRegisteredEvents = jest.fn();
   const mockListAcceptedConnectionUids = jest.fn().mockResolvedValue([]);
   const mockCreateNotification = jest.fn().mockResolvedValue(undefined);
   const mockFindByUid = jest.fn().mockResolvedValue(null);
@@ -53,6 +50,7 @@ describe('EventsService', () => {
             registerAtomic: mockRegisterAtomic,
             cancelRegistration: mockCancelRegistration,
             listRegistrations: mockListRegistrations,
+            listRegisteredEvents: mockListRegisteredEvents,
           },
         },
         {
@@ -90,6 +88,11 @@ describe('EventsService', () => {
     service = module.get<EventsService>(EventsService);
     jest.clearAllMocks();
     mockListAcceptedConnectionUids.mockResolvedValue([]);
+    mockFindByUid.mockResolvedValue({
+      uid: 'owner-uid',
+      role: 'organizer',
+    });
+    mockListRegisteredEvents.mockResolvedValue([]);
     mockEventIndexService.enabled = false;
   });
 
@@ -133,15 +136,19 @@ describe('EventsService', () => {
     it('throws NotFoundException when event does not exist', async () => {
       mockFindById.mockResolvedValue(null);
       await expect(
-        service.updateEvent('nonexistent', { title: 'New Title' }),
+        service.updateEvent('nonexistent', { title: 'New Title' }, 'owner-uid'),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('updates only the provided fields', async () => {
-      mockFindById.mockResolvedValue({ id: 'e1', title: 'Old Title' });
+      mockFindById.mockResolvedValue({
+        id: 'e1',
+        title: 'Old Title',
+        createdBy: 'owner-uid',
+      });
       mockUpdateEvent.mockResolvedValue(undefined);
 
-      await service.updateEvent('e1', { title: 'New Title' });
+      await service.updateEvent('e1', { title: 'New Title' }, 'owner-uid');
 
       expect(mockUpdateEvent).toHaveBeenCalledWith('e1', {
         title: 'New Title',
@@ -149,13 +156,21 @@ describe('EventsService', () => {
     });
 
     it('converts startAt and endAt strings to Date objects', async () => {
-      mockFindById.mockResolvedValue({ id: 'e1', title: 'Old Title' });
+      mockFindById.mockResolvedValue({
+        id: 'e1',
+        title: 'Old Title',
+        createdBy: 'owner-uid',
+      });
       mockUpdateEvent.mockResolvedValue(undefined);
 
-      await service.updateEvent('e1', {
-        startAt: '2026-06-15T09:00:00.000Z',
-        endAt: '2026-06-15T10:00:00.000Z',
-      });
+      await service.updateEvent(
+        'e1',
+        {
+          startAt: '2026-06-15T09:00:00.000Z',
+          endAt: '2026-06-15T10:00:00.000Z',
+        },
+        'owner-uid',
+      );
 
       expect(mockUpdateEvent).toHaveBeenCalledWith(
         'e1',
@@ -167,10 +182,10 @@ describe('EventsService', () => {
     });
 
     it('does not forward unset fields', async () => {
-      mockFindById.mockResolvedValue({ id: 'e1' });
+      mockFindById.mockResolvedValue({ id: 'e1', createdBy: 'owner-uid' });
       mockUpdateEvent.mockResolvedValue(undefined);
 
-      await service.updateEvent('e1', { title: 'New Title' });
+      await service.updateEvent('e1', { title: 'New Title' }, 'owner-uid');
 
       const firstCallArgs = mockUpdateEvent.mock.calls[0] as [
         string,
@@ -184,16 +199,16 @@ describe('EventsService', () => {
   describe('deleteEvent', () => {
     it('throws NotFoundException when event does not exist', async () => {
       mockFindById.mockResolvedValue(null);
-      await expect(service.deleteEvent('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.deleteEvent('nonexistent', 'owner-uid'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('deletes event when it exists', async () => {
-      mockFindById.mockResolvedValue({ id: 'e1' });
+      mockFindById.mockResolvedValue({ id: 'e1', createdBy: 'owner-uid' });
       mockDeleteEvent.mockResolvedValue(undefined);
 
-      await service.deleteEvent('e1');
+      await service.deleteEvent('e1', 'owner-uid');
 
       expect(mockDeleteEvent).toHaveBeenCalledWith('e1');
       expect(mockSafeRemoveEvent).toHaveBeenCalledWith('e1');
@@ -202,13 +217,20 @@ describe('EventsService', () => {
 
   describe('registerForEvent', () => {
     it('throws NotFoundException when event does not exist', async () => {
-      mockRegisterAtomic.mockRejectedValue(new EventNotFoundError());
+      mockFindById.mockResolvedValue(null);
       await expect(
         service.registerForEvent('nonexistent', 'user1'),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('registers successfully when capacity is available', async () => {
+      mockFindById.mockResolvedValue({
+        id: 'e1',
+        title: 'Active event',
+        startAt: new Date(Date.now() + 3_600_000),
+        endAt: new Date(Date.now() + 7_200_000),
+        archived: false,
+      });
       mockRegisterAtomic.mockResolvedValue(undefined);
 
       await service.registerForEvent('e1', 'user1');
@@ -217,6 +239,13 @@ describe('EventsService', () => {
     });
 
     it('throws ConflictException when event is full', async () => {
+      mockFindById.mockResolvedValue({
+        id: 'e1',
+        title: 'Active event',
+        startAt: new Date(Date.now() + 3_600_000),
+        endAt: new Date(Date.now() + 7_200_000),
+        archived: false,
+      });
       mockRegisterAtomic.mockRejectedValue(new EventFullError());
 
       await expect(service.registerForEvent('e1', 'user1')).rejects.toThrow(

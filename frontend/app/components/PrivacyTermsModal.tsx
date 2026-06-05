@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useLocale } from '../lib/i18n';
 
 const ACCEPTANCE_KEY = 'confera_privacy_terms_accepted_v1';
@@ -17,14 +17,12 @@ type LegalContent = {
   title: string;
   intro: string;
   notice: string;
-  firstVisitTitle: string;
-  firstVisitIntro: string;
   summaryTitle: string;
   summaryItems: string[];
   sections: LegalSection[];
-  details: string;
   accept: string;
   close: string;
+  openLabel: string;
 };
 
 const CONTENT: Record<'sl' | 'en', LegalContent> = {
@@ -35,9 +33,6 @@ const CONTENT: Record<'sl' | 'en', LegalContent> = {
       'Confera obdeluje podatke, ki so potrebni za registracijo, profil, priporočila dogodkov, AI ujemanje udeležencev, povezave, povabila, obvestila in razporejanje srečanj.',
     notice:
       'To je delovni osnutek obvestila o zasebnosti in pogojev uporabe za aplikacijo. Pred produkcijsko uporabo mora organizator dogodka dodati svojo identiteto, kontakt za zahteve posameznikov in preveriti končno pravno besedilo.',
-    firstVisitTitle: 'Najprej zasebnost',
-    firstVisitIntro:
-      'Da lahko ustvarimo profil, priporočila, povezave in razpored dogodka, Confera obdeluje omejen nabor osebnih in profilnih podatkov. Pred nadaljevanjem preberite povzetek in pogoje uporabe.',
     summaryTitle: 'Kratek povzetek',
     summaryItems: [
       'Račun: ime, e-pošta, vloga, UID računa in podatki za prijavo prek Firebase.',
@@ -100,9 +95,9 @@ const CONTENT: Record<'sl' | 'en', LegalContent> = {
         ],
       },
     ],
-    details: 'Prikaži celotno obvestilo',
     accept: 'Razumem in sprejemam',
     close: 'Zapri',
+    openLabel: 'Zasebnost in pogoji',
   },
   en: {
     eyebrow: 'Privacy and terms',
@@ -111,9 +106,6 @@ const CONTENT: Record<'sl' | 'en', LegalContent> = {
       'Confera processes data needed for registration, profiles, event recommendations, AI participant matching, connections, invites, notifications, and meeting scheduling.',
     notice:
       'This is a working draft privacy notice and terms text for the application. Before production use, the event organizer must add its controller identity, data-rights contact, and review the final legal wording.',
-    firstVisitTitle: 'Privacy first',
-    firstVisitIntro:
-      'To create profiles, recommendations, connections, and event schedules, Confera processes a limited set of personal and profile data. Please review the summary and terms before continuing.',
     summaryTitle: 'Short summary',
     summaryItems: [
       'Account: name, email, user role, account UID, and Firebase sign-in data.',
@@ -176,9 +168,9 @@ const CONTENT: Record<'sl' | 'en', LegalContent> = {
         ],
       },
     ],
-    details: 'View full notice',
     accept: 'I understand and accept',
     close: 'Close',
+    openLabel: 'Privacy and terms',
   },
 };
 
@@ -191,162 +183,155 @@ export default function PrivacyTermsModal() {
   const locale = useLocale();
   const content = useMemo(() => CONTENT[locale], [locale]);
   const [open, setOpen] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
-  const [manualOpen, setManualOpen] = useState(false);
 
   useEffect(() => {
-    const accepted = window.localStorage.getItem(ACCEPTANCE_KEY) === 'accepted';
-    const firstVisitTimer = accepted
-      ? undefined
-      : window.setTimeout(() => {
-          setOpen(true);
-        }, 900);
-
-    const onOpen = () => {
-      setManualOpen(true);
-      setShowDetails(true);
-      setOpen(true);
-    };
+    const onOpen = () => setOpen(true);
     window.addEventListener(OPEN_EVENT, onOpen);
-    return () => {
-      if (firstVisitTimer) window.clearTimeout(firstVisitTimer);
-      window.removeEventListener(OPEN_EVENT, onOpen);
-    };
+    return () => window.removeEventListener(OPEN_EVENT, onOpen);
   }, []);
 
   useEffect(() => {
     if (!open) return;
 
-    const previousOverflow = document.body.style.overflow;
+    const scrollY = window.scrollY;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyTop = document.body.style.top;
+    const previousBodyWidth = document.body.style.width;
+
+    document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.width = previousBodyWidth;
+      window.scrollTo(0, scrollY);
     };
   }, [open]);
-
-  if (!open) return null;
 
   function accept() {
     window.localStorage.setItem(ACCEPTANCE_KEY, 'accepted');
     setOpen(false);
-    setManualOpen(false);
-    setShowDetails(false);
   }
-
-  function close() {
-    if (!manualOpen) return;
-    setOpen(false);
-    setManualOpen(false);
-    setShowDetails(false);
-  }
-
-  const isCompactFirstVisit = !manualOpen && !showDetails;
 
   return (
-    <div
-      className={`fixed inset-0 z-[100] flex bg-[#0d0d0d]/25 px-4 py-6 backdrop-blur-[2px] ${
-        isCompactFirstVisit
-          ? 'items-end justify-center sm:items-center'
-          : 'items-center justify-center'
-      }`}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="privacy-terms-title"
-    >
-      <motion.div
-        initial={{
-          opacity: 0,
-          y: isCompactFirstVisit ? 36 : 18,
-          scale: isCompactFirstVisit ? 1 : 0.98,
-        }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.28, ease: 'easeOut' }}
-        className={`w-full overflow-hidden bg-white text-[#0d0d0d] shadow-2xl ${
-          isCompactFirstVisit
-            ? 'max-w-[640px] rounded-t-[24px] sm:rounded-[24px]'
-            : 'max-h-[88vh] max-w-[800px] rounded-[24px]'
-        }`}
+    <>
+      <motion.button
+        type="button"
+        onClick={() => setOpen(true)}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: open ? 0 : 1, scale: open ? 0.8 : 1 }}
+        whileHover={{ scale: 1.06 }}
+        whileTap={{ scale: 0.95 }}
+        transition={{ duration: 0.2 }}
+        className="fixed bottom-5 right-5 z-[90] grid h-12 w-12 place-items-center rounded-full border border-white/20 bg-[#111827] text-white shadow-[0_10px_30px_rgba(0,0,0,0.28)] outline-none transition-colors hover:bg-[#263449] focus-visible:ring-2 focus-visible:ring-[#7fa8c8] focus-visible:ring-offset-2 sm:bottom-7 sm:right-7"
+        aria-label={content.openLabel}
+        title={content.openLabel}
       >
-        <div className="border-b border-[#f0f0f0] px-6 py-5">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#7fa8c8]">
-            {content.eyebrow}
-          </p>
-          <h2 id="privacy-terms-title" className="text-[24px] font-bold">
-            {isCompactFirstVisit ? content.firstVisitTitle : content.title}
-          </h2>
-          <p className="mt-2 text-[14px] leading-relaxed text-[#6e6e73]">
-            {isCompactFirstVisit ? content.firstVisitIntro : content.intro}
-          </p>
-        </div>
-
-        <div
-          className={`overflow-y-auto px-6 py-5 ${
-            isCompactFirstVisit ? 'max-h-[42vh]' : 'max-h-[58vh]'
-          }`}
+        <span
+          aria-hidden="true"
+          className="grid h-6 w-6 place-items-center rounded-full border-2 border-current font-serif text-[15px] font-bold leading-none"
         >
-          <div className="mb-5 rounded-[16px] border border-[#dbeafe] bg-[#eff6ff] p-4">
-            <h3 className="mb-2 text-[14px] font-bold text-[#1e40af]">
-              {content.summaryTitle}
-            </h3>
-            <ul className="space-y-1.5 text-[13px] leading-relaxed text-[#1f2937]">
-              {content.summaryItems.map((item) => (
-                <li key={item}>• {item}</li>
-              ))}
-            </ul>
-          </div>
+          i
+        </span>
+      </motion.button>
 
-          {showDetails && (
-            <>
-              <p className="mb-5 rounded-[14px] bg-[#fff7ed] p-3 text-[12px] leading-relaxed text-[#9a3412]">
-                {content.notice}
-              </p>
-
-              <div className="space-y-4">
-                {content.sections.map((section) => (
-                  <section key={section.title}>
-                    <h3 className="mb-2 text-[15px] font-bold">
-                      {section.title}
-                    </h3>
-                    <ul className="space-y-1.5 text-[13px] leading-relaxed text-[#4b5563]">
-                      {section.items.map((item) => (
-                        <li key={item}>• {item}</li>
-                      ))}
-                    </ul>
-                  </section>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[#f0f0f0] px-6 py-4">
-          {!showDetails && (
-            <button
-              type="button"
-              onClick={() => setShowDetails(true)}
-              className="rounded-full border border-[#e5e7eb] bg-white px-5 py-2 text-[13px] font-semibold text-[#3d3d3d] hover:bg-[#f7f7f7]"
-            >
-              {content.details}
-            </button>
-          )}
-          {manualOpen && (
-            <button
-              type="button"
-              onClick={close}
-              className="rounded-full border border-[#e5e7eb] bg-white px-5 py-2 text-[13px] font-semibold text-[#3d3d3d] hover:bg-[#f7f7f7]"
-            >
-              {content.close}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={accept}
-            className="rounded-full border-0 bg-[#0d0d0d] px-5 py-2 text-[13px] font-semibold text-white hover:bg-[#1f1f1f]"
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-[#0d0d0d]/35 px-3 py-3 backdrop-blur-[3px] sm:px-6 sm:py-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="privacy-terms-title"
           >
-            {content.accept}
-          </button>
-        </div>
-      </motion.div>
-    </div>
+            <motion.div
+              initial={{ opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.985 }}
+              transition={{ duration: 0.24, ease: 'easeOut' }}
+              className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[800px] flex-col overflow-hidden rounded-[8px] bg-white text-[#0d0d0d] shadow-2xl sm:max-h-[calc(100dvh-3rem)]"
+            >
+              <div className="shrink-0 border-b border-[#f0f0f0] px-5 py-4 sm:px-6 sm:py-5">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#5687ad]">
+                  {content.eyebrow}
+                </p>
+                <h2
+                  id="privacy-terms-title"
+                  className="text-[22px] font-bold sm:text-[24px]"
+                >
+                  {content.title}
+                </h2>
+                <p className="mt-2 text-[13px] leading-relaxed text-[#6e6e73] sm:text-[14px]">
+                  {content.intro}
+                </p>
+              </div>
+
+              <div
+                data-lenis-prevent
+                className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-5 py-5 sm:px-6"
+              >
+                <div className="mb-5 rounded-[8px] border border-[#dbeafe] bg-[#eff6ff] p-4">
+                  <h3 className="mb-2 text-[14px] font-bold text-[#1e40af]">
+                    {content.summaryTitle}
+                  </h3>
+                  <ul className="space-y-1.5 text-[13px] leading-relaxed text-[#1f2937]">
+                    {content.summaryItems.map((item) => (
+                      <li key={item}>• {item}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <p className="mb-5 rounded-[8px] bg-[#fff7ed] p-3 text-[12px] leading-relaxed text-[#9a3412]">
+                  {content.notice}
+                </p>
+
+                <div className="space-y-4">
+                  {content.sections.map((section) => (
+                    <section key={section.title}>
+                      <h3 className="mb-2 text-[15px] font-bold">
+                        {section.title}
+                      </h3>
+                      <ul className="space-y-1.5 text-[13px] leading-relaxed text-[#4b5563]">
+                        {section.items.map((item) => (
+                          <li key={item}>• {item}</li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-[#f0f0f0] px-5 py-4 sm:px-6">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="rounded-full border border-[#e5e7eb] bg-white px-5 py-2 text-[13px] font-semibold text-[#3d3d3d] hover:bg-[#f7f7f7]"
+                >
+                  {content.close}
+                </button>
+                <button
+                  type="button"
+                  onClick={accept}
+                  className="rounded-full border-0 bg-[#0d0d0d] px-5 py-2 text-[13px] font-semibold text-white hover:bg-[#1f1f1f]"
+                >
+                  {content.accept}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
