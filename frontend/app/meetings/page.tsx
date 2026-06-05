@@ -186,14 +186,14 @@ export default function MeetingsPage() {
       {(isParticipant || careerBookings.length > 0) && (
         <section className="mb-6">
           <h3 className="text-[15px] font-semibold text-[#0d0d0d] mb-3">
-            Karierni razgovori
+            {t('meetings.careerInterviews')}
             <span className="ml-2 text-[13px] font-normal text-[#8e8e93]">({careerBookings.length})</span>
           </h3>
           {loading ? (
             <SkeletonCards />
           ) : careerBookings.length === 0 ? (
             <div className="rounded-[12px] border border-[#f0f0f0] px-4 py-5 text-sm text-[#8e8e93]">
-              Nimate še potrjenih kariernih razgovorov.
+              {t('meetings.noCareerInterviews')}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -222,7 +222,7 @@ export default function MeetingsPage() {
                             : '—'}
                         </div>
                       </div>
-                      <span className="text-[10px] font-semibold text-[#92400e] bg-[#fef3c7] px-2 py-[3px] rounded-full shrink-0">💼 Karierni</span>
+                      <span className="text-[10px] font-semibold text-[#92400e] bg-[#fef3c7] px-2 py-[3px] rounded-full shrink-0">💼 {t('meetings.career')}</span>
                     </div>
                     <div className="px-4 py-3 flex flex-col gap-[6px]">
                       <div className="flex items-center gap-[6px] text-[12px] text-[#374151]">
@@ -235,7 +235,7 @@ export default function MeetingsPage() {
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-[#9ca3af]">
                           <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
                         </svg>
-                        <span className="text-[#8e8e93]">Razgovor z:</span>
+                        <span className="text-[#8e8e93]">{t('meetings.interviewWith')}</span>
                         <Link href={`/profile/${booking.industryMemberUid}`} className="font-semibold text-[#0d0d0d] hover:underline no-underline">
                           {booking.industryMemberName}
                         </Link>

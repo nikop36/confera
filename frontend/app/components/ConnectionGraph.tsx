@@ -26,6 +26,7 @@ import {
 import { UserNode } from './UserNode';
 import { UserPopup } from './UserPopup';
 import { useGraphData, type GraphNodeData, type GraphEdgeData } from '../connections/useGraphData';
+import { useT } from '../lib/i18n';
 
 const nodeTypes = { userNode: UserNode };
 
@@ -79,6 +80,7 @@ type Props = {
 };
 
 export function ConnectionGraph({ idToken, connectedUids, pendingUids, activeTags, onConnectAction, onTagsLoaded }: Props) {
+  const t = useT();
   const { nodes: rawNodes, edges: rawEdges, loading, error } = useGraphData(idToken);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<GraphNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<GraphEdgeData>>([]);
@@ -150,7 +152,7 @@ export function ConnectionGraph({ idToken, connectedUids, pendingUids, activeTag
   if (loading) {
     return (
       <div className="rounded-[12px] bg-[#f7f7f7] px-4 py-3 text-sm text-[#8e8e93]">
-        Nalaganje grafa...
+        {t('connections.graph.loading')}
       </div>
     );
   }
@@ -164,7 +166,7 @@ export function ConnectionGraph({ idToken, connectedUids, pendingUids, activeTag
   if (!loading && rawNodes.length === 0) {
     return (
       <div className="rounded-[14px] border border-[#f0f0f0] px-5 py-6 text-sm text-[#8e8e93]">
-        Nimate še nobenih potrjenih povezav za prikaz v grafu.
+        {t('connections.graph.empty')}
       </div>
     );
   }
@@ -222,9 +224,21 @@ export function ConnectionGraph({ idToken, connectedUids, pendingUids, activeTag
               gap: 4,
             }}
           >
-            <LegendRow color="#0d0d0d" dash={undefined} label="Povezava" />
-            <LegendRow color="#0071e3" dash="5,3" label="Ujemanje (AI)" />
-            <LegendRow color="#16a34a" dash="2,3" label="Skupno srečanje" />
+            <LegendRow
+              color="#0d0d0d"
+              dash={undefined}
+              label={t('connections.graph.legend.connection')}
+            />
+            <LegendRow
+              color="#0071e3"
+              dash="5,3"
+              label={t('connections.graph.legend.match')}
+            />
+            <LegendRow
+              color="#16a34a"
+              dash="2,3"
+              label={t('connections.graph.legend.sharedMeeting')}
+            />
           </div>
         </Panel>
       </ReactFlow>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useT } from '../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -56,6 +57,7 @@ const COLLAPSED_LIMIT = 16;
 
 /** Interactive multi-select tag picker with search and collapsible rows */
 export default function TagPicker({ token, value, onChange, tags: externalTags }: TagPickerProps) {
+  const t = useT();
   const [internalTags, setInternalTags] = useState<Tag[]>([]);
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState(false);
@@ -111,7 +113,7 @@ export default function TagPicker({ token, value, onChange, tags: externalTags }
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search tags…"
+          placeholder={t('tagPicker.searchPlaceholder')}
           className="w-full pl-9 pr-3 py-[6px] text-[12px] rounded-lg border border-[#e5e7eb] bg-[#f9fafb] outline-none focus:border-[#0d0d0d] focus:bg-white transition-colors placeholder:text-[#9ca3af] font-sans"
         />
       </div>
@@ -146,12 +148,14 @@ export default function TagPicker({ token, value, onChange, tags: externalTags }
               onClick={() => setExpanded((v) => !v)}
               className="text-[11px] font-semibold px-[9px] py-[3px] rounded-full border border-dashed border-[#d1d5db] text-[#6b7280] bg-transparent cursor-pointer font-sans hover:border-[#0d0d0d] hover:text-[#0d0d0d] transition-colors"
             >
-              {expanded ? 'Show less' : `+${hiddenCount} more`}
+              {expanded ? t('tagPicker.showLess') : `+${hiddenCount} ${t('tagPicker.more')}`}
             </button>
           )}
         </div>
       ) : (
-        <p className="text-[12px] text-[#9ca3af] py-1">No tags match &ldquo;{search}&rdquo;</p>
+        <p className="text-[12px] text-[#9ca3af] py-1">
+          {t('tagPicker.noResultsPrefix')} &ldquo;{search}&rdquo;{t('tagPicker.noResultsSuffix')}
+        </p>
       )}
     </div>
   );

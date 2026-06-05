@@ -112,7 +112,7 @@ export default function HomePage() {
         <h2 className="text-[22px] font-bold">{t('nav.news', 'Dogodki')}</h2>
         {!loading && (
           <p className="text-[13px] text-[#8e8e93] mt-1">
-            {filtered.length} {t('events.total', 'events')}
+            {filtered.length} {t('events.total')}
           </p>
         )}
       </div>
@@ -157,7 +157,7 @@ export default function HomePage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-[14px] border border-[#f0f0f0] px-5 py-6 text-sm text-[#8e8e93]">
-          {selectedTags.length > 0 ? t('events.noneForTags', 'Ni dogodkov z izbranimi oznakami.') : t('events.empty', 'No events yet.')}
+          {selectedTags.length > 0 ? t('events.noneForTags', 'Ni dogodkov z izbranimi oznakami.') : t('events.empty')}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -194,7 +194,7 @@ export default function HomePage() {
                       <svg width="9" height="9" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="1">
                         <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17 5.8 21.3l2.4-7.4L2 9.4h7.6z" />
                       </svg>
-                      <span className="text-[10px] font-bold text-white">Priporočeno</span>
+                      <span className="text-[10px] font-bold text-white">{t('events.recommended')}</span>
                     </div>
                   )}
 

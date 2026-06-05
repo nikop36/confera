@@ -199,7 +199,7 @@ export default function ConnectionsPage() {
     if (!res.ok) {
       const body = await res.json().catch(() => ({})) as { message?: string | string[] };
       const msg = Array.isArray(body.message) ? body.message[0] : body.message;
-      throw new Error(msg ?? 'Napaka pri pošiljanju zahteve.');
+      throw new Error(msg ?? t('connections.error.send'));
     }
     setPendingSentUids((prev) => new Set([...prev, uid]));
     window.dispatchEvent(new Event('connections:refresh'));
@@ -223,11 +223,14 @@ export default function ConnectionsPage() {
                 key: 'zahteve' as const,
                 label:
                   data.pendingReceived.length > 0
-                    ? `Zahteve (${data.pendingReceived.length})`
-                    : 'Zahteve',
+                    ? `${t('connections.requests')} (${data.pendingReceived.length})`
+                    : t('connections.requests'),
               },
-              { key: 'povezave' as const, label: 'Povezave' },
-              { key: 'graf' as const, label: 'Graf' },
+              {
+                key: 'povezave' as const,
+                label: t('connections.tab.connections'),
+              },
+              { key: 'graf' as const, label: t('connections.graph') },
             ]
           ).map(({ key, label }) => (
             <button
@@ -256,7 +259,9 @@ export default function ConnectionsPage() {
                   : 'bg-[#f0f0f0] text-[#3d3d3d] hover:bg-[#e5e5e5]'
               }`}
             >
-              {activeTags.size > 0 ? `Filtri (${activeTags.size})` : 'Filtri'}
+              {activeTags.size > 0
+                ? `${t('connections.filters')} (${activeTags.size})`
+                : t('connections.filters')}
             </button>
             {filterOpen && (
               <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-[#e5e7eb] rounded-[12px] shadow-lg p-3 flex flex-wrap gap-[5px] min-w-[180px] max-w-[280px]">
@@ -292,7 +297,7 @@ export default function ConnectionsPage() {
                     onClick={() => setActiveTags(new Set())}
                     className="px-[7px] py-[2px] rounded-full text-[9px] font-medium bg-[#f0f0f0] text-[#8e8e93]"
                   >
-                    Počisti
+                    {t('connections.clearFilters')}
                   </button>
                 )}
               </div>

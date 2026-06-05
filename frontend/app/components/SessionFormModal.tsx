@@ -474,6 +474,7 @@ function PresenterPicker({
   industryUsers: CommunityUser[];
   onChange: (name: string, uid: string) => void;
 }) {
+  const t = useT();
   const [showDropdown, setShowDropdown] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -500,13 +501,13 @@ function PresenterPicker({
         value={name}
         onChange={(e) => { onChange(e.target.value, ''); setShowDropdown(true); }}
         onFocus={() => setShowDropdown(true)}
-        placeholder="Ime predavatelja (izberite iz sistema ali vpišite gosta)"
+        placeholder={t('sessionForm.presenterPlaceholder')}
         className="w-full border border-[#e5e7eb] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
       />
       {uid ? (
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#059669] font-semibold">✓ V sistemu</span>
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#059669] font-semibold">✓ {t('sessionForm.inSystem')}</span>
       ) : name.trim() ? (
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#8e8e93] font-semibold">Gost</span>
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#8e8e93] font-semibold">{t('sessionForm.guest')}</span>
       ) : null}
       {showDropdown && filtered.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e5e7eb] rounded-[8px] shadow-md z-10 max-h-[160px] overflow-y-auto">

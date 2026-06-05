@@ -1,5 +1,6 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { GraphNodeData } from '../connections/useGraphData';
+import { useT } from '../lib/i18n';
 
 const ROLE_STYLE: Record<string, { bg: string; text: string; border: string; dot: string }> = {
   participant: { bg: '#f0f7ff', text: '#2563eb', border: '#bfdbfe', dot: '#2563eb' },
@@ -18,6 +19,7 @@ const CENTER_HANDLE: React.CSSProperties = {
 };
 
 export function UserNode({ data, selected }: NodeProps) {
+  const t = useT();
   const d = data as GraphNodeData;
   const isSelf = d.nodeType === 'self';
   const isFof = d.nodeType === 'fof';
@@ -115,7 +117,7 @@ export function UserNode({ data, selected }: NodeProps) {
           pointerEvents: 'none',
         }}
       >
-        {isSelf ? 'Jaz' : d.displayName.split(' ')[0]}
+        {isSelf ? t('connections.graph.self') : d.displayName.split(' ')[0]}
       </span>
     </div>
   );

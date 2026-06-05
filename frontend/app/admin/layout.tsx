@@ -156,7 +156,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
             </svg>
           </div>
-          <span className="font-bold text-[14px] text-[#0d0d0d]">Confera Admin</span>
+          <span className="font-bold text-[14px] text-[#0d0d0d]">{t('admin.brand', 'Confera Admin')}</span>
         </div>
 
         {/* Nav */}

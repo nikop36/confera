@@ -1,13 +1,6 @@
 import Link from 'next/link';
 import type { GraphNodeData } from '../connections/useGraphData';
-
-const ROLE_LABEL: Record<string, string> = {
-  participant: 'Udeleženec',
-  industry: 'Industrija',
-  organizer: 'Organizator',
-  admin: 'Admin',
-  guest: 'Gost',
-};
+import { useT } from '../lib/i18n';
 
 type Props = {
   node: GraphNodeData & { id: string };
@@ -19,8 +12,10 @@ type Props = {
 };
 
 export function UserPopup({ node, isConnected, isPending, isConnecting, onConnect, onClose }: Props) {
+  const t = useT();
   if (node.nodeType === 'self') return null;
   const isFof = node.nodeType === 'fof';
+  const roleLabel = t(`admin.role.${node.role}`, node.role);
 
   return (
     <div
@@ -51,7 +46,7 @@ export function UserPopup({ node, isConnected, isPending, isConnecting, onConnec
           lineHeight: 1,
           padding: 0,
         }}
-        aria-label="Zapri"
+        aria-label={t('connections.action.close')}
       >
         ×
       </button>
@@ -60,8 +55,8 @@ export function UserPopup({ node, isConnected, isPending, isConnecting, onConnec
         {node.displayName}
       </p>
       <p style={{ fontSize: 12, color: '#8e8e93', margin: '0 0 6px' }}>
-        {ROLE_LABEL[node.role] ?? node.role}
-        {isFof && <span style={{ marginLeft: 6, fontSize: 10, color: '#d1d5db', fontStyle: 'italic' }}>prijatelj prijatelja</span>}
+        {roleLabel}
+        {isFof && <span style={{ marginLeft: 6, fontSize: 10, color: '#d1d5db', fontStyle: 'italic' }}>{t('connections.friendOfFriend')}</span>}
       </p>
       {node.affiliation && (
         <p style={{ fontSize: 12, color: '#555', margin: '0 0 8px' }}>{String(node.affiliation)}</p>
@@ -103,7 +98,7 @@ export function UserPopup({ node, isConnected, isPending, isConnecting, onConnec
             fontWeight: 600,
           }}
         >
-          Povezana
+          {t('connections.accepted')}
         </span>
       ) : isPending ? (
         <span
@@ -118,7 +113,7 @@ export function UserPopup({ node, isConnected, isPending, isConnecting, onConnec
             fontWeight: 600,
           }}
         >
-          Zahteva poslana
+          {t('shell.sent')}
         </span>
       ) : (
         <button
@@ -138,14 +133,14 @@ export function UserPopup({ node, isConnected, isPending, isConnecting, onConnec
             fontFamily: 'system-ui, sans-serif',
           }}
         >
-          {isConnecting ? '...' : 'Poveži se'}
+          {isConnecting ? '...' : t('connections.action.connect')}
         </button>
       )}
       <Link
         href={`/profile/${node.id}`}
         style={{ fontSize: 12, color: '#0071e3', fontWeight: 500, textDecoration: 'none', whiteSpace: 'nowrap' }}
       >
-        Profil →
+        {t('connections.action.openProfile')} →
       </Link>
       </div>
     </div>

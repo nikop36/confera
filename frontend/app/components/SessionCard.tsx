@@ -1,6 +1,7 @@
 'use client';
 
 import { TagPills } from './TagPicker';
+import { useLocale, useT } from '../lib/i18n';
 
 export type Speaker = {
   name: string;
@@ -41,12 +42,13 @@ type SessionCardProps = {
   onPresenterDecline?: () => void;
 };
 
-function formatTimeRange(startAt: string, endAt: string): string {
+function formatTimeRange(startAt: string, endAt: string, locale: 'sl' | 'en'): string {
   const opts: Intl.DateTimeFormatOptions = {
     hour: '2-digit',
     minute: '2-digit',
   };
-  return `${new Date(startAt).toLocaleTimeString('sl-SI', opts)} – ${new Date(endAt).toLocaleTimeString('sl-SI', opts)}`;
+  const lc = locale === 'en' ? 'en-GB' : 'sl-SI';
+  return `${new Date(startAt).toLocaleTimeString(lc, opts)} – ${new Date(endAt).toLocaleTimeString(lc, opts)}`;
 }
 
 export default function SessionCard({
@@ -63,6 +65,8 @@ export default function SessionCard({
   onPresenterConfirm,
   onPresenterDecline,
 }: SessionCardProps) {
+  const t = useT();
+  const locale = useLocale();
   const isFull =
     session.capacity !== null &&
     session.registeredCount >= session.capacity;
@@ -92,7 +96,7 @@ export default function SessionCard({
         </p>
         {isCancelled && (
           <span className="shrink-0 text-[9px] font-bold text-[#dc2626] bg-[#fff1f2] px-[6px] py-[2px] rounded-full">
-            Odpovedano
+            {t('sessionCard.cancelled')}
           </span>
         )}
       </div>
@@ -102,7 +106,7 @@ export default function SessionCard({
       )}
 
       <p className="text-[10px] text-[#8e8e93]">
-        {formatTimeRange(session.startAt, session.endAt)}
+        {formatTimeRange(session.startAt, session.endAt, locale)}
       </p>
 
       {(session.tags ?? []).length > 0 && (
@@ -121,22 +125,22 @@ export default function SessionCard({
         <div className="flex items-center gap-1 flex-wrap">
           {session.presenterStatus === 'pending' && (
             <span className="text-[9px] font-semibold bg-[#fef3c7] text-[#92400e] px-[5px] py-[1px] rounded-[4px]">
-              ⏳ Presenter pending
+              ⏳ {t('sessionCard.presenterPending')}
             </span>
           )}
           {session.presenterStatus === 'confirmed' && (
             <span className="text-[9px] font-semibold bg-[#ecfdf3] text-[#166534] px-[5px] py-[1px] rounded-[4px]">
-              ✓ Presenter confirmed
+              ✓ {t('sessionCard.presenterConfirmed')}
             </span>
           )}
           {session.presenterStatus === 'declined' && (
             <span className="text-[9px] font-semibold bg-[#fff1f2] text-[#dc2626] px-[5px] py-[1px] rounded-[4px]">
-              ✕ Presenter declined
+              ✕ {t('sessionCard.presenterDeclined')}
             </span>
           )}
           {session.presenterStatus === 'auto_confirmed' && (
             <span className="text-[9px] font-semibold bg-[#f3f4f6] text-[#6b7280] px-[5px] py-[1px] rounded-[4px]">
-              Presenter invited
+              {t('sessionCard.presenterInvited')}
             </span>
           )}
         </div>
@@ -145,20 +149,20 @@ export default function SessionCard({
       {/* Presenter invite response buttons */}
       {isInvitedPresenter && (
         <div className="flex gap-1 items-center mt-[2px]">
-          <span className="text-[9px] text-[#92400e]">You&apos;re invited as presenter:</span>
+          <span className="text-[9px] text-[#92400e]">{t('sessionCard.presenterInvitePrompt')}</span>
           <button
             type="button"
             onClick={onPresenterConfirm}
             className="text-[9px] font-semibold px-[6px] py-[2px] rounded-[5px] bg-[#ecfdf3] text-[#166534] hover:bg-[#d1fae5] border-0 cursor-pointer font-sans"
           >
-            Accept
+            {t('sessionCard.accept')}
           </button>
           <button
             type="button"
             onClick={onPresenterDecline}
             className="text-[9px] font-semibold px-[6px] py-[2px] rounded-[5px] bg-[#fff1f2] text-[#dc2626] hover:bg-[#fee2e2] border-0 cursor-pointer font-sans"
           >
-            Decline
+            {t('sessionCard.decline')}
           </button>
         </div>
       )}
@@ -167,13 +171,13 @@ export default function SessionCard({
         {/* Capacity pill */}
         {session.isRegistered ? (
           <span className="text-[9px] font-semibold bg-[#ecfdf3] text-[#166534] px-[5px] py-[1px] rounded-[4px]">
-            ✓ Prijavljen/a
+            ✓ {t('sessionCard.registered')}
           </span>
         ) : session.capacity === null ? (
-          <span className="text-[9px] text-[#8e8e93]">Brez omejitve</span>
+          <span className="text-[9px] text-[#8e8e93]">{t('sessionCard.unlimited')}</span>
         ) : isFull ? (
           <span className="text-[9px] font-semibold bg-[#fff1f2] text-[#dc2626] px-[5px] py-[1px] rounded-[4px]">
-            Razprodano
+            {t('sessionCard.full')}
           </span>
         ) : (
           <span className="text-[9px] text-[#6e6e73]">
@@ -189,7 +193,7 @@ export default function SessionCard({
               onClick={onCancel}
               className="text-[9px] font-semibold px-[6px] py-[2px] rounded-[5px] bg-[#ecfdf3] text-[#166534] hover:bg-[#d1fae5] border-0 cursor-pointer disabled:opacity-50 font-sans"
             >
-              {isRegistering ? '...' : 'Odjavi'}
+              {isRegistering ? '...' : t('sessionCard.unregister')}
             </button>
           ) : (
             <button
@@ -198,7 +202,7 @@ export default function SessionCard({
               onClick={onRegister}
               className="text-[9px] font-semibold px-[6px] py-[2px] rounded-[5px] bg-[#0d0d0d] text-white hover:bg-[#1f1f1f] border-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-sans"
             >
-              {isRegistering ? '...' : isFull ? 'Polno' : 'Prijavi'}
+              {isRegistering ? '...' : isFull ? t('sessionCard.full') : t('sessionCard.register')}
             </button>
           )}
 

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import type { Speaker } from './SessionCard';
+import { useT } from '../lib/i18n';
 
 type CommunityUser = {
   uid: string;
@@ -22,6 +23,7 @@ export default function SpeakerInput({
   onRemove,
   users,
 }: SpeakerInputProps) {
+  const t = useT();
   const [showDropdown, setShowDropdown] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -64,16 +66,16 @@ export default function SpeakerInput({
             value={value.name}
             onChange={(e) => handleNameChange(e.target.value)}
             onFocus={() => setShowDropdown(true)}
-            placeholder="Ime predavatelja (lahko zunanji)"
+            placeholder={t('sessionForm.presenterPlaceholder')}
             className="w-full border border-[#e5e7eb] rounded-[6px] px-3 py-[6px] text-[13px] outline-none focus:border-[#0d0d0d] transition-colors"
           />
           {value.userId ? (
             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#059669] font-semibold">
-              ✓ V sistemu
+              ✓ {t('sessionForm.inSystem')}
             </span>
           ) : value.name.trim() ? (
             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#8e8e93] font-semibold">
-              Zunanji
+              {t('sessionForm.guest')}
             </span>
           ) : null}
           {showDropdown && filtered.length > 0 && (
@@ -108,7 +110,7 @@ export default function SpeakerInput({
         rows={2}
         value={value.bio ?? ''}
         onChange={(e) => onChange({ ...value, bio: e.target.value })}
-        placeholder="Kratka bio (neobvezno)"
+        placeholder={t('sessionForm.speakerBioPlaceholder')}
         className="border border-[#e5e7eb] rounded-[6px] px-3 py-[6px] text-[12px] outline-none focus:border-[#0d0d0d] transition-colors resize-none"
       />
     </div>

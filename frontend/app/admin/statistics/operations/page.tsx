@@ -171,7 +171,7 @@ export default function AdminStatisticsPage() {
               ? occupancyErr
               : !confirmedRes.ok && confirmedErr
                 ? confirmedErr
-                : `Failed to load statistics (${occupancyRes.status}/${confirmedRes.status})`;
+                : `${t('admin.stats.operations.errorLoadWithStatus')} (${occupancyRes.status}/${confirmedRes.status})`;
           throw new Error(message);
         }
 
@@ -184,7 +184,7 @@ export default function AdminStatisticsPage() {
         setConfirmed(confirmedPayload);
       } catch (err) {
         if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : 'Failed to load statistics');
+        setError(err instanceof Error ? err.message : t('admin.stats.operations.errorLoad'));
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -194,7 +194,7 @@ export default function AdminStatisticsPage() {
 
     void load();
     return () => controller.abort();
-  }, [user?.idToken, range.from, range.to]);
+  }, [user?.idToken, range.from, range.to, t]);
 
   const sortedRooms = useMemo(
     () =>

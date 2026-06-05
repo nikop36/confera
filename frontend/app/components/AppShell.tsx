@@ -40,7 +40,7 @@ const NAV: NavItem[] = [
 const SUGGESTIONS = [
   { name: 'Dr. Petra Kos', org: 'Univerza Ljubljana', hue: 200 },
   { name: 'Andrej Novak', org: 'Startup Slovenia', hue: 280 },
-  { name: 'Nina Hauptman', org: 'Public Administration', hue: 155 },
+  { name: 'Nina Hauptman', orgKey: 'shell.suggestion.publicAdministration', hue: 155 },
 ];
 
 const RECOMMENDATION_COLORS = [
@@ -50,14 +50,39 @@ const RECOMMENDATION_COLORS = [
   { bg: '#7c3aed', fg: '#ffffff' },
 ];
 
-const RECOMMENDATION_FALLBACK = [
-  'Artificial intelligence',
-  'Industry collaboration',
-  'Public administration',
-  'Sustainability',
-  'Research',
-  'Innovation',
+const RECOMMENDATION_FALLBACK_KEYS = [
+  'shell.recommendation.ai',
+  'shell.recommendation.industry',
+  'shell.recommendation.publicAdministration',
+  'shell.recommendation.sustainability',
+  'shell.recommendation.research',
+  'shell.recommendation.innovation',
 ];
+
+const RECOMMENDATION_LABEL_KEYS: Record<string, string> = {
+  ai: 'recommendation.label.artificialIntelligence',
+  'artificial-intelligence': 'recommendation.label.artificialIntelligence',
+  'umetna-inteligenca': 'recommendation.label.artificialIntelligence',
+  'machine-learning': 'recommendation.label.machineLearning',
+  'strojno-ucenje': 'recommendation.label.machineLearning',
+  ml: 'recommendation.label.machineLearning',
+  nlp: 'recommendation.label.naturalLanguageProcessing',
+  'natural-language-processing': 'recommendation.label.naturalLanguageProcessing',
+  'obdelava-naravnega-jezika': 'recommendation.label.naturalLanguageProcessing',
+  'network-with-investors': 'recommendation.label.networkWithInvestors',
+  'networking-with-investors': 'recommendation.label.networkWithInvestors',
+  'mrezenje-z-investitorji': 'recommendation.label.networkWithInvestors',
+  'industry-collaboration': 'shell.recommendation.industry',
+  'sodelovanje-z-industrijo': 'shell.recommendation.industry',
+  'public-administration': 'shell.recommendation.publicAdministration',
+  'javna-uprava': 'shell.recommendation.publicAdministration',
+  sustainability: 'shell.recommendation.sustainability',
+  vzdrznost: 'shell.recommendation.sustainability',
+  research: 'shell.recommendation.research',
+  raziskovanje: 'shell.recommendation.research',
+  innovation: 'shell.recommendation.innovation',
+  inovacije: 'shell.recommendation.innovation',
+};
 
 type MatchSuggestion = {
   uid: string;
@@ -94,6 +119,7 @@ type InviteOverview = {
 
 type ApiNotification = {
   id: string;
+  type?: string;
   message: string;
   read: boolean;
   createdAt:
@@ -127,7 +153,7 @@ const shellCache: {
   matches?: CacheEntry<MatchSuggestion[]>;
   connections?: CacheEntry<ConnectionOverview>;
   invites?: CacheEntry<InviteOverview>;
-  notifications?: CacheEntry<SidebarNotification[]>;
+  notifications?: CacheEntry<ApiNotification[]>;
   recommendations?: CacheEntry<ProfileRecommendationSource | undefined>;
 } = {};
 
@@ -143,6 +169,27 @@ function clearShellCache() {
   shellCache.invites = undefined;
   shellCache.notifications = undefined;
   shellCache.recommendations = undefined;
+}
+
+function recommendationSlug(value: string) {
+  let slug = '';
+  let lastWasSeparator = true;
+
+  for (const char of value.toLowerCase().normalize('NFKD')) {
+    const code = char.charCodeAt(0);
+    const isAsciiLetter = code >= 97 && code <= 122;
+    const isDigit = code >= 48 && code <= 57;
+
+    if (isAsciiLetter || isDigit) {
+      slug += char;
+      lastWasSeparator = false;
+    } else if (!lastWasSeparator) {
+      slug += '-';
+      lastWasSeparator = true;
+    }
+  }
+
+  return slug.endsWith('-') ? slug.slice(0, -1) : slug;
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -164,8 +211,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [recommendations, setRecommendations] = useState<
     Array<{ label: string; bg: string; fg: string }>
   >(
-    RECOMMENDATION_FALLBACK.slice(0, 4).map((label, index) => ({
-      label,
+    RECOMMENDATION_FALLBACK_KEYS.slice(0, 4).map((key, index) => ({
+      label: t(key),
       ...RECOMMENDATION_COLORS[index % RECOMMENDATION_COLORS.length],
     })),
   );
@@ -188,37 +235,40 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       org: match.affiliation || 'Confera',
       hue: [200, 280, 155][index] ?? 210,
     }))
-    : SUGGESTIONS.map((entry) => ({ ...entry, uid: '' }));
+    : SUGGESTIONS.map((entry) => ({
+      ...entry,
+      org: 'orgKey' in entry && entry.orgKey ? t(entry.orgKey) : (entry.org ?? ''),
+      uid: '',
+    }));
 
   const buildRecommendations = useCallback(
     (source?: ProfileRecommendationSource) => {
-      const uniqueLabels: string[] = [];
-      const pushUnique = (value?: string) => {
-        const normalized = value?.trim();
-        if (!normalized) return;
-        if (
-          uniqueLabels.some(
-            (entry) => entry.toLowerCase() === normalized.toLowerCase(),
-          )
-        ) {
-          return;
-        }
-        uniqueLabels.push(normalized);
+      const uniqueLabels = new Map<string, string>();
+      const pushUnique = (value?: string, canonicalOverride?: string) => {
+        const raw = value?.trim();
+        if (!raw) return;
+
+        const slug = recommendationSlug(raw);
+        const translationKey = RECOMMENDATION_LABEL_KEYS[slug];
+        const canonical = canonicalOverride ?? translationKey ?? slug;
+        if (!canonical || uniqueLabels.has(canonical)) return;
+
+        uniqueLabels.set(canonical, translationKey ? t(translationKey) : raw);
       };
 
-      (source?.tags ?? []).forEach(pushUnique);
-      (source?.interests ?? []).forEach(pushUnique);
-      (source?.goals ?? []).forEach(pushUnique);
-      RECOMMENDATION_FALLBACK.forEach(pushUnique);
+      (source?.tags ?? []).forEach((value) => pushUnique(value));
+      (source?.interests ?? []).forEach((value) => pushUnique(value));
+      (source?.goals ?? []).forEach((value) => pushUnique(value));
+      RECOMMENDATION_FALLBACK_KEYS.forEach((key) => pushUnique(t(key), key));
 
       setRecommendations(
-        uniqueLabels.slice(0, 4).map((label, index) => ({
+        Array.from(uniqueLabels.values()).slice(0, 4).map((label, index) => ({
           label,
           ...RECOMMENDATION_COLORS[index % RECOMMENDATION_COLORS.length],
         })),
       );
     },
-    [],
+    [t],
   );
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -322,7 +372,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const loadNotifications = useCallback(async (token: string) => {
     const cached = readShellCache(shellCache.notifications, token);
     if (cached) {
-      setNotifications(cached);
+      setNotifications(
+        cached.map((item) => ({
+          id: item.id,
+          text: formatNotificationText(item, t),
+          time: formatRelativeTime(item.createdAt, t),
+          unread: !item.read,
+        })),
+      );
       return;
     }
 
@@ -334,16 +391,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       const data = (await response.json()) as ApiNotification[];
       const mapped = data.map((item) => ({
         id: item.id,
-        text: item.message,
-        time: formatRelativeTime(item.createdAt),
+        text: formatNotificationText(item, t),
+        time: formatRelativeTime(item.createdAt, t),
         unread: !item.read,
       }));
-      shellCache.notifications = { token, at: Date.now(), data: mapped };
+      shellCache.notifications = { token, at: Date.now(), data };
       setNotifications(mapped);
     } catch {
       // ignore notification refresh errors
     }
-  }, []);
+  }, [t]);
 
   const loadRecommendations = useCallback(
     async (token: string) => {
@@ -559,7 +616,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="relative w-14 h-14 rounded-full z-10 border-[3px] border-white shadow-md overflow-hidden bg-[#f3f4f6]">
                   <Image
                     src={user.profileImageUrl}
-                    alt={user.displayName ?? 'Profilna slika'}
+                    alt={user.displayName ?? t('common.profileImage')}
                     className="w-full h-full object-cover"
                     fill
                     sizes="56px"
@@ -833,18 +890,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#e5e5ea] mobile-safe-bottom">
         <div className="flex">
           {([
-            { href: isParticipant ? '/home' : '/events', label: 'Events', badge: 0, icon: (
+            { href: isParticipant ? '/home' : '/events', label: t('nav.events'), badge: 0, icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
                 <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" />
               </svg>
             )},
             // { href: '/meetings', label: 'Meetings', badge: meetingsBadgeCount, icon: null },
-            { href: '/connections', label: 'Connect', badge: 0, icon: (
+            { href: '/connections', label: t('nav.connections'), badge: 0, icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
             )},
-            { href: '/community', label: 'Community', badge: 0, icon: (
+            { href: '/community', label: t('nav.community'), badge: 0, icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
                 <circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
               </svg>
@@ -875,7 +932,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
               <circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" />
             </svg>
-            <span className="text-[9px] font-normal">More</span>
+            <span className="text-[9px] font-normal">{t('shell.more')}</span>
             {pendingInvites > 0 && (
               <span className="absolute top-1 right-[18%] min-w-4 h-4 px-1 rounded-full bg-[#0d0d0d] text-white text-[9px] font-bold leading-4 flex items-center justify-center">
                 {pendingInvites > 9 ? '9+' : pendingInvites}
@@ -1039,6 +1096,7 @@ function NavIcon({
 
 function formatRelativeTime(
   createdAt: ApiNotification['createdAt'],
+  t: ReturnType<typeof useT>,
 ): string {
   const createdAtDate = normalizeDate(createdAt);
   if (!createdAtDate) return '';
@@ -1046,14 +1104,123 @@ function formatRelativeTime(
   const diffMs = Date.now() - createdAtDate.getTime();
   const diffMin = Math.max(0, Math.floor(diffMs / 60_000));
 
-  if (diffMin < 1) return 'zdaj';
-  if (diffMin < 60) return `${diffMin} min`;
+  if (diffMin < 1) return t('common.now');
+  if (diffMin < 60) return `${diffMin} ${t('common.minuteShort')}`;
 
   const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `${diffHours} h`;
+  if (diffHours < 24) return `${diffHours} ${t('common.hourShort')}`;
 
   const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays} d`;
+  return `${diffDays} ${t('common.dayShort')}`;
+}
+
+function formatNotificationText(
+  notification: ApiNotification,
+  t: ReturnType<typeof useT>,
+): string {
+  const subject = extractQuotedValue(notification.message);
+  const actor = extractNotificationActor(notification.message);
+  const details = extractNotificationDetails(notification);
+  const values = {
+    actor: actor || t('shell.participant', 'Participant'),
+    subject,
+    details,
+  };
+
+  const keyByType: Record<string, string> = {
+    role_approved: 'notification.roleApproved',
+    role_rejected: 'notification.roleRejected',
+    meeting_request: 'notification.meetingRequest',
+    meeting_accepted: 'notification.meetingAccepted',
+    meeting_rejected: 'notification.meetingRejected',
+    connection_request: 'notification.connectionRequest',
+    connection_accepted: 'notification.connectionAccepted',
+    connection_rejected: 'notification.connectionRejected',
+    career_interview_assigned: 'notification.careerInterviewAssigned',
+    career_interview_rescheduled: 'notification.careerInterviewRescheduled',
+    career_interview_cancelled: 'notification.careerInterviewCancelled',
+    career_slot_requested: 'notification.careerSlotRequested',
+    career_slot_approved: 'notification.careerSlotApproved',
+    career_slot_declined: 'notification.careerSlotDeclined',
+    event_auto_registered: 'notification.eventAutoRegistered',
+    event_invite: 'notification.eventInvite',
+    event_registered: 'notification.eventRegistered',
+    event_cancelled: 'notification.eventCancelled',
+    event_participant_joined: 'notification.eventParticipantJoined',
+    event_participant_cancelled:
+      'notification.eventParticipantCancelled',
+    guest_confirmation: 'notification.guestConfirmation',
+    guest_confirmed: 'notification.guestConfirmed',
+    guest_event_invite: 'notification.guestEventInvite',
+    session_presenter_invited: 'notification.sessionPresenterInvited',
+    session_presenter_confirmed: 'notification.sessionPresenterConfirmed',
+    session_presenter_declined: 'notification.sessionPresenterDeclined',
+    career_slot_approval_request:
+      'notification.careerSlotApprovalRequest',
+    career_slot_organizer_approved:
+      'notification.careerSlotOrganizerApproved',
+    career_slot_organizer_rejected:
+      'notification.careerSlotOrganizerRejected',
+  };
+
+  const key = notification.type ? keyByType[notification.type] : undefined;
+  if (!key) return notification.message;
+
+  const template = t(key, notification.message);
+  return interpolateNotification(template, values);
+}
+
+function interpolateNotification(
+  template: string,
+  values: Record<string, string>,
+): string {
+  return Object.entries(values).reduce(
+    (text, [key, value]) => text.replaceAll(`{{${key}}}`, value),
+    template,
+  );
+}
+
+function extractQuotedValue(message: string): string {
+  const start = message.indexOf('"');
+  if (start < 0) return '';
+  const end = message.indexOf('"', start + 1);
+  return end > start ? message.slice(start + 1, end) : '';
+}
+
+function extractNotificationActor(message: string): string {
+  const separators = [
+    ' sent you ',
+    ' has registered for ',
+    ' has cancelled their registration ',
+    ' has invited you ',
+    ' has registered you ',
+    ' has confirmed their role ',
+    ' has declined their role ',
+    ' has submitted the career slot ',
+    ' has requested a spot ',
+  ];
+
+  for (const separator of separators) {
+    const index = message.indexOf(separator);
+    if (index > 0) return message.slice(0, index).trim();
+  }
+
+  return '';
+}
+
+function extractNotificationDetails(notification: ApiNotification): string {
+  const prefixesByType: Record<string, string> = {
+    meeting_request: 'You have a new career interview invite at ',
+    career_interview_assigned: 'Career interview was scheduled at ',
+    career_interview_rescheduled: 'Career interview was rescheduled to ',
+  };
+  const prefix = notification.type
+    ? prefixesByType[notification.type]
+    : undefined;
+  if (!prefix || !notification.message.startsWith(prefix)) return '';
+
+  const value = notification.message.slice(prefix.length).trim();
+  return value.endsWith('.') ? value.slice(0, -1) : value;
 }
 
 function normalizeDate(createdAt: ApiNotification['createdAt']): Date | null {

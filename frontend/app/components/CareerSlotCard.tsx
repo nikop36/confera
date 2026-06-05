@@ -268,7 +268,7 @@ export default function CareerSlotCard({
                       {t('careerCard.apply', 'Apply')}
                     </button>
                   ) : !canManage ? null : (
-                    <span className="text-[10px] text-[#9ca3af]">Prosto</span>
+                    <span className="text-[10px] text-[#9ca3af]">{t('careerCard.free')}</span>
                   )}
                 </div>
 
