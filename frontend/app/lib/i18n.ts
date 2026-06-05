@@ -346,6 +346,17 @@ const SL: Dictionary = {
   'auth.password.hide': 'Skrij geslo',
   'auth.password.show': 'Prikaži geslo',
   'auth.error.loginFailed': 'Prijava ni uspela',
+  'auth.error.displayName':
+    'Ime mora vsebovati od 2 do 80 znakov. Dovoljene so črke, enojni presledki, vezaji, pike in apostrofi.',
+  'auth.error.email': 'Vnesite veljaven e-poštni naslov.',
+  'auth.error.password':
+    'Geslo mora vsebovati od 12 do 128 znakov, veliko in malo črko, številko ter poseben znak. Presledki niso dovoljeni.',
+  'auth.error.inviteToken': 'Povabilna koda ni veljavna.',
+  'auth.error.passwordPersonalData':
+    'Geslo ne sme vsebovati vašega imena ali dela e-poštnega naslova.',
+  'auth.error.emailExists': 'Račun s tem e-poštnim naslovom že obstaja.',
+  'auth.error.invitePending':
+    'Pred registracijo morate potrditi povabilo, poslano na ta e-poštni naslov.',
   'auth.register.title': 'Dobrodošli',
   'auth.register.hasAccount': 'Že imate račun?',
   'auth.register.signIn': 'Prijavite se',
@@ -361,7 +372,8 @@ const SL: Dictionary = {
   'auth.register.hero.desc': 'Pridružite se sistemu za ciljno usmerjeno mreženje med udeleženci konference — akademija, industrija, javna uprava.',
   'auth.register.hero.footer': 'Konferenca 2026',
   'auth.register.passwordPlaceholder': 'Min. 12 znakov',
-  'auth.register.passwordHint': 'Vsaj 12 znakov, 1 velika črka, 1 številka, 1 poseben znak.',
+  'auth.register.passwordHint':
+    '12–128 znakov, velika in mala črka, številka ter poseben znak; brez presledkov.',
   'auth.register.inviteToggle': 'Imam povabilno kodo (neobvezno)',
   'auth.register.terms.prefix': 'Z registracijo se strinjate s',
   'auth.register.terms.terms': 'pogoji uporabe',
@@ -1328,6 +1340,17 @@ const EN: Dictionary = {
   'auth.password.hide': 'Hide password',
   'auth.password.show': 'Show password',
   'auth.error.loginFailed': 'Sign in failed',
+  'auth.error.displayName':
+    'Name must contain 2–80 characters. Letters, single spaces, hyphens, periods, and apostrophes are allowed.',
+  'auth.error.email': 'Enter a valid email address.',
+  'auth.error.password':
+    'Password must contain 12–128 characters, uppercase and lowercase letters, a number, and a special character. Whitespace is not allowed.',
+  'auth.error.inviteToken': 'The invite code is invalid.',
+  'auth.error.passwordPersonalData':
+    'Password must not contain your name or email address.',
+  'auth.error.emailExists': 'An account with this email address already exists.',
+  'auth.error.invitePending':
+    'You must confirm the invitation sent to this email address before registering.',
   'auth.register.title': 'Welcome',
   'auth.register.hasAccount': 'Already have an account?',
   'auth.register.signIn': 'Sign in',
@@ -1343,7 +1366,8 @@ const EN: Dictionary = {
   'auth.register.hero.desc': 'Join focused networking between conference participants — academia, industry, and public sector.',
   'auth.register.hero.footer': 'Confera 2026',
   'auth.register.passwordPlaceholder': 'Min. 12 characters',
-  'auth.register.passwordHint': 'At least 12 characters, 1 uppercase letter, 1 number, 1 special character.',
+  'auth.register.passwordHint':
+    '12–128 characters, uppercase and lowercase letters, a number, and a special character; no whitespace.',
   'auth.register.inviteToggle': 'I have an invite code (optional)',
   'auth.register.terms.prefix': 'By registering, you agree to the',
   'auth.register.terms.terms': 'terms of use',

@@ -73,8 +73,11 @@ export class ProfileController {
 
   // GET /profile/:uid
   @Get(':uid')
+  @UseGuards(FirebaseAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get public profile by uid' })
   @ApiResponse({ status: 200, description: 'Profile returned' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
   @ApiResponse({ status: 404, description: 'Profile not found' })
   async getProfile(@Param('uid') uid: string) {
     const profile = await this.profileService.findProfile(uid);

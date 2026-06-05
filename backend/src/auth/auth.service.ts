@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -14,6 +15,10 @@ import { FirebaseError } from '../common/interfaces/firebase-error.interface';
 import { LoginDto } from './dto/login.dto';
 import { ConfigService } from '@nestjs/config';
 import { UserRoleEnum } from '../common/enums/roles.enum';
+import {
+  normalizeDisplayName,
+  normalizeEmail,
+} from './validation/auth-input.validation';
 
 function isFirebaseError(err: unknown): err is FirebaseError {
   return typeof err === 'object' && err !== null && 'code' in err;
@@ -32,8 +37,16 @@ export class AuthService {
   async register(
     dto: RegisterDto,
   ): Promise<{ uid: string; email: string; role: string }> {
+    const email = normalizeEmail(dto.email) as string;
+    const displayName = normalizeDisplayName(dto.displayName) as string;
+    this.assertPasswordDoesNotContainPersonalData(
+      dto.password,
+      email,
+      displayName,
+    );
+
     // Check for existing guest record before touching Firebase Auth
-    const existingGuest = await this.usersService.findByEmailOrNull(dto.email);
+    const existingGuest = await this.usersService.findByEmailOrNull(email);
 
     if (existingGuest?.role === UserRoleEnum.GUEST) {
       if (existingGuest.guestStatus !== 'confirmed') {
@@ -45,9 +58,9 @@ export class AuthService {
       let userRecord: admin.auth.UserRecord;
       try {
         userRecord = await this.firebaseService.getAuth().createUser({
-          email: dto.email,
+          email,
           password: dto.password,
-          displayName: dto.displayName,
+          displayName,
         });
       } catch (err) {
         if (isFirebaseError(err) && err.code === 'auth/email-already-exists') {
@@ -56,13 +69,10 @@ export class AuthService {
         throw new InternalServerErrorException('Registration failed');
       }
 
-      await this.usersService.upgradeGuestToParticipant(
-        dto.email,
-        userRecord.uid,
-      );
+      await this.usersService.upgradeGuestToParticipant(email, userRecord.uid);
       return {
         uid: userRecord.uid,
-        email: dto.email,
+        email,
         role: UserRoleEnum.PARTICIPANT,
       };
     }
@@ -71,9 +81,9 @@ export class AuthService {
     let userRecord: admin.auth.UserRecord;
     try {
       userRecord = await this.firebaseService.getAuth().createUser({
-        email: dto.email,
+        email,
         password: dto.password,
-        displayName: dto.displayName,
+        displayName,
       });
     } catch (err) {
       if (isFirebaseError(err) && err.code === 'auth/email-already-exists') {
@@ -84,8 +94,8 @@ export class AuthService {
 
     const user: User = {
       uid: userRecord.uid,
-      email: dto.email,
-      displayName: dto.displayName,
+      email,
+      displayName,
       role: UserRoleEnum.PARTICIPANT,
       profileStatus: 'incomplete',
       createdAt: new Date(),
@@ -98,6 +108,7 @@ export class AuthService {
 
   async login(dto: LoginDto): Promise<{ idToken: string; uid: string }> {
     const apiKey = this.configService.get<string>('FIREBASE_API_KEY');
+    const email = normalizeEmail(dto.email) as string;
 
     const res = await fetch(
       `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
@@ -105,7 +116,7 @@ export class AuthService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: dto.email,
+          email,
           password: dto.password,
           returnSecureToken: true,
         }),
@@ -120,13 +131,6 @@ export class AuthService {
 
     const data = (await res.json()) as FirebaseLoginResponse;
 
-    console.log(
-      'Firebase login status:',
-      res.status,
-      'error:',
-      data.error?.message ?? 'none',
-    );
-
     if (!res.ok) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -134,7 +138,7 @@ export class AuthService {
     const idToken = data.idToken ?? '';
     const uid = data.localId ?? '';
 
-    await this.syncUserAfterLogin(uid, dto.email);
+    await this.syncUserAfterLogin(uid, email);
 
     return { idToken, uid };
   }
@@ -158,6 +162,24 @@ export class AuthService {
         `Firebase login succeeded, but user profile sync failed for ${uid}: ${
           error instanceof Error ? error.message : 'unknown error'
         }`,
+      );
+    }
+  }
+
+  private assertPasswordDoesNotContainPersonalData(
+    password: string,
+    email: string,
+    displayName: string,
+  ): void {
+    const passwordLower = password.toLowerCase();
+    const personalValues = [
+      email.split('@')[0],
+      ...displayName.toLowerCase().split(/[\s.'’-]+/u),
+    ].filter((value) => value.length >= 3);
+
+    if (personalValues.some((value) => passwordLower.includes(value))) {
+      throw new BadRequestException(
+        'Password must not contain your email address or name.',
       );
     }
   }

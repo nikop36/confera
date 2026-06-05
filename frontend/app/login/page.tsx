@@ -4,7 +4,12 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { saveStoredUser } from '../lib/auth';
+import { saveStoredUser, useHydrated } from '../lib/auth';
+import {
+  getSafeReturnPath,
+  normalizeEmail,
+  resolvePostAuthDestination,
+} from '../lib/auth-validation';
 import { saveStoredLocale, useT } from '../lib/i18n';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -16,6 +21,12 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const hydrated = useHydrated();
+  const returnTo = hydrated
+    ? getSafeReturnPath(
+        new URLSearchParams(window.location.search).get('returnTo'),
+      )
+    : null;
 
   function field(key: keyof typeof form) {
     return (event: React.ChangeEvent<HTMLInputElement>) =>
@@ -28,21 +39,23 @@ export default function LoginPage() {
     setError('');
 
     try {
+      const normalizedEmail = normalizeEmail(form.email);
       const res = await fetch(`${API}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, password: form.password }),
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password: form.password,
+        }),
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? t('auth.error.loginFailed', 'Sign in failed'));
+        throw new Error(t('auth.error.loginFailed', 'Sign in failed'));
       }
 
       const { idToken, uid } = await res.json() as { idToken: string; uid: string };
 
-      let displayName = form.email.split('@')[0];
+      let displayName = normalizedEmail.split('@')[0];
       let role = 'participant';
       let profileImageUrl = '';
 
@@ -68,15 +81,16 @@ export default function LoginPage() {
             : '';
       }
 
-      saveStoredUser({
+      const storedUser = {
         uid,
         idToken,
         displayName,
-        email: form.email,
+        email: normalizedEmail,
         role,
         profileImageUrl,
-      });
-      router.push(role === 'admin' ? '/admin' : '/home');
+      };
+      saveStoredUser(storedUser);
+      router.replace(resolvePostAuthDestination(storedUser, returnTo));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error.generic', 'An error occurred'));
     } finally {
@@ -153,7 +167,16 @@ export default function LoginPage() {
             <h2 className="text-[28px] font-bold text-[#0d0d0d] mb-1">{t('auth.login.title')}</h2>
             <p className="text-[14px] text-[#8e8e93]">
               {t('auth.login.noAccount')}{' '}
-              <Link href="/register" className="text-[#7fa8c8] hover:underline">{t('auth.login.createAccount')}</Link>
+              <Link
+                href={
+                  returnTo
+                    ? `/register?returnTo=${encodeURIComponent(returnTo)}`
+                    : '/register'
+                }
+                className="text-[#7fa8c8] hover:underline"
+              >
+                {t('auth.login.createAccount')}
+              </Link>
             </p>
           </div>
 
@@ -166,6 +189,8 @@ export default function LoginPage() {
                 value={form.email}
                 onChange={field('email')}
                 placeholder="jana@primer.si"
+                autoComplete="email"
+                maxLength={254}
                 required
                 className="profile-input"
               />
@@ -180,6 +205,8 @@ export default function LoginPage() {
                   value={form.password}
                   onChange={field('password')}
                   placeholder={t('auth.login.passwordPlaceholder', 'Your password')}
+                  autoComplete="current-password"
+                  maxLength={128}
                   required
                   className="profile-input pr-12"
                 />
