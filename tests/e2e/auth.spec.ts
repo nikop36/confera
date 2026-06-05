@@ -4,6 +4,78 @@ const TEST_EMAIL = 'playwright@confera.com';
 const TEST_PASSWORD = 'PlaywrightTest1!';
 const TEST_NAME = 'Playwright User';
 
+test.describe('Protected routes', () => {
+  test('redirects an unauthenticated visitor to login', async ({ page }) => {
+    await page.goto('/events');
+
+    await expect(page).toHaveURL(/\/login\?returnTo=%2Fevents$/);
+    await expect(
+      page.getByRole('heading', { name: 'Prijavite se' }),
+    ).toBeVisible();
+  });
+
+  test('rejects a forged or expired stored session', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        'confera_user',
+        JSON.stringify({
+          uid: 'fake-user',
+          displayName: 'Fake User',
+          email: 'fake@example.com',
+          role: 'admin',
+          idToken: 'invalid-token',
+        }),
+      );
+    });
+    await page.route('**/profile/me', async (route) => {
+      await route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Invalid or expired token' }),
+      });
+    });
+
+    await page.goto('/events');
+
+    await expect(page).toHaveURL(/\/login\?returnTo=%2Fevents$/);
+    const storedUser = await page.evaluate(() =>
+      window.localStorage.getItem('confera_user'),
+    );
+    expect(storedUser).toBeNull();
+  });
+
+  test('uses the server-confirmed role for admin routes', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        'confera_user',
+        JSON.stringify({
+          uid: 'participant-user',
+          displayName: 'Participant User',
+          email: 'participant@example.com',
+          role: 'admin',
+          idToken: 'valid-participant-token',
+        }),
+      );
+    });
+    await page.route('**/profile/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          uid: 'participant-user',
+          displayName: 'Participant User',
+          email: 'participant@example.com',
+          role: 'participant',
+        }),
+      });
+    });
+
+    await page.goto('/admin');
+
+    await expect(page).toHaveURL(/\/home$/);
+  });
+});
+
 test.describe('Auth flow', () => {
   test('user can register successfully', async ({ page }) => {
     await page.goto('/register');
