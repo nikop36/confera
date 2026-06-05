@@ -25,13 +25,12 @@ Sistem avtomatizira ujemanje udeležencev z AI modulom, ki izbrane profilne ozna
 ### Udeleženec konference (raziskovalec / študent)
 - Ustvari profil z izbranimi oznakami in razpoložljivostjo
 - Prejme priporočila za srečanja z relevantnimi udeleženci
-- Pregleduje razstavitelje sejma in se prijavi na karierne razgovore
-- Vidi razlago ujemanja na osnovi skupnih oznak
+- Pregleduje dogodke in se prijavi na karierne razgovore
 
-### Organizator konference
+### Organizator
 - Uvozi seznam udeležencev iz CSV/Excel predloge
-- Upravlja urnik, prostore in konfiguracijo matching parametrov
-- Pregleduje statistiko in KPI metrike konference
+- Upravlja urnik, prostore svojih dogodkov
+- Na svoje dogodke dodaja zunanje izvajalce kot goste.
 
 ### Predstavnik industrije / zaposlovalec
 - Razstavlja na raziskovalnem sejmu
@@ -49,7 +48,6 @@ Sistem avtomatizira ujemanje udeležencev z AI modulom, ki izbrane profilne ozna
 | Uvoz iz univerzitetnih sistemov (CSV) | ✅ | Omejeno |
 | Avtomatizirano razporejanje srečanj | ✅ | Delno |
 | Prilagodljivost organizatorju | ✅ | ❌ |
-| Nižji stroški | ✅ | ❌ |
 
 ---
 
@@ -66,8 +64,6 @@ Sistem avtomatizira ujemanje udeležencev z AI modulom, ki izbrane profilne ozna
 
 | Metrika | Opis |
 |---|---|
-| Povprečno število priporočil na uporabnika | Kakovost AI matching izhoda |
 | Stopnja sprejetih srečanj (%) | Relevantnost priporočil |
 | Stopnja izvedenih srečanj (%) | Operativna učinkovitost |
 | Zasedenost terminov (%) | Izkoriščenost kapacitet |
-| Povprečen čas do prvega srečanja | Hitrost onboardinga udeleženca |
