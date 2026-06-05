@@ -23,10 +23,6 @@ describe('ConnectionsService - getGraph()', () => {
     role: UserRoleEnum.PARTICIPANT,
     profileStatus: 'complete' as const,
     createdAt: new Date(),
-    interests: ['AI'],
-    goals: [],
-    competencies: [],
-    researchKeywords: [],
     tags: ['AI', 'SaaS'],
   };
   const peerProfile = {

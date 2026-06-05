@@ -12,11 +12,7 @@ export type ProfileMatch = {
   displayName: string;
   affiliation?: string;
   bio?: string;
-  interests: string[];
-  goals: string[];
-  competencies: string[];
-  researchKeywords: string[];
-  meetingType?: string;
+  tags: string[];
   score: number;
   reasons: string[];
 };
@@ -26,11 +22,7 @@ type MatchRow = {
   display_name: string;
   affiliation: string | null;
   bio: string | null;
-  interests: string[];
-  goals: string[];
-  competencies: string[];
-  research_keywords: string[];
-  meeting_type: string | null;
+  tags: string[];
   score: number;
 };
 
@@ -49,6 +41,10 @@ export class MatchingIndexService {
 
   async upsertProfile(profile: SearchableProfile) {
     if (!this.databaseService.enabled) return;
+    if (!hasTags(profile)) {
+      await this.removeProfile(profile.uid);
+      return;
+    }
 
     const profileText = buildProfileSearchText(profile);
     const profileHash = hashProfileSearchText(profileText);
@@ -64,11 +60,7 @@ export class MatchingIndexService {
         email,
         affiliation,
         bio,
-        interests,
-        goals,
-        competencies,
-        research_keywords,
-        meeting_type,
+        tags,
         profile_text,
         profile_embedding,
         embedding_model,
@@ -76,19 +68,15 @@ export class MatchingIndexService {
         updated_at
       )
       values (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-        $11, $12::vector, $13, $14, now()
+        $1, $2, $3, $4, $5, $6,
+        $7, $8::vector, $9, $10, now()
       )
       on conflict (uid) do update set
         display_name = excluded.display_name,
         email = excluded.email,
         affiliation = excluded.affiliation,
         bio = excluded.bio,
-        interests = excluded.interests,
-        goals = excluded.goals,
-        competencies = excluded.competencies,
-        research_keywords = excluded.research_keywords,
-        meeting_type = excluded.meeting_type,
+        tags = excluded.tags,
         profile_text = excluded.profile_text,
         profile_embedding = case
           when participant_profile_index.profile_hash = excluded.profile_hash
@@ -105,11 +93,7 @@ export class MatchingIndexService {
         profile.email,
         profile.affiliation ?? null,
         profile.bio ?? null,
-        profile.interests ?? [],
-        profile.goals ?? [],
-        profile.competencies ?? [],
-        profile.researchKeywords ?? [],
-        profile.meetingType ?? 'both',
+        profile.tags ?? [],
         profileText,
         embedding,
         this.embeddingService.model,
@@ -158,6 +142,11 @@ export class MatchingIndexService {
       throw new Error('Matching database is not configured.');
     }
 
+    if (!hasTags(profile)) {
+      await this.removeProfile(profile.uid);
+      return [];
+    }
+
     await this.upsertProfile(profile);
 
     const profileText = buildProfileSearchText(profile);
@@ -178,11 +167,7 @@ export class MatchingIndexService {
       displayName: row.display_name,
       affiliation: row.affiliation ?? undefined,
       bio: row.bio ?? undefined,
-      interests: row.interests ?? [],
-      goals: row.goals ?? [],
-      competencies: row.competencies ?? [],
-      researchKeywords: row.research_keywords ?? [],
-      meetingType: row.meeting_type ?? undefined,
+      tags: row.tags ?? [],
       score: Number(row.score),
       reasons: this.buildReasons(profile, row),
     }));
@@ -190,34 +175,13 @@ export class MatchingIndexService {
 
   private buildReasons(profile: SearchableProfile, match: MatchRow) {
     const reasons: string[] = [];
-    const sharedInterests = intersection(profile.interests, match.interests);
-    const sharedGoals = intersection(profile.goals, match.goals);
-    const sharedKeywords = intersection(
-      profile.researchKeywords,
-      match.research_keywords,
-    );
+    const sharedTags = intersection(profile.tags, match.tags);
 
-    if (sharedInterests.length) {
-      reasons.push(`Skupna področja interesa: ${sharedInterests.join(', ')}`);
+    if (sharedTags.length) {
+      reasons.push(`Skupne oznake: ${sharedTags.join(', ')}`);
     }
 
-    if (sharedGoals.length) {
-      reasons.push(`Podobni cilji mreženja: ${sharedGoals.join(', ')}`);
-    }
-
-    if (sharedKeywords.length) {
-      reasons.push(`Ujemanje ključnih besed: ${sharedKeywords.join(', ')}`);
-    }
-
-    if (
-      profile.meetingType &&
-      match.meeting_type &&
-      isMeetingTypeCompatible(profile.meetingType, match.meeting_type)
-    ) {
-      reasons.push('Združljiva preferenca za način srečanja');
-    }
-
-    return reasons.length ? reasons : ['Semantično podoben profil'];
+    return reasons.length ? reasons : ['Semantično podobne oznake'];
   }
 }
 
@@ -226,6 +190,6 @@ function intersection(left?: string[], right?: string[]) {
   return (left ?? []).filter((value) => rightSet.has(value));
 }
 
-function isMeetingTypeCompatible(left: string, right: string) {
-  return left === 'both' || right === 'both' || left === right;
+function hasTags(profile: SearchableProfile) {
+  return (profile.tags ?? []).some((tag) => tag.trim().length > 0);
 }

@@ -29,4 +29,25 @@ describe('EmbeddingService', () => {
       '[0.123457,-0.2,1]',
     );
   });
+
+  it('should score profiles with shared tags above unrelated profiles', () => {
+    const current = service.createEmbedding(
+      'Oznake: artificial intelligence, llm, data science',
+    );
+    const aligned = service.createEmbedding(
+      'Oznake: artificial intelligence, llm, startups',
+    );
+    const unrelated = service.createEmbedding('Oznake: sports, travel, music');
+
+    expect(cosine(current, aligned)).toBeGreaterThan(
+      cosine(current, unrelated),
+    );
+  });
 });
+
+function cosine(left: number[], right: number[]) {
+  return left.reduce(
+    (sum, value, index) => sum + value * (right[index] ?? 0),
+    0,
+  );
+}

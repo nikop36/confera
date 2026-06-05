@@ -17,17 +17,16 @@ create table if not exists participant_profile_index (
   email text,
   affiliation text,
   bio text,
-  interests text[] not null default '{}',
-  goals text[] not null default '{}',
-  competencies text[] not null default '{}',
-  research_keywords text[] not null default '{}',
-  meeting_type text,
+  tags text[] not null default '{}',
   profile_text text not null,
   profile_embedding vector(384),
   embedding_model text,
   profile_hash text not null,
   updated_at timestamptz not null default now()
 );
+
+alter table participant_profile_index
+  add column if not exists tags text[] not null default '{}';
 
 create index if not exists participant_profile_text_idx
   on participant_profile_index
@@ -37,6 +36,8 @@ create index if not exists participant_profile_embedding_idx
   on participant_profile_index
   using ivfflat (profile_embedding vector_cosine_ops)
   with (lists = 100);
+
+drop function if exists hybrid_profile_search(text, vector, text, integer);
 
 create or replace function hybrid_profile_search(
   query_text text,
@@ -49,11 +50,7 @@ returns table (
   display_name text,
   affiliation text,
   bio text,
-  interests text[],
-  goals text[],
-  competencies text[],
-  research_keywords text[],
-  meeting_type text,
+  tags text[],
   score double precision,
   keyword_rank bigint,
   semantic_rank bigint
@@ -66,11 +63,7 @@ with keyword as (
     p.display_name,
     p.affiliation,
     p.bio,
-    p.interests,
-    p.goals,
-    p.competencies,
-    p.research_keywords,
-    p.meeting_type,
+    p.tags,
     row_number() over (
       order by ts_rank(
         to_tsvector('simple', p.profile_text),
@@ -89,11 +82,7 @@ semantic as (
     p.display_name,
     p.affiliation,
     p.bio,
-    p.interests,
-    p.goals,
-    p.competencies,
-    p.research_keywords,
-    p.meeting_type,
+    p.tags,
     row_number() over (
       order by p.profile_embedding <=> query_embedding
     ) as rank
@@ -108,11 +97,7 @@ combined as (
     coalesce(k.display_name, s.display_name) as display_name,
     coalesce(k.affiliation, s.affiliation) as affiliation,
     coalesce(k.bio, s.bio) as bio,
-    coalesce(k.interests, s.interests) as interests,
-    coalesce(k.goals, s.goals) as goals,
-    coalesce(k.competencies, s.competencies) as competencies,
-    coalesce(k.research_keywords, s.research_keywords) as research_keywords,
-    coalesce(k.meeting_type, s.meeting_type) as meeting_type,
+    coalesce(k.tags, s.tags) as tags,
     coalesce(1.0 / (60 + k.rank), 0) +
       coalesce(1.0 / (60 + s.rank), 0) as score,
     k.rank as keyword_rank,

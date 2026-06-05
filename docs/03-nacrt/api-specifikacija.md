@@ -38,7 +38,7 @@ Authorization: Bearer <token>
 |---|---|
 | `auth` | Prijava, odjava, preverjanje identitete |
 | `users` | Upravljanje uporabniških računov |
-| `profile` | Urejanje profila, interesi, kompetence |
+| `profile` | Urejanje profila in izbranih oznak (`tags`) |
 | `role-requests` | Zahteve za spremembo vloge, pregled in odločitev |
 | `matching` | AI priporočila ujemanja udeležencev |
 | `scheduling` | Termini in prostori za srečanja |
@@ -49,7 +49,7 @@ Authorization: Bearer <token>
 | `sessions` | Seje znotraj dogodkov — ustvarjanje, urejanje, povabilo predavatelja, potrditev/zavrnitev |
 | `career-slots` | Karierni termini — predlog, odobritev organizatorja, prijave udeležencev |
 | `guests` | Gostovska povabila in potrditve |
-| `tags` | Upravljanje oznak interesnih področij |
+| `tags` | Upravljanje profilnih oznak |
 | `notifications` | Sistemska obvestila |
 | `export` | Izvoz podatkov (udeleženci, statistika) |
 | `statistics` | KPI metrike in analitika |

@@ -19,11 +19,7 @@ type UserProfile = {
   role?: string;
   bio?: string;
   affiliation?: string;
-  interests?: string[];
-  goals?: string[];
   meetingType?: MeetingType;
-  competencies?: string[];
-  researchKeywords?: string[];
   tags?: string[];
   roleProfile?: Record<string, unknown>;
 };
@@ -50,11 +46,7 @@ type InvitesOverview = {
 type ProfileForm = {
   bio: string;
   affiliation: string;
-  interests: string[];
-  goals: string[];
   meetingType: MeetingType;
-  competencies: string[];
-  researchKeywords: string[];
   tags: string[];
   profileImageUrl: string;
   backgroundImageUrl: string;
@@ -100,11 +92,7 @@ type RecommendedEvent = {
 const DEFAULT_FORM: ProfileForm = {
   bio: '',
   affiliation: '',
-  interests: [],
-  goals: [],
   meetingType: 'both',
-  competencies: [],
-  researchKeywords: [],
   tags: [],
   profileImageUrl: '',
   backgroundImageUrl: '',
@@ -148,11 +136,7 @@ function profileToForm(profile?: UserProfile): ProfileForm {
   return {
     bio: profile?.bio ?? '',
     affiliation: profile?.affiliation ?? '',
-    interests: profile?.interests ?? [],
-    goals: profile?.goals ?? [],
     meetingType: profile?.meetingType ?? 'both',
-    competencies: profile?.competencies ?? [],
-    researchKeywords: profile?.researchKeywords ?? [],
     tags: profile?.tags ?? [],
     profileImageUrl: profileImageValue(profile, 'profileImageUrl'),
     backgroundImageUrl: profileImageValue(profile, 'backgroundImageUrl'),
@@ -457,10 +441,6 @@ export default function ProfilePage() {
       const payload = {
         bio: form.bio.trim() || undefined,
         affiliation: form.affiliation.trim() || undefined,
-        interests: [],
-        goals: [],
-        competencies: [],
-        researchKeywords: form.tags.map(s => s.replace(/-/g, ' ')),
         meetingType: form.meetingType,
         tags: form.tags,
         roleProfile: {

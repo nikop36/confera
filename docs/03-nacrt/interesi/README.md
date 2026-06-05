@@ -1,24 +1,22 @@
-# Definicija področij interesa
+# Definicija oznak profila
 
-Ta dokument opisuje taksonomijo interesov in sorodnih profilnih signalov, ki jih aplikacija uporablja za priporočila in kasnejše AI ujemanje udeležencev.
+Ta dokument opisuje taksonomijo profilnih oznak, ki jih aplikacija uporablja za
+priporočila in AI ujemanje udeležencev.
 
-Vir za uporabniški vmesnik je `frontend/app/lib/profile-taxonomy.ts`. Firestore trenutno shranjuje izbrane vrednosti kot polja `string[]` na dokumentu uporabnika.
+Vir za uporabniški vmesnik je `frontend/app/lib/profile-taxonomy.ts`. Firestore
+shranjuje izbrane vrednosti v polje `tags: string[]` na dokumentu uporabnika.
 
 ---
 
 ## Namen
 
-Področja interesa so primarni signal za tematsko podobnost med udeleženci. Sama po sebi niso dovolj za kakovostno priporočanje, zato jih AI matching v1 uporablja skupaj z:
+Oznake so edini profilni signal, ki ga uporablja AI matching udeležencev.
+Uporabnik označi teme, ki ga zanimajo, backend pa iz teh oznak zgradi tekstovni
+profil za hibridno iskanje.
 
 | Polje | Namen pri ujemanju |
 |---|---|
-| `interests` | Tematska področja, ki uporabnika zanimajo |
-| `goals` | Kaj uporabnik želi doseči na konferenci |
-| `competencies` | Znanja, izkušnje in vloge uporabnika |
-| `researchKeywords` | Bolj specifični strokovni izrazi |
-| `bio` | Prosti opis uporabnika |
-| `affiliation` | Organizacija ali institucija |
-| `meetingType` | Preferenca za spletno ali fizično srečanje |
+| `tags` | Teme, ki uporabnika zanimajo; edini vhod v `participant_profile_index` za rangiranje in razlage |
 
 ---
 
@@ -28,18 +26,16 @@ Trenutna struktura v kolekciji `users`:
 
 ```json
 {
-  "interests": ["Umetna inteligenca", "Medicina"],
-  "goals": ["Raziskovalno sodelovanje", "Zaposlitev"],
-  "competencies": ["Strojno učenje", "Javno nastopanje"],
-  "researchKeywords": ["LLM", "Priporočilni sistemi"]
+  "tags": ["umetna-inteligenca", "medicina", "llm"]
 }
 ```
 
-Vrednosti so za zdaj shranjene kot prikazna besedila. To omogoča hitro implementacijo in enostavno uporabo pri prototipu AI ujemanja.
+Vrednosti so shranjene kot stabilni slugi. Pri gradnji AI vhoda backend zamenja
+vezaje s presledki, npr. `umetna-inteligenca` postane `umetna inteligenca`.
 
 ---
 
-## Področja interesa
+## Področja oznak
 
 ### Tehnologija
 
@@ -148,23 +144,18 @@ Vrednosti so za zdaj shranjene kot prikazna besedila. To omogoča hitro implemen
 
 ## Strategija za AI matching v1
 
-Za prvo različico ujemanja sistem izdela tekstovni profil uporabnika iz strukturiranih in prostih polj. Primer:
+Sistem izdela tekstovni profil uporabnika samo iz oznak. Primer:
 
 ```txt
-Interesi: Umetna inteligenca, Medicina
-Cilji: Raziskovalno sodelovanje, Zaposlitev
-Kompetence: Strojno učenje, Javno nastopanje
-Ključne besede: LLM, Priporočilni sistemi
-Opis: ...
-Institucija: ...
+Oznake: umetna inteligenca, medicina, llm
 ```
 
 Ta tekstovni profil se sinhronizira v PostgreSQL tabelo
 `participant_profile_index`, kjer se uporablja za hibridno iskanje:
 
-- `to_tsvector` za besedilno ujemanje po interesih, ciljih in ključnih besedah
+- `to_tsvector` za besedilno ujemanje po oznakah
 - `pgvector` za semantično podobnost profilov
-- združen rezultat, ki vrne rangirane uporabnike in razloge za priporočilo
+- združen rezultat, ki vrne rangirane uporabnike in razloge na osnovi skupnih oznak
 
 Firestore ostane vir resnice za profil, PostgreSQL pa je iskalni indeks za AI
 ujemanje. Lokalni razvoj lahko uporablja `docker-compose.yml`, ki zažene
@@ -182,5 +173,4 @@ ujemanje pripravljena, kakovost priporočil pa se bo izboljšala z zamenjavo
 - Nove možnosti se dodajajo v `frontend/app/lib/profile-taxonomy.ts`.
 - Besedila naj ostanejo v slovenščini, ker so prikazana uporabniku in shranjena v Firestore.
 - Ne odstranjuj obstoječih vrednosti brez migracije, ker so lahko že shranjene pri uporabnikih.
-- Če bo projekt kasneje potreboval večjo stabilnost, naj se uvedejo stabilni ID-ji, npr. `{ id: "artificial-intelligence", label: "Umetna inteligenca" }`.
-- Možnost `Drugo` ostane dovoljena, vendar naj ima pri ujemanju nižjo težo kot vrednosti iz taksonomije, ker ni standardizirana.
+- Oznake naj ostanejo stabilni slugi, ker jih AI indeks uporablja kot vhodni signal.

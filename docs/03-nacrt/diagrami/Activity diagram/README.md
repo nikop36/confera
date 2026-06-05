@@ -16,7 +16,7 @@ flowchart TD
     D -- "Da" --> F["Sistem naloži profile ostalih udeležencev"]
     F --> G["Sistem izloči neustrezne kandidate"]
     G --> I["Sistem preveri časovno razpoložljivost"]
-    I --> H["Sistem primerja interese, kompetence, cilje in vloge"]
+    I --> H["Sistem primerja izbrane oznake udeležencev"]
     H --> J["Sistem izračuna oceno ujemanja"]
     J --> K{"Ali obstajajo primerna ujemanja?"}
 

@@ -93,7 +93,7 @@ Sistem pozna pet vlog: `participant`, `organizer`, `industry`, `admin`, `guest`.
 ## Podatkovni tok — AI matching
 
 1. Backend pridobi profile udeležencev iz Firebase
-2. Profili se pretvorijo v vektorske reprezentacije (embeddingi) in shranijo v Supabase
+2. Izbrane profilne oznake (`tags`) se pretvorijo v vektorske reprezentacije (embeddingi) in shranijo v Supabase
 3. Ob zahtevi za matching Supabase izračuna kosinusno podobnost med vektorji
-4. Rezultati se kombinirajo z dodatnimi kriteriji (vloga, razpoložljivost, cilji) in vrnejo backendu
+4. Rezultati se razvrstijo po hibridnem iskanju nad oznakami in vrnejo backendu
 5. Backend vrne razvrščene predloge z razlago ujemanja odjemalcu

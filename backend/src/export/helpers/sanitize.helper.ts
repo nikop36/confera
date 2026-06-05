@@ -7,12 +7,7 @@ const MAX_STRING_LENGTH = 500;
 const MAX_ARRAY_ITEMS = 20;
 const MAX_ITEM_LENGTH = 100;
 
-const ARRAY_FIELDS = [
-  'interests',
-  'goals',
-  'competencies',
-  'researchKeywords',
-] as const;
+const ARRAY_FIELDS = ['tags'] as const;
 
 // Splits pipe-separated string into array and validates each item
 function parseArrayField(value: string, fieldName: string): string[] {

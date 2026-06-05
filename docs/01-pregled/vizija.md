@@ -2,7 +2,7 @@
 
 ## Namen
 
-**Confera** je spletna platforma za ciljno usmerjeno mreženje udeležencev konference. Sistem povezuje posameznike iz akademske sfere, industrije in javne uprave ter jim omogoča smiselna srečanja na podlagi skupnih interesnih področij, kompatibilnih ciljev in razpoložljivosti.
+**Confera** je spletna platforma za ciljno usmerjeno mreženje udeležencev konference. Sistem povezuje posameznike iz akademske sfere, industrije in javne uprave ter jim omogoča smiselna srečanja na podlagi skupnih oznak profila in razpoložljivosti.
 
 Platforma hkrati podpira organizacijo spremljevalnih dogodkov konference — raziskovalnega sejma in kariernih razgovorov — ter organizatorjem zagotavlja pregled nad potekom in statistiko.
 
@@ -16,17 +16,17 @@ Tradicionalno mreženje na konferencah je naključno in neučinkovito. Udeležen
 
 ## Rešitev
 
-Sistem avtomatizira ujemanje udeležencev z AI modulom, ki profile pretvori v vektorske reprezentacije (embedding) in izračuna podobnost med udeleženci s kosinusno metriko. Ujemanje kombinira več kriterijev: skupne interese, kompatibilne vloge, razpoložljivost in cilje udeleženca. Razporejanje srečanj poteka optimizacijsko — sistem minimizira konflikte in maksimizira število izvedenih srečanj znotraj fiksnega nabora prostorov in terminov.
+Sistem avtomatizira ujemanje udeležencev z AI modulom, ki izbrane profilne oznake pretvori v vektorske reprezentacije (embedding) in izračuna podobnost med udeleženci s kosinusno metriko. `interests`, `goals` in `competencies` niso več del trenutnega profilnega modela za ujemanje; nadomešča jih polje `tags`. Razporejanje srečanj poteka optimizacijsko — sistem minimizira konflikte in maksimizira število izvedenih srečanj znotraj fiksnega nabora prostorov in terminov.
 
 ---
 
 ## Ključni uporabniki
 
 ### Udeleženec konference (raziskovalec / študent)
-- Ustvari profil z interesnimi področji, kompetencami in razpoložljivostjo
+- Ustvari profil z izbranimi oznakami in razpoložljivostjo
 - Prejme priporočila za srečanja z relevantnimi udeleženci
 - Pregleduje razstavitelje sejma in se prijavi na karierne razgovore
-- Vidi razlago ujemanja (skupni interesi, kompatibilni cilji)
+- Vidi razlago ujemanja na osnovi skupnih oznak
 
 ### Organizator konference
 - Uvozi seznam udeležencev iz CSV/Excel predloge
@@ -44,7 +44,7 @@ Sistem avtomatizira ujemanje udeležencev z AI modulom, ki profile pretvori v ve
 
 | Lastnost | ConferenceConnect | Komercialne rešitve (Brella, Swapcard, Whova…) |
 |---|---|---|
-| Akademski kontekst (interesi, projekti) | ✅ | ❌ |
+| Akademski kontekst (profilne oznake, projekti) | ✅ | ❌ |
 | Podpora raziskovalnemu sejmu | ✅ | ❌ |
 | Uvoz iz univerzitetnih sistemov (CSV) | ✅ | Omejeno |
 | Avtomatizirano razporejanje srečanj | ✅ | Delno |

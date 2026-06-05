@@ -17,22 +17,18 @@ Glavna kolekcija za vse uporabnike sistema. Vsak dokument ima kot ID Firebase Au
 | email            | string    | Da      | E-poštni naslov                                                                          |
 | displayName      | string    | Da      | Prikazno ime                                                                             |
 | role             | string    | Da      | Vloga: `participant`, `organizer`, `industry`, `admin`, `guest`                          |
-| profileStatus    | string    | Da      | `incomplete` — profil ni v AI ujemanju; `complete` — profil je indeksiran za AI ujemanje |
+| profileStatus    | string    | Da      | Status izpolnjenosti profila; AI ujemanje trenutno uporablja prisotnost `tags` kot praktični pogoj indeksiranja |
 | createdAt        | timestamp | Da      | Čas registracije                                                                         |
 | bio              | string    | Ne      | Kratka predstavitev                                                                      |
 | affiliation      | string    | Ne      | Organizacija ali institucija                                                             |
-| interests        | string[]  | Ne      | Seznam interesov                                                                         |
-| goals            | string[]  | Ne      | Cilji udeležbe                                                                           |
+| tags             | string[]  | Ne      | Oznake, ki jih uporabnik izbere; glavni vhod za AI ujemanje udeležencev                  |
 | meetingType      | string    | Ne      | `online`, `in-person` ali `both`                                                         |
-| competencies     | string[]  | Ne      | Kompetence in veščine                                                                    |
-| researchKeywords | string[]  | Ne      | Ključne besede za iskanje                                                                |
 | roleProfile      | map       | Ne      | Fleksibilna polja specifična za vlogo                                                    |
 
-**Taksonomija profilnih signalov:** podrobna definicija področij interesa,
-ciljev mreženja, kompetenc in ključnih besed je dokumentirana v
-[interesi.md](./interesi/interesi.md). Ta polja so trenutno shranjena kot `string[]`,
-ker aplikacija podpira vnaprej pripravljene izbire in uporabniško možnost
-`Drugo`.
+**Profilni signal za AI ujemanje:** trenutna implementacija uporablja izbrane
+`tags`. Uporabnik označi teme, ki ga zanimajo, backend pa te oznake sinhronizira
+v `participant_profile_index`. Polja `interests`, `goals`, `competencies` in
+`researchKeywords` niso več del trenutnega podatkovnega modela profila.
 
 **Primer dokumenta:**
 ```json
@@ -45,11 +41,8 @@ ker aplikacija podpira vnaprej pripravljene izbire in uporabniško možnost
   "createdAt": "2026-05-14T16:06:06.576Z",
   "bio": "Raziskovalec na FRI",
   "affiliation": "Univerza v Ljubljani",
-  "interests": ["AI", "strojno učenje"],
-  "goals": ["mreženje", "iskanje investitorjev"],
+  "tags": ["ai", "strojno-ucenje"],
   "meetingType": "both",
-  "competencies": ["Python", "TypeScript"],
-  "researchKeywords": ["nevronske mreže", "LLM"],
   "roleProfile": {
     "previousEvents": ["SloTech 2025"]
   }

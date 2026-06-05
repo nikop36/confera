@@ -42,7 +42,7 @@ Supabase je izbran izključno za AI matching in profilne slike. Razlog je pgvect
 
 ### Embeddingi + kosinusna podobnost (pgvector)
 
-Profili udeležencev se pretvorijo v vektorske reprezentacije z jezikovnim modelom. Podobnost med profili se izračuna s kosinusno metriko neposredno v Supabase (pgvector). Rezultat se kombinira z dodatnimi kriteriji (vloga, razpoložljivost, cilji) in prikaže z razlago ujemanja — kar povečuje transparentnost in zaupanje uporabnikov v priporočila.
+Izbrane profilne oznake (`tags`) se pretvorijo v vektorske reprezentacije z jezikovnim modelom. Podobnost med profili se izračuna s kosinusno metriko neposredno v Supabase (pgvector), rezultat pa se prikaže z razlago na osnovi skupnih oznak. Polja `interests`, `goals` in `competencies` niso več del trenutnega AI ujemanja udeležencev.
 
 ---
 

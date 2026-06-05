@@ -109,7 +109,7 @@ describe('ProfileService', () => {
       const partialUpdate: Partial<UserProfile> = {
         bio: 'Researcher',
         affiliation: 'Univerza v Ljubljani',
-        interests: ['AI', 'ML'],
+        tags: ['ai', 'machine-learning'],
         meetingType: 'both',
       };
       mockFindByUid.mockResolvedValue({ uid: 'uid-123', ...partialUpdate });

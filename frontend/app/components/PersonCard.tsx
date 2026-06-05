@@ -10,8 +10,7 @@ export type CommunityUser = {
   affiliation?: string;
   role: string;
   bio?: string;
-  interests?: string[];
-  goals?: string[];
+  tags?: string[];
   meetingType?: 'online' | 'in-person' | 'both';
   score?: number;
 };
@@ -79,7 +78,7 @@ export default function PersonCard({
 }: PersonCardProps) {
   const t = useT();
   const gradient = avatarGradient(person.uid);
-  const topInterests = (person.interests ?? []).slice(0, 2);
+  const topTags = (person.tags ?? []).slice(0, 2);
   const meeting = meetingLabel(person.meetingType);
 
   const borderClass = isExpanded
@@ -132,15 +131,15 @@ export default function PersonCard({
         </p>
       )}
 
-      {/* Interest chips — always visible */}
-      {topInterests.length > 0 && (
+      {/* Tag chips — always visible */}
+      {topTags.length > 0 && (
         <div className="flex flex-wrap gap-[3px]">
-          {topInterests.map((interest, i) => (
+          {topTags.map((tag, i) => (
             <span
-              key={interest}
+              key={tag}
               className={`px-[7px] py-[2px] rounded-full text-[9px] font-medium ${chipColor(i)}`}
             >
-              {interest}
+              {tag}
             </span>
           ))}
         </div>
@@ -159,37 +158,20 @@ export default function PersonCard({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="border-t border-[#f0f0f0] mt-[11px] pt-[11px]">
-              {/* Full interests + goals in two columns */}
-              <div className="grid grid-cols-2 gap-[6px] mb-[8px]">
-                {(person.interests ?? []).length > 0 && (
+              {/* Full tags */}
+              <div className="mb-[8px]">
+                {(person.tags ?? []).length > 0 && (
                   <div>
                     <p className="text-[8px] font-bold uppercase tracking-[0.05em] text-[#a1a1aa] mb-[4px]">
-                      {t('profilePublic.interests', 'Interests')}
+                      {t('profile.field.tags', 'Tags')}
                     </p>
                     <div className="flex flex-wrap gap-[3px]">
-                      {(person.interests ?? []).map((interest, i) => (
+                      {(person.tags ?? []).map((tag, i) => (
                         <span
-                          key={interest}
+                          key={tag}
                           className={`px-[7px] py-[2px] rounded-full text-[9px] font-medium ${chipColor(i)}`}
                         >
-                          {interest}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(person.goals ?? []).length > 0 && (
-                  <div>
-                    <p className="text-[8px] font-bold uppercase tracking-[0.05em] text-[#a1a1aa] mb-[4px]">
-                      {t('profilePublic.goals', 'Goals')}
-                    </p>
-                    <div className="flex flex-wrap gap-[3px]">
-                      {(person.goals ?? []).map((goal, i) => (
-                        <span
-                          key={goal}
-                          className={`px-[7px] py-[2px] rounded-full text-[9px] font-medium ${chipColor((i + 2) % 4)}`}
-                        >
-                          {goal}
+                          {tag}
                         </span>
                       ))}
                     </div>

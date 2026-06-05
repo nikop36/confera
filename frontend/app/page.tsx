@@ -34,7 +34,7 @@ export default function Home() {
       icon: FEATURE_ICONS[0],
       tag: t('landing.feature.1.tag', 'Targeted networking'),
       title: t('landing.feature.1.title', 'Right contacts, right moment'),
-      desc: t('landing.feature.1.desc', 'The system analyzes your interest areas and connects you with participants from academia, industry, and public administration who share the same professional goals.'),
+      desc: t('landing.feature.1.desc', 'The system analyzes your selected tags and connects you with participants from academia, industry, and public administration who share similar topics.'),
     },
     {
       icon: FEATURE_ICONS[1],
@@ -46,12 +46,12 @@ export default function Home() {
       icon: FEATURE_ICONS[2],
       tag: t('landing.feature.3.tag', 'Smart scheduling'),
       title: t('landing.feature.3.title', 'The algorithm works for you'),
-      desc: t('landing.feature.3.desc', 'The advanced algorithm considers interests, availability, and room constraints — each participant gets an optimized schedule without conflicts.'),
+      desc: t('landing.feature.3.desc', 'The advanced algorithm considers tags, availability, and room constraints — each participant gets an optimized schedule without conflicts.'),
     },
   ];
   const steps = [
     { n: "01", title: t('landing.step.1.title', 'Create profile'), desc: t('landing.step.1.desc', 'Set your role — academic, industry expert, or public sector representative.') },
-    { n: "02", title: t('landing.step.2.title', 'Choose interests'), desc: t('landing.step.2.desc', 'Mark topics that interest you: from artificial intelligence to sustainability.') },
+    { n: "02", title: t('landing.step.2.title', 'Choose tags'), desc: t('landing.step.2.desc', 'Mark topics that describe you: from artificial intelligence to sustainability.') },
     { n: "03", title: t('landing.step.3.title', 'System connects'), desc: t('landing.step.3.desc', 'Confera finds participant matches and suggests meetings with the highest potential.') },
     { n: "04", title: t('landing.step.4.title', 'Meet'), desc: t('landing.step.4.desc', 'Receive your personal conference schedule with arranged meetings, locations, and contacts.') },
   ];
