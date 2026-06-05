@@ -351,7 +351,6 @@ const SL: Dictionary = {
   'auth.error.email': 'Vnesite veljaven e-poštni naslov.',
   'auth.error.password':
     'Geslo mora vsebovati od 12 do 128 znakov, veliko in malo črko, številko ter poseben znak. Presledki niso dovoljeni.',
-  'auth.error.inviteToken': 'Povabilna koda ni veljavna.',
   'auth.error.passwordPersonalData':
     'Geslo ne sme vsebovati vašega imena ali dela e-poštnega naslova.',
   'auth.error.emailExists': 'Račun s tem e-poštnim naslovom že obstaja.',
@@ -374,7 +373,6 @@ const SL: Dictionary = {
   'auth.register.passwordPlaceholder': 'Min. 12 znakov',
   'auth.register.passwordHint':
     '12–128 znakov, velika in mala črka, številka ter poseben znak; brez presledkov.',
-  'auth.register.inviteToggle': 'Imam povabilno kodo (neobvezno)',
   'auth.register.terms.prefix': 'Z registracijo se strinjate s',
   'auth.register.terms.terms': 'pogoji uporabe',
   'auth.register.terms.privacy': 'politiko zasebnosti',
@@ -537,11 +535,9 @@ const SL: Dictionary = {
   'landing.cta.title.3': 'čaka.',
   'landing.cta.subtitle': 'Registrirajte se pred konferenco in Confera poskrbi za ostalo.',
   'landing.cta.register': 'Registracija udeležencev',
-  'landing.cta.contact': 'Kontaktirajte nas',
   'landing.footer.tagline': 'Sistem za ciljno usmerjeno mreženje',
   'landing.footer.privacy': 'Zasebnost',
   'landing.footer.terms': 'Pogoji',
-  'landing.footer.contact': 'Kontakt',
   'hero.pill.academia': 'Akademija',
   'hero.pill.industry': 'Industrija',
   'hero.pill.public': 'Javna uprava',
@@ -1336,7 +1332,6 @@ const EN: Dictionary = {
   'auth.error.email': 'Enter a valid email address.',
   'auth.error.password':
     'Password must contain 12–128 characters, uppercase and lowercase letters, a number, and a special character. Whitespace is not allowed.',
-  'auth.error.inviteToken': 'The invite code is invalid.',
   'auth.error.passwordPersonalData':
     'Password must not contain your name or email address.',
   'auth.error.emailExists': 'An account with this email address already exists.',
@@ -1359,7 +1354,6 @@ const EN: Dictionary = {
   'auth.register.passwordPlaceholder': 'Min. 12 characters',
   'auth.register.passwordHint':
     '12–128 characters, uppercase and lowercase letters, a number, and a special character; no whitespace.',
-  'auth.register.inviteToggle': 'I have an invite code (optional)',
   'auth.register.terms.prefix': 'By registering, you agree to the',
   'auth.register.terms.terms': 'terms of use',
   'auth.register.terms.privacy': 'privacy policy',
@@ -1522,11 +1516,9 @@ const EN: Dictionary = {
   'landing.cta.title.3': 'is waiting.',
   'landing.cta.subtitle': 'Register before the conference and Confera takes care of the rest.',
   'landing.cta.register': 'Participant registration',
-  'landing.cta.contact': 'Contact us',
   'landing.footer.tagline': 'Targeted networking system',
   'landing.footer.privacy': 'Privacy',
   'landing.footer.terms': 'Terms',
-  'landing.footer.contact': 'Contact',
   'hero.pill.academia': 'Academia',
   'hero.pill.industry': 'Industry',
   'hero.pill.public': 'Public sector',

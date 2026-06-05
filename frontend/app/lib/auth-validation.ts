@@ -12,10 +12,6 @@ export function normalizeDisplayName(value: string): string {
   return value.normalize('NFKC').trim();
 }
 
-export function normalizeInviteToken(value: string): string {
-  return value.trim();
-}
-
 export function isValidDisplayName(value: string): boolean {
   const normalized = normalizeDisplayName(value);
   return (
@@ -41,8 +37,7 @@ export function validateRegistrationInput(input: {
   displayName: string;
   email: string;
   password: string;
-  inviteToken?: string;
-}): 'displayName' | 'email' | 'password' | 'inviteToken' | null {
+}): 'displayName' | 'email' | 'password' | null {
   if (!isValidDisplayName(input.displayName)) return 'displayName';
   if (
     input.email.length > 254 ||
@@ -51,12 +46,6 @@ export function validateRegistrationInput(input: {
     return 'email';
   }
   if (!isValidRegistrationPassword(input.password)) return 'password';
-  if (
-    input.inviteToken &&
-    !/^[A-Za-z0-9_-]{1,128}$/.test(normalizeInviteToken(input.inviteToken))
-  ) {
-    return 'inviteToken';
-  }
   return null;
 }
 
@@ -79,9 +68,6 @@ export function getRegistrationErrorTranslationKey(
   }
   if (normalizedMessage.includes('password')) {
     return 'auth.error.password';
-  }
-  if (normalizedMessage.includes('invite token')) {
-    return 'auth.error.inviteToken';
   }
   if (normalizedMessage.includes('email')) {
     return 'auth.error.email';

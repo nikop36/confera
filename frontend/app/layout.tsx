@@ -4,6 +4,7 @@ import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import SmoothScroll from "./components/SmoothScroll";
 import AuthAccessGuard from "./components/AuthAccessGuard";
+import PrivacyTermsModal from "./components/PrivacyTermsModal";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -36,6 +37,7 @@ export default function RootLayout({
         <SmoothScroll>
           <AuthAccessGuard>{children}</AuthAccessGuard>
         </SmoothScroll>
+        <PrivacyTermsModal />
       </body>
     </html>
   );

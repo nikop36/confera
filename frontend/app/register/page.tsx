@@ -4,13 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { openPrivacyTermsModal } from '../components/PrivacyTermsModal';
 import { saveStoredUser, useHydrated } from '../lib/auth';
 import {
   getRegistrationErrorTranslationKey,
   getSafeReturnPath,
   normalizeDisplayName,
   normalizeEmail,
-  normalizeInviteToken,
   resolvePostAuthDestination,
   validateRegistrationInput,
 } from '../lib/auth-validation';
@@ -40,9 +40,8 @@ function passwordStrength(pw: string) {
 export default function RegisterPage() {
   const router = useRouter();
   const t = useT();
-  const [form, setForm] = useState({ displayName: '', email: '', password: '', inviteToken: '' });
+  const [form, setForm] = useState({ displayName: '', email: '', password: '' });
   const [showPw, setShowPw] = useState(false);
-  const [showInvite, setShowInvite] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const hydrated = useHydrated();
@@ -68,7 +67,6 @@ export default function RegisterPage() {
         displayName: normalizeDisplayName(form.displayName),
         email: normalizeEmail(form.email),
         password: form.password,
-        inviteToken: normalizeInviteToken(form.inviteToken),
       };
       const validationError = validateRegistrationInput(normalizedForm);
       if (validationError) {
@@ -85,9 +83,6 @@ export default function RegisterPage() {
         email: normalizedForm.email,
         password: normalizedForm.password,
       };
-      if (normalizedForm.inviteToken) {
-        body.inviteToken = normalizedForm.inviteToken;
-      }
 
       const res = await fetch(`${API}/auth/register`, {
         method: 'POST',
@@ -294,36 +289,6 @@ export default function RegisterPage() {
               </p>
             </div>
 
-            <div>
-              <button
-                type="button"
-                onClick={() => setShowInvite(v => !v)}
-                className="flex items-center gap-1.5 text-[13px] text-[#8e8e93] hover:text-[#0d0d0d] bg-transparent border-0 cursor-pointer font-sans transition-colors"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d={showInvite ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'} />
-                </svg>
-                {t('auth.register.inviteToggle', 'I have an invite code (optional)')}
-              </button>
-              {showInvite && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="mt-2 overflow-hidden"
-                >
-                  <input
-                    type="text"
-                    value={form.inviteToken}
-                    onChange={field('inviteToken')}
-                    placeholder="INVITE-XXXX"
-                    autoComplete="off"
-                    maxLength={128}
-                    className="profile-input font-mono"
-                  />
-                </motion.div>
-              )}
-            </div>
-
             {error && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -360,9 +325,21 @@ export default function RegisterPage() {
 
           <p className="mt-6 text-[12px] text-center text-[#8e8e93]">
             {t('auth.register.terms.prefix', 'By registering, you agree to the')}{' '}
-            <span className="text-[#7fa8c8] cursor-pointer hover:underline">{t('auth.register.terms.terms', 'terms of use')}</span>
+            <button
+              type="button"
+              onClick={openPrivacyTermsModal}
+              className="border-0 bg-transparent p-0 text-[#7fa8c8] cursor-pointer hover:underline font-sans text-[12px]"
+            >
+              {t('auth.register.terms.terms', 'terms of use')}
+            </button>
             {' '}in{' '}
-            <span className="text-[#7fa8c8] cursor-pointer hover:underline">{t('auth.register.terms.privacy', 'privacy policy')}</span>.
+            <button
+              type="button"
+              onClick={openPrivacyTermsModal}
+              className="border-0 bg-transparent p-0 text-[#7fa8c8] cursor-pointer hover:underline font-sans text-[12px]"
+            >
+              {t('auth.register.terms.privacy', 'privacy policy')}
+            </button>.
           </p>
         </motion.div>
       </div>

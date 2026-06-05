@@ -219,6 +219,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   ).length;
   const isAdmin = user?.role === 'admin';
   const isParticipant = user?.role === 'participant' || (!user?.role && user != null);
+  const eventsPanelHref = isParticipant ? '/home' : '/events';
   const visibleNav = NAV.filter(({ key }) => !(key === 'events' && isParticipant));
 
   const initials = user?.displayName
@@ -814,9 +815,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </h3>
             <div className="grid grid-cols-2 gap-2">
               {recommendations.map((recommendation, index) => (
-                <div
+                <button
                   key={`${recommendation.label}-${index}`}
-                  className="min-h-[78px] rounded-xl p-3 flex flex-col justify-end"
+                  type="button"
+                  onClick={() => router.push(eventsPanelHref)}
+                  className="min-h-[78px] rounded-xl p-3 flex flex-col justify-end border-0 text-left cursor-pointer transition-transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-[#007AFF] focus:ring-offset-2 font-sans"
                   style={{
                     background: recommendation.bg,
                     color: recommendation.fg,
@@ -875,7 +878,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <p className="text-[12px] font-bold leading-tight break-words">
                     {recommendation.label}
                   </p>
-                </div>
+                </button>
               ))}
             </div>
           </section>
@@ -886,7 +889,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#e5e5ea] mobile-safe-bottom">
         <div className="flex">
           {([
-            { href: isParticipant ? '/home' : '/events', label: t('nav.events'), badge: 0, icon: (
+            { href: eventsPanelHref, label: t('nav.events'), badge: 0, icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
                 <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" />
               </svg>

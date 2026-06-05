@@ -3,15 +3,13 @@ import {
   isValidDisplayName,
   normalizeDisplayName,
   normalizeEmail,
-  normalizeInviteToken,
 } from './auth-input.validation';
 
 describe('authentication input validation', () => {
   describe('normalization', () => {
-    it('normalizes email, display name, and invite token input', () => {
+    it('normalizes email and display name input', () => {
       expect(normalizeEmail('  USER@Example.COM ')).toBe('user@example.com');
       expect(normalizeDisplayName('  Aleš Močnik  ')).toBe('Aleš Močnik');
-      expect(normalizeInviteToken('  invite_123  ')).toBe('invite_123');
     });
   });
 

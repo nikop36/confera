@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import HeroSection from "./components/HeroSection";
+import { openPrivacyTermsModal } from "./components/PrivacyTermsModal";
 import { useT } from "./lib/i18n";
 const FEATURE_ICONS = [
   (
@@ -167,7 +168,7 @@ export default function Home() {
           {t('landing.cta.subtitle', 'Register before the conference and Confera takes care of the rest.')}
         </p>
         <div className="flex gap-3 justify-center flex-wrap">
-          <a
+          <Link
             href="/register"
             className="flex items-center gap-1.5 px-6 py-3 rounded-full bg-[#0d0d0d] text-white text-[14px] font-semibold no-underline"
           >
@@ -175,13 +176,7 @@ export default function Home() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
-          </a>
-          <a
-            href="#"
-            className="flex items-center gap-1.5 px-6 py-3 rounded-full border border-[#e5e7eb] bg-white text-[#3d3d3d] text-[14px] font-semibold no-underline hover:bg-[#f7f7f7] transition-colors"
-          >
-            {t('landing.cta.contact', 'Contact us')}
-          </a>
+          </Link>
         </div>
       </section>
 
@@ -195,8 +190,15 @@ export default function Home() {
           © 2026 Confera · {t('landing.footer.tagline', 'Targeted networking system')}
         </p>
         <div className="flex gap-5">
-          {[t('landing.footer.privacy', 'Privacy'), t('landing.footer.terms', 'Terms'), t('landing.footer.contact', 'Contact')].map((l) => (
-            <a key={l} href="#" className="text-[12px] text-[#8e8e93] no-underline hover:text-[#0d0d0d] transition-colors">{l}</a>
+          {[t('landing.footer.privacy', 'Privacy'), t('landing.footer.terms', 'Terms')].map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={openPrivacyTermsModal}
+              className="border-0 bg-transparent p-0 text-[12px] text-[#8e8e93] hover:text-[#0d0d0d] transition-colors cursor-pointer font-sans"
+            >
+              {l}
+            </button>
           ))}
         </div>
       </footer>

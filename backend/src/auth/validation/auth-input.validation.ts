@@ -17,10 +17,6 @@ export function normalizeDisplayName(value: unknown): unknown {
   return typeof value === 'string' ? value.normalize('NFKC').trim() : value;
 }
 
-export function normalizeInviteToken(value: unknown): unknown {
-  return typeof value === 'string' ? value.trim() : value;
-}
-
 export function isValidDisplayName(value: unknown): boolean {
   if (typeof value !== 'string') return false;
   if (
