@@ -92,9 +92,16 @@ export default function ConferenceProgramPage() {
   const eventId = params['id'] as string;
   const router = useRouter();
   const user = useStoredUser();
+
   const isAdminOrOrganizer =
     user?.role === 'admin' || user?.role === 'organizer';
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestDisplayName, setGuestDisplayName] = useState('');
+  const [invitingGuest, setInvitingGuest] = useState(false);
+  const [guestInviteError, setGuestInviteError] = useState('');
+  const [guestInviteSuccess, setGuestInviteSuccess] = useState('');
 
   const [conference, setConference] = useState<EventItem | null>(null);
   const [sessions, setSessions] = useState<SessionItem[]>([]);
@@ -104,6 +111,8 @@ export default function ConferenceProgramPage() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [exportFormat, setExportFormat] = useState<'csv' | 'xlsx'>('csv');
 
   const [registeringEvent, setRegisteringEvent] = useState(false);
   const [registerEventError, setRegisterEventError] = useState('');
@@ -414,14 +423,56 @@ export default function ConferenceProgramPage() {
     }
   }
 
-  async function handleExport() {
+  async function handleInviteGuest() {
+    if (!user?.idToken || !guestEmail.trim()) return;
+
+    setInvitingGuest(true);
+    setGuestInviteError('');
+    setGuestInviteSuccess('');
+
+    try {
+      const res = await fetch(`${API}/events/${eventId}/guests`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${user.idToken}`,
+          'Content-Type': 'application/json',
+        },
+       body: JSON.stringify({
+          email: guestEmail.trim(),
+          displayName: guestDisplayName.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          message?: string | string[];
+        };
+
+        const msg = Array.isArray(body.message)
+          ? body.message[0]
+          : body.message;
+
+        throw new Error(msg ?? 'Failed to invite guest');
+      }
+
+      setGuestInviteSuccess('Invitation sent');
+      setGuestEmail('');
+    } catch (err) {
+      setGuestInviteError(
+        err instanceof Error ? err.message : 'Failed to invite guest',
+      );
+    } finally {
+      setInvitingGuest(false);
+    }
+  }
+
+  async function handleExport(format: 'csv' | 'xlsx') {
     if (!user?.idToken) return;
 
     try {
       const res = await fetch(
-        `${API}/events/${eventId}/registrations/export?format=csv`,
+        `${API}/events/${eventId}/registrations/export?format=${format}`,
         {
-          method: 'GET',
           headers: {
             Authorization: `Bearer ${user.idToken}`,
           },
@@ -436,9 +487,9 @@ export default function ConferenceProgramPage() {
 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
 
-      a.download = `registrations-${eventId}.csv`;
+      a.href = url;
+      a.download = `registrations-${eventId}.${format}`;
 
       document.body.appendChild(a);
       a.click();
@@ -709,13 +760,70 @@ export default function ConferenceProgramPage() {
 
                   <button
                     type="button"
-                    onClick={() => void handleExport()}
+                    onClick={() => void handleExport('csv')}
                     className="flex-1 py-[9px] rounded-[12px] text-[12px] font-semibold text-[#047857] bg-[#ecfdf5] border border-[#a7f3d0] hover:bg-[#d1fae5] transition flex items-center justify-center gap-1"
                   >
-                    📤 {t('eventDetail.export', 'Export')}
+                    📤 {t('eventDetail.export', 'Csv')}
+                  </button>
+                  <button type="button" onClick={() => void handleExport('xlsx')} className="flex-1 py-[9px] rounded-[12px] text-[12px] font-semibold text-[#047857] bg-[#ecfdf5] border border-[#a7f3d0] hover:bg-[#d1fae5] transition flex items-center justify-center gap-1">
+                    📊  Excel
                   </button>
                 </div>
               )}
+              <div className="h-px bg-[#f0f0f0] my-1" />
+            
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Guest name"
+                  value={guestDisplayName}
+                  onChange={(e) => setGuestDisplayName(e.target.value)}
+                  className="flex-1 px-3 py-[9px] rounded-[12px] border border-[#d1d5db]"
+                />
+
+                <input
+                  type="email"
+                  placeholder="Guest email"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  className="flex-1 px-3 py-[9px] rounded-[12px] border border-[#d1d5db]"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => void handleInviteGuest()}
+                  disabled={!guestDisplayName.trim() || !guestEmail.trim()}
+                  className="
+                    px-4 py-[9px]
+                    rounded-[12px]
+                    text-[12px]
+                    font-semibold
+                    text-white
+                    bg-[#0071e3]
+                    hover:bg-[#0064cc]
+                    disabled:bg-[#93c5fd]
+                    disabled:cursor-not-allowed
+                    transition
+                    flex items-center
+                    justify-center
+                    gap-1
+                  "
+                >
+                  ✉️ Invite
+                </button>
+            </div>
+
+            {guestInviteError && (
+              <p className="text-[11px] text-[#dc2626]">
+                {guestInviteError}
+              </p>
+            )}
+
+            {guestInviteSuccess && (
+              <p className="text-[11px] text-[#16a34a]">
+                {guestInviteSuccess}
+              </p>
+            )}
             </div>
           )}
         </>

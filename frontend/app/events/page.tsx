@@ -7,7 +7,6 @@ import EventFormModal, { type EventFormValues } from '../components/EventFormMod
 import { useStoredUser } from '../lib/auth';
 import TagPicker, { type Tag } from '../components/TagPicker';
 import { useT } from '../lib/i18n';
-const [shouldLoad, setShouldLoad] = useState(false);
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -179,6 +178,8 @@ function MonthCalendar({
 export default function EventsPage() {
   const user = useStoredUser();
   const t = useT();
+
+  const [shouldLoad, setShouldLoad] = useState(false);
 
   // All fetched events (including archived)
   const [events, setEvents] = useState<EventItem[]>([]);

@@ -81,7 +81,7 @@ export class EventsExportController {
         fieldSize: 16384,
         files: 1,
         fields: 0,
-        parts: 1,
+        parts: 10,
         headerPairs: 20,
       },
     }),
