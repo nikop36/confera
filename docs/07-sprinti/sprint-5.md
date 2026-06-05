@@ -1,7 +1,16 @@
 ## Sprint 5
 
 **Beno:**
-## TODO:
+V petem sprintu sem zaključil več pomembnih tehničnih izboljšav, ki vplivajo na stabilnost, merljivost in uporabniško izkušnjo dogodkovnega modula. V tem sklopu sem:
+
+- Izvedel **scaling test z orodjem k6** ter odpravil ozka grla, ki so se pojavila pri večji obremenitvi.
+- Pripravil in konfiguriral **Firebase/Firestore emulator setup** za hitrejše lokalno testiranje brez vpliva na produkcijske podatke.
+- Implementiral **logging interceptor** za merjenje odzivnega časa API‑jev in lažje odkrivanje počasnih endpointov.
+- Dodal **restrikcije za dogodke** z uvedbo paginacije in dodatnega filtra za prikaz samo prijavljenih uporabnikov.
+- Na stran dogodkov za organizatorje vključil **date‑time picker**, ki omogoča natančnejše upravljanje terminov in prikaz samo njihovih preteklih dogodkov.
+- Izvedel celovito **testiranje novih funkcionalnosti** ter odpravil napake, odkrite med QA postopkom.
+- Posodobil in razširil **projektno dokumentacijo**, da odraža vse nove spremembe in tehnične prilagoditve.
+
 
 ---
 

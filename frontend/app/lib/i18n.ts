@@ -991,6 +991,16 @@ const SL: Dictionary = {
   'timePicker.step.endMinute': 'Konec — minute',
   'timePicker.next': 'Naprej',
   'timePicker.confirm': 'Potrdi',
+  'events.showAll': 'Prikaži vse datume',
+  'events.archived': 'Arhivirano',
+  'events.leave': 'Zapusti',
+  'events.noneForDate': 'Ni dogodkov za izbrani datum.',
+  'news.title': 'Novosti',
+  'news.subtitle': 'Vsi razpoložljivi dogodki',
+  'news.onlyJoined': 'Moji dogodki',
+  'news.noneJoined': 'Niste prijavljeni na noben dogodek.',
+  'news.showing': 'Prikazano',
+  'news.of': 'od',
 };
 
 const EN: Dictionary = {
@@ -1975,6 +1985,16 @@ const EN: Dictionary = {
   'timePicker.step.endMinute': 'End — minute',
   'timePicker.next': 'Next',
   'timePicker.confirm': 'Confirm',
+  'events.showAll': 'Show all dates',
+  'events.archived': 'Archived',
+  'events.leave': 'Leave',
+  'events.noneForDate': 'No events on this date.',
+  'news.title': 'News',
+  'news.subtitle': 'All available events',
+  'news.onlyJoined': 'My events',
+  'news.noneJoined': 'You are not registered for any events.',
+  'news.showing': 'Showing',
+  'news.of': 'of',
 };
 
 function dictionaryFor(locale: Locale): Dictionary {

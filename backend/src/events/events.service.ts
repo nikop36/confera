@@ -56,19 +56,21 @@ export class EventsService {
   async listEvents(callerUid: string): Promise<EventWithMeta[]> {
     const friendUids =
       await this.connectionsRepository.listAcceptedConnectionUids(callerUid);
-    const events = await this.eventsRepository.listEvents(
-      callerUid,
-      friendUids,
-    );
-
-    const now = Date.now();
-    return events.filter((e) => !e.archived && e.endAt.getTime() >= now);
+    return this.eventsRepository.listEvents(callerUid, friendUids);
   }
 
   // Same as listEvents but scoped to events created by callerUid.
   // Used by the organizer Program page.
   async listMyEvents(callerUid: string): Promise<EventWithMeta[]> {
-    const all = await this.listEvents(callerUid);
+    const friendUids =
+      await this.connectionsRepository.listAcceptedConnectionUids(callerUid);
+
+    // includeArchived = true  ← so the organizer calendar shows past events
+    const all = await this.eventsRepository.listEvents(
+      callerUid,
+      friendUids,
+      true,
+    );
     return all.filter((e) => e.createdBy === callerUid);
   }
 

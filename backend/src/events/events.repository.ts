@@ -30,6 +30,7 @@ export class EventsRepository {
   async listEvents(
     callerUid: string,
     friendUids: string[] = [],
+    includeArchived = false,
   ): Promise<EventWithMeta[]> {
     const db = this.firebaseService.getFirestore();
 
@@ -42,10 +43,15 @@ export class EventsRepository {
       regSnap.docs.map((d) => d.ref.parent.parent!.id),
     );
 
-    const snapshot = await db
+    let query: FirebaseFirestore.Query = db
       .collection('events')
-      .orderBy('startAt', 'asc')
-      .get();
+      .orderBy('startAt', 'asc');
+
+    if (!includeArchived) {
+      query = query.where('archived', '==', false);
+    }
+
+    const snapshot = await query.get();
 
     if (friendUids.length === 0) {
       return snapshot.docs.map((doc) => ({

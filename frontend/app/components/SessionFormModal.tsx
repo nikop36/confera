@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { SessionItem, Speaker } from './SessionCard';
-import SpeakerInput from './SpeakerInput';
 import TagPicker from './TagPicker';
 import ClockTimePicker from './ClockTimePicker';
 import { useT } from '../lib/i18n';
@@ -225,23 +224,6 @@ export default function SessionFormModal({
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  function addSpeaker() {
-    set('speakers', [...form.speakers, { name: '', bio: '' }]);
-  }
-
-  function updateSpeaker(index: number, updated: Speaker) {
-    set(
-      'speakers',
-      form.speakers.map((s, i) => (i === index ? updated : s)),
-    );
-  }
-
-  function removeSpeaker(index: number) {
-    set(
-      'speakers',
-      form.speakers.filter((_, i) => i !== index),
-    );
-  }
 
   const days = getEventDays(eventStartAt, eventEndAt);
   const isMultiDay = days.length > 1;
@@ -316,29 +298,6 @@ export default function SessionFormModal({
               industryUsers={users.filter((u) => u.role !== 'participant')}
               onChange={(name, uid) => setForm((prev) => ({ ...prev, presenterName: name, presenterUid: uid }))}
             />
-          </div>
-
-          {/* Speakers */}
-          <div className="flex flex-col gap-2">
-            <span className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wide">
-              {t('sessionForm.speakers', 'Speakers')}
-            </span>
-            {form.speakers.map((speaker, index) => (
-              <SpeakerInput
-                key={index}
-                value={speaker}
-                onChange={(updated) => updateSpeaker(index, updated)}
-                onRemove={() => removeSpeaker(index)}
-                users={users}
-              />
-            ))}
-            <button
-              type="button"
-              onClick={addSpeaker}
-              className="text-[11px] font-semibold text-[#6b7280] hover:text-[#0d0d0d] border border-dashed border-[#d1d5db] rounded-[8px] py-[6px] bg-transparent cursor-pointer transition-colors font-sans"
-            >
-              + {t('sessionForm.addSpeaker', 'Add speaker')}
-            </button>
           </div>
 
           {/* Day + time */}

@@ -1,25 +1,25 @@
-'use client';
-
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { TagPills } from './TagPicker';
-import { useLocale, useT } from '../lib/i18n';
-
-const AVATAR_COLOURS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
-
-function avatarColour(uid: string): string {
-  let hash = 0;
-  for (const ch of uid) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffff;
-  return AVATAR_COLOURS[hash % AVATAR_COLOURS.length];
+import { useT, useLocale } from '../lib/i18n';
+// avatar helpers — inline so there's no external dependency
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .map((p) => p[0] ?? '')
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 }
 
-function initials(displayName: string): string {
-  return displayName
-    .split(' ')
-    .map((w) => w[0] ?? '')
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+function avatarColour(uid: string): string {
+  const colours = [
+    '#6366f1', '#0ea5e9', '#10b981', '#f59e0b',
+    '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6',
+  ];
+  let hash = 0;
+  for (let i = 0; i < uid.length; i++) hash = uid.charCodeAt(i) + ((hash << 5) - hash);
+  return colours[Math.abs(hash) % colours.length];
 }
 
 export type EventItem = {
@@ -31,9 +31,11 @@ export type EventItem = {
   location: string;
   capacity: number;
   registeredCount: number;
-  isRegistered: boolean;
   tags?: string[];
-  friendsGoing?: { uid: string; displayName: string }[]; // placeholder for Task 7
+  isRegistered: boolean;
+  friendsGoing?: { uid: string; displayName: string }[];
+  createdBy: string;
+  archived?: boolean;
 };
 
 type EventCardProps = {
@@ -42,7 +44,7 @@ type EventCardProps = {
   isExpanded: boolean;
   onToggle: () => void;
   isRegistering: boolean;
-  registerError?: string | null;
+  registerError?: string;
   onRegister: () => void;
   onCancel: () => void;
   isAdminOrOrganizer: boolean;
@@ -51,12 +53,9 @@ type EventCardProps = {
 };
 
 function formatTimeRange(startAt: string, endAt: string, locale: 'sl' | 'en'): string {
-  const opts: Intl.DateTimeFormatOptions = {
-    hour: '2-digit',
-    minute: '2-digit',
-  };
-  const localeCode = locale === 'en' ? 'en-GB' : 'sl-SI';
-  return `${new Date(startAt).toLocaleTimeString(localeCode, opts)} – ${new Date(endAt).toLocaleTimeString(localeCode, opts)}`;
+  const opts: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+  const l = locale === 'en' ? 'en-GB' : 'sl-SI';
+  return `${new Date(startAt).toLocaleTimeString(l, opts)} – ${new Date(endAt).toLocaleTimeString(l, opts)}`;
 }
 
 export default function EventCard({
@@ -111,7 +110,7 @@ export default function EventCard({
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-            {event.isRegistered ? (
+          {event.isRegistered ? (
             <span className="bg-[#ecfdf3] text-[#166534] text-[10px] font-semibold px-[7px] py-[2px] rounded-[5px]">
               ✓ {t('eventDetail.registered', 'Registered')}
             </span>
@@ -129,6 +128,7 @@ export default function EventCard({
           </span>
         </div>
       </div>
+
       {(event.tags ?? []).length > 0 && (
         <div className="mt-2">
           <TagPills
@@ -139,6 +139,7 @@ export default function EventCard({
           />
         </div>
       )}
+
       {(event.friendsGoing ?? []).length > 0 && (
         <div className="flex items-center gap-[5px] mt-[6px]">
           <div className="flex">
@@ -160,12 +161,15 @@ export default function EventCard({
           <span className="text-[11px] text-[#6366f1] font-semibold">
             {(event.friendsGoing ?? []).length === 1
               ? t('events.friendGoing.one', '1 friend is going')
-              : t('events.friendGoing.many', '{{count}} friends are going').replace('{{count}}', String((event.friendsGoing ?? []).length))}
+              : t('events.friendGoing.many', '{{count}} friends are going').replace(
+                  '{{count}}',
+                  String((event.friendsGoing ?? []).length),
+                )}
           </span>
         </div>
       )}
 
-      {/* Animated expanded panel */}
+      {/* Expanded panel */}
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
@@ -184,7 +188,8 @@ export default function EventCard({
                   {formatTimeRange(event.startAt, event.endAt, locale)}
                 </span>
                 <span className="text-[11px] text-[#6e6e73]">
-                  {event.registeredCount} / {event.capacity} {t('eventDetail.seats', 'seats')}
+                  {event.registeredCount} / {event.capacity}{' '}
+                  {t('eventDetail.seats', 'seats')}
                 </span>
               </div>
 
@@ -203,6 +208,7 @@ export default function EventCard({
               {/* Action row */}
               <div className="flex gap-2 items-center">
                 {event.isRegistered ? (
+                  // ── CHANGED: red Leave button ──────────────────────────────
                   <button
                     type="button"
                     disabled={isRegistering}
@@ -210,11 +216,11 @@ export default function EventCard({
                       e.stopPropagation();
                       onCancel();
                     }}
-                    className="flex-1 py-[7px] rounded-[8px] text-[11px] font-semibold bg-[#ecfdf3] text-[#166534] hover:bg-[#d1fae5] transition-colors disabled:opacity-50 border-0 cursor-pointer font-sans"
+                    className="flex-1 py-[7px] rounded-[8px] text-[11px] font-semibold bg-[#fff1f2] text-[#dc2626] hover:bg-[#fee2e2] transition-colors disabled:opacity-50 border-0 cursor-pointer font-sans"
                   >
                     {isRegistering
-                      ? t('events.cancelling', 'Cancelling...')
-                      : t('events.unregister', 'Unregister')}
+                      ? t('events.cancelling', 'Prekinjam...')
+                      : t('events.leave', 'Zapusti')}
                   </button>
                 ) : (
                   <button
@@ -227,7 +233,7 @@ export default function EventCard({
                     className="flex-1 py-[7px] rounded-[8px] text-[11px] font-semibold bg-[#0d0d0d] text-white hover:bg-[#1f1f1f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-0 cursor-pointer font-sans"
                   >
                     {isRegistering
-                      ? t('events.registering', 'Registering...')
+                      ? t('events.registering', 'Prijavljam...')
                       : isFull
                         ? t('events.soldOut', 'Sold out')
                         : t('events.register', 'Register')}

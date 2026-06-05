@@ -9,14 +9,10 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-  Query,
-  DefaultValuePipe,
-  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
-  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -39,26 +35,12 @@ export class EventsController {
   // ── list / read ───────────────────────────────────────────────────────────
 
   @Get()
-  @ApiOperation({ summary: 'List all active events (paginated)' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-  @ApiResponse({ status: 200, description: 'Paginated events returned' })
-  async listEvents(
-    @CurrentUser() user: FirebaseUser,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-  ) {
-    const all = await this.eventsService.listEvents(user.uid);
-    const safeLimit = Math.min(Math.max(limit, 1), 50); // cap at 50
-    const safePage = Math.max(page, 1);
-    const start = (safePage - 1) * safeLimit;
-    const data = all.slice(start, start + safeLimit);
-    return {
-      data,
-      total: all.length,
-      page: safePage,
-      limit: safeLimit,
-    };
+  @ApiOperation({
+    summary: 'List all events with registration status for caller',
+  })
+  @ApiResponse({ status: 200, description: 'Events returned' })
+  async listEvents(@CurrentUser() user: FirebaseUser) {
+    return this.eventsService.listEvents(user.uid);
   }
 
   @Get('mine')

@@ -94,6 +94,7 @@ export default function ConferenceProgramPage() {
   const user = useStoredUser();
   const isAdminOrOrganizer =
     user?.role === 'admin' || user?.role === 'organizer';
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [conference, setConference] = useState<EventItem | null>(null);
   const [sessions, setSessions] = useState<SessionItem[]>([]);
@@ -413,6 +414,72 @@ export default function ConferenceProgramPage() {
     }
   }
 
+  async function handleExport() {
+    if (!user?.idToken) return;
+
+    try {
+      const res = await fetch(
+        `${API}/events/${eventId}/registrations/export?format=csv`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${user.idToken}`,
+          },
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await res.blob();
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+
+      a.download = `registrations-${eventId}.csv`;
+
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+    }
+  }
+
+  async function handleImport(file: File) {
+    if (!user?.idToken) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(
+        `${API}/events/${eventId}/registrations/import`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${user.idToken}`,
+          },
+          body: formData,
+        },
+      );
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message ?? 'Import failed');
+      }
+
+      // refresh data after import
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Import failed');
+    }
+  }
+
   const tagMap = Object.fromEntries(tags.map((t) => [t.slug, t.label]));
   const allItems = toGridItems(sessions, careerSlots);
   const itemsByDay = groupByDay(allItems);
@@ -422,12 +489,11 @@ export default function ConferenceProgramPage() {
       {/* Back link */}
       <button
         type="button"
-        onClick={() => router.push('/events')}
+        onClick={() => router.push(isAdminOrOrganizer ? '/events' : '/home')}
         className="text-[12px] text-[#8e8e93] hover:text-[#0d0d0d] mb-4 flex items-center gap-1 bg-transparent border-0 cursor-pointer font-sans p-0"
       >
-        ← {t('events.title')}
+        ← {isAdminOrOrganizer ? t('events.title') : t('home.title', 'Novosti')}
       </button>
-
       {error && (
         <div className="mb-4 rounded-[12px] bg-[#fff1f2] px-4 py-3 text-sm text-[#dc2626]">
           {error}
@@ -602,23 +668,54 @@ export default function ConferenceProgramPage() {
 
           {/* Add buttons */}
           {(isAdminOrOrganizer || user?.role === 'industry') && (
-            <div className="flex gap-2 mt-4">
-              {isAdminOrOrganizer && (
+            <div className="flex flex-col gap-3 mt-4">
+
+              {/* Primary actions */}
+              <div className="flex gap-2">
+                {isAdminOrOrganizer && (
+                  <button
+                    type="button"
+                    onClick={() => setModalSession(null)}
+                    className="flex-1 py-[10px] border-[1.5px] border-dashed border-[#d1d5db] rounded-[12px] text-[12px] font-semibold text-[#8e8e93] hover:border-[#0d0d0d] hover:text-[#0d0d0d] hover:bg-[#fafafa] transition-colors bg-transparent cursor-pointer font-sans"
+                  >
+                    + {t('eventDetail.addSession', 'Add session')}
+                  </button>
+                )}
+
                 <button
                   type="button"
-                  onClick={() => setModalSession(null)}
-                  className="flex-1 py-[10px] border-[1.5px] border-dashed border-[#d1d5db] rounded-[12px] text-[12px] font-semibold text-[#8e8e93] hover:border-[#0d0d0d] hover:text-[#0d0d0d] hover:bg-[#fafafa] transition-colors bg-transparent cursor-pointer font-sans"
+                  onClick={() => setModalCareerSlot(null)}
+                  className="flex-1 py-[10px] border-[1.5px] border-dashed border-[#fcd34d] rounded-[12px] text-[12px] font-semibold text-[#92400e] hover:border-[#f59e0b] hover:bg-[#fffbeb] transition-colors bg-transparent cursor-pointer font-sans"
                 >
-                  + {t('eventDetail.addSession', 'Add session')}
+                  + {t('eventDetail.addCareer', 'Add career interview')}
                 </button>
+              </div>
+
+              {/* Divider spacing */}
+              {isAdminOrOrganizer && (
+                <div className="h-px bg-[#f0f0f0] my-1" />
               )}
-              <button
-                type="button"
-                onClick={() => setModalCareerSlot(null)}
-                className="flex-1 py-[10px] border-[1.5px] border-dashed border-[#fcd34d] rounded-[12px] text-[12px] font-semibold text-[#92400e] hover:border-[#f59e0b] hover:bg-[#fffbeb] transition-colors bg-transparent cursor-pointer font-sans"
-              >
-                + {t('eventDetail.addCareer', 'Add career interview')}
-              </button>
+
+              {/* Utility actions (Import / Export) */}
+              {isAdminOrOrganizer && (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 py-[9px] rounded-[12px] text-[12px] font-semibold text-[#1d4ed8] bg-[#eff6ff] border border-[#bfdbfe] hover:bg-[#dbeafe] transition flex items-center justify-center gap-1"
+                  >
+                    📥 {t('eventDetail.import', 'Import')}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleExport()}
+                    className="flex-1 py-[9px] rounded-[12px] text-[12px] font-semibold text-[#047857] bg-[#ecfdf5] border border-[#a7f3d0] hover:bg-[#d1fae5] transition flex items-center justify-center gap-1"
+                  >
+                    📤 {t('eventDetail.export', 'Export')}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -649,9 +746,21 @@ export default function ConferenceProgramPage() {
           onSave={handleCareerSlotSave}
         />
       )}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv,.xlsx"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleImport(file);
+          e.target.value = '';
+        }}
+      />
     </AppShell>
   );
 }
+
 
 function SkeletonProgram() {
   return (
