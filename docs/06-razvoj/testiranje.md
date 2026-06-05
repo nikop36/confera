@@ -69,7 +69,7 @@ npm run test:api:flow
 
 ## End-to-end testi — Playwright
 
-Playwright pokriva celoten tok (frontend → backend → API → baza) z uporabniškimi scenariji. Testi živijo v `tests/playwright/`.
+Playwright pokriva celoten tok (frontend → backend → API → baza) z uporabniškimi scenariji. Testi živijo v `tests/e2e/`.
 
 ### Vzpostavitev
 
@@ -78,6 +78,20 @@ Zagotovi, da je v root `.env` nastavljena spremenljivka:
 ```
 PLAYWRIGHT_BASE_URL=http://localhost:3001
 ```
+
+Za teste povezav morata biti v `.env` nastavljena tudi dva obstoječa testna uporabnika:
+
+```
+TEST_EMAIL=...
+TEST_PASSWORD=...
+ORGANIZER_EMAIL=...
+ORGANIZER_PASSWORD=...
+```
+
+Pred zagonom mora biti aplikacija lokalno dostopna:
+
+- frontend: `http://localhost:3001`
+- backend API: `http://localhost:3000`
 
 ### Zagon
 
@@ -91,6 +105,13 @@ npm run test:e2e:ui
 # Prikaz poročila zadnjega zagona
 npm run test:e2e:report
 ```
+
+### Pokriti e2e scenariji
+
+| Datoteka | Scenarij |
+|---|---|
+| `tests/e2e/connections.spec.ts` | Uporabnik pošlje zahtevo za povezavo, prejemnik jo potrdi, oba uporabnika vidita sprejeto povezavo |
+| `tests/e2e/connections.spec.ts` | Podvojena pending zahteva za povezavo je zavrnjena z napako `400` |
 
 ---
 
@@ -115,6 +136,8 @@ npm run test:e2e:report
 | `src/matching/__tests__/matching.service.spec.ts` | Orkestracija endpointa za priporočila |
 | `src/matching/__tests__/matching-index.service.spec.ts` | Sinhronizacija SQL indeksa in razlage priporočil |
 | `src/role-requests/__tests__/role-requests.service.spec.ts` | Logika zahtev za vloge |
+| `src/role-requests/__tests__/role-requests.repository.spec.ts` | Normalizacija datumov zahtev za vloge iz Firestore zapisov |
+| `tests/e2e/connections.spec.ts` | E2E tok pošiljanja, potrditve in zavrnitve podvojene zahteve za povezavo |
 | `src/app.controller.spec.ts` | Endpoint za zdravje sistema |
 
 

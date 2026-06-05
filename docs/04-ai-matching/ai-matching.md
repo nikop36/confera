@@ -32,15 +32,11 @@ Uporabnik posodobi profil
 v Firestore. SQL indeks je zato dodaten sloj, ne kritična pot za osnovno uporabo
 aplikacije.
 
-V AI ujemanje so vključeni samo profili z vsaj eno izbrano oznako (`tags`).
-Uporabniki brez oznak aplikacijo normalno uporabljajo, vendar se njihov profil
-odstrani iz `participant_profile_index` in zanje endpoint vrne prazen seznam
-ujemanj.
+V AI ujemanje so vključeni samo profili s `profileStatus: 'complete'`. Uporabniki
+z nepopolnim profilom (`incomplete`) aplikacijo normalno uporabljajo, vendar niso
+vidni v priporočilih in ne prejemajo ujemanj.
 
-Vhod za AI ujemanje udeležencev so samo profilne oznake (`tags`). Polja
-`interests`, `goals`, `competencies` in `researchKeywords` niso več del
-trenutnega profilnega modela in zato niso vhod v `participant_profile_index`.
-
+Vhod za AI ujemanje udeležencev so samo profilne oznake (`tags`).
 ---
 
 ## Podatkovni indeks
