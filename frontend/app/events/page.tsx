@@ -7,7 +7,6 @@ import EventFormModal, { type EventFormValues } from '../components/EventFormMod
 import { useStoredUser } from '../lib/auth';
 import TagPicker, { type Tag } from '../components/TagPicker';
 import { useT } from '../lib/i18n';
-const [shouldLoad, setShouldLoad] = useState(false);
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -228,14 +227,16 @@ export default function EventsPage() {
   }, [t]);
 
   useEffect(() => {
-    if (user?.idToken) setShouldLoad(true);
-  }, [user?.idToken]);
+    if (!user?.idToken) return;
 
-  useEffect(() => {
-    if (!shouldLoad || !user?.idToken) return;
-    void loadEvents(user.idToken);
-    void loadTags(user.idToken);
-  }, [shouldLoad, user?.idToken]);
+    const token = user.idToken;
+    const initialLoad = window.setTimeout(() => {
+      void loadEvents(token);
+      void loadTags(token);
+    }, 0);
+
+    return () => window.clearTimeout(initialLoad);
+  }, [loadEvents, loadTags, user?.idToken]);
 
   // ── handlers ───────────────────────────────────────────────────────────────
 
