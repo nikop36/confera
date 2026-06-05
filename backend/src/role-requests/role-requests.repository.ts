@@ -13,7 +13,7 @@ export class RoleRequestsRepository {
     const db = this.firebaseService.getFirestore();
     const ref = await db.collection('roleRequests').add(data);
 
-    return { id: ref.id, ...data };
+    return normalizeRoleRequest(ref.id, data);
   }
 
   async findAllPending(): Promise<RoleRequest[]> {
@@ -25,10 +25,7 @@ export class RoleRequestsRepository {
       .orderBy('createdAt', 'asc')
       .get();
 
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as RoleRequest[];
+    return snapshot.docs.map((doc) => normalizeRoleRequest(doc.id, doc.data()));
   }
 
   async findPendingByUid(uid: string): Promise<RoleRequest | null> {
@@ -44,7 +41,7 @@ export class RoleRequestsRepository {
     if (snapshot.empty) return null;
 
     const doc = snapshot.docs[0];
-    return { id: doc.id, ...doc.data() } as RoleRequest;
+    return normalizeRoleRequest(doc.id, doc.data());
   }
 
   async findById(id: string): Promise<RoleRequest | null> {
@@ -53,7 +50,10 @@ export class RoleRequestsRepository {
 
     if (!doc.exists) return null;
 
-    return { id: doc.id, ...doc.data() } as RoleRequest;
+    const data = doc.data();
+    if (!data) return null;
+
+    return normalizeRoleRequest(doc.id, data);
   }
 
   async updateStatus(
@@ -69,4 +69,60 @@ export class RoleRequestsRepository {
       reviewedAt: new Date(),
     });
   }
+}
+
+type RoleRequestRecord = {
+  uid?: unknown;
+  email?: unknown;
+  requestedRole?: unknown;
+  reason?: unknown;
+  status?: unknown;
+  reviewedBy?: unknown;
+  reviewedAt?: unknown;
+  createdAt?: unknown;
+};
+
+function normalizeRoleRequest(
+  id: string,
+  data: RoleRequestRecord,
+): RoleRequest {
+  return {
+    id,
+    uid: String(data.uid),
+    email: String(data.email),
+    requestedRole: String(data.requestedRole) as RoleRequest['requestedRole'],
+    reason: typeof data.reason === 'string' ? data.reason : undefined,
+    status: String(data.status) as RoleRequest['status'],
+    reviewedBy:
+      typeof data.reviewedBy === 'string' ? data.reviewedBy : undefined,
+    reviewedAt: toDate(data.reviewedAt),
+    createdAt: toDate(data.createdAt) ?? new Date(0),
+  };
+}
+
+function toDate(value: unknown): Date | undefined {
+  if (!value) return undefined;
+  if (value instanceof Date) return value;
+
+  if (
+    typeof value === 'object' &&
+    'toDate' in value &&
+    typeof (value as { toDate?: unknown }).toDate === 'function'
+  ) {
+    return (value as { toDate: () => Date }).toDate();
+  }
+
+  if (typeof value === 'object') {
+    const seconds =
+      (value as { seconds?: number }).seconds ??
+      (value as { _seconds?: number })._seconds;
+    if (typeof seconds === 'number') return new Date(seconds * 1000);
+  }
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }
+
+  return undefined;
 }
