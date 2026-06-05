@@ -9,10 +9,14 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -32,27 +36,61 @@ import type { FirebaseUser } from '../common/interfaces/firebase-user.interface'
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
+  // ── list / read ───────────────────────────────────────────────────────────
+
   @Get()
-  @ApiOperation({
-    summary: 'List all events with registration status for caller',
-  })
-  @ApiResponse({ status: 200, description: 'Events returned' })
-  async listEvents(@CurrentUser() user: FirebaseUser) {
-    return this.eventsService.listEvents(user.uid);
+  @ApiOperation({ summary: 'List all active events (paginated)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiResponse({ status: 200, description: 'Paginated events returned' })
+  async listEvents(
+    @CurrentUser() user: FirebaseUser,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    const all = await this.eventsService.listEvents(user.uid);
+    const safeLimit = Math.min(Math.max(limit, 1), 50); // cap at 50
+    const safePage = Math.max(page, 1);
+    const start = (safePage - 1) * safeLimit;
+    const data = all.slice(start, start + safeLimit);
+    return {
+      data,
+      total: all.length,
+      page: safePage,
+      limit: safeLimit,
+    };
+  }
+
+  @Get('mine')
+  @Roles('admin', 'organizer')
+  @ApiOperation({ summary: "List only the caller's own events" })
+  @ApiResponse({ status: 200, description: "Caller's events returned" })
+  async listMyEvents(@CurrentUser() user: FirebaseUser) {
+    return this.eventsService.listMyEvents(user.uid);
   }
 
   @Get('recommendations/me')
-  @ApiOperation({
-    summary: 'List AI-ranked event recommendations for current user',
-  })
+  @ApiOperation({ summary: 'AI-ranked event recommendations for current user' })
   @ApiResponse({ status: 200, description: 'Recommended events returned' })
   async listRecommendedEvents(@CurrentUser() user: FirebaseUser) {
     return this.eventsService.listRecommendedEvents(user.uid);
   }
 
+  @Get('joined')
+  @ApiOperation({
+    summary: 'List events current user joined',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Joined events returned',
+  })
+  async listJoinedEvents(@CurrentUser() user: FirebaseUser) {
+    return this.eventsService.listJoinedEvents(user.uid);
+  }
+
   @Get(':id')
-  @ApiOperation({ summary: 'Get a single conference by ID' })
-  @ApiResponse({ status: 200, description: 'Conference returned' })
+  @ApiOperation({ summary: 'Get a single event by ID' })
+  @ApiResponse({ status: 200, description: 'Event returned' })
   @ApiResponse({ status: 404, description: 'Not found' })
   async getEventById(
     @Param('id') id: string,
@@ -60,6 +98,8 @@ export class EventsController {
   ) {
     return this.eventsService.getEventById(id, user.uid);
   }
+
+  // ── write ─────────────────────────────────────────────────────────────────
 
   @Post()
   @Roles('admin', 'organizer')
@@ -75,26 +115,37 @@ export class EventsController {
 
   @Patch(':id')
   @Roles('admin', 'organizer')
-  @ApiOperation({ summary: 'Update an event' })
+  @ApiOperation({ summary: 'Update an event (organizer: own events only)' })
   @ApiResponse({ status: 200, description: 'Event updated' })
-  async updateEvent(@Param('id') id: string, @Body() dto: UpdateEventDto) {
-    await this.eventsService.updateEvent(id, dto);
+  @ApiResponse({ status: 403, description: 'Not the event owner' })
+  async updateEvent(
+    @Param('id') id: string,
+    @Body() dto: UpdateEventDto,
+    @CurrentUser() user: FirebaseUser, // ← now forwarded
+  ) {
+    await this.eventsService.updateEvent(id, dto, user.uid);
   }
 
   @Delete(':id')
   @Roles('admin', 'organizer')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete an event' })
+  @ApiOperation({ summary: 'Delete an event (organizer: own events only)' })
   @ApiResponse({ status: 204, description: 'Event deleted' })
-  async deleteEvent(@Param('id') id: string) {
-    await this.eventsService.deleteEvent(id);
+  @ApiResponse({ status: 403, description: 'Not the event owner' })
+  async deleteEvent(
+    @Param('id') id: string,
+    @CurrentUser() user: FirebaseUser, // ← now forwarded
+  ) {
+    await this.eventsService.deleteEvent(id, user.uid);
   }
+
+  // ── registration ──────────────────────────────────────────────────────────
 
   @Post(':id/register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register current user for an event' })
   @ApiResponse({ status: 201, description: 'Registered' })
-  @ApiResponse({ status: 409, description: 'Event is full' })
+  @ApiResponse({ status: 409, description: 'Event full or time overlap' })
   async registerForEvent(
     @Param('id') id: string,
     @CurrentUser() user: FirebaseUser,

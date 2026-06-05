@@ -16,6 +16,7 @@ export interface Event {
   tags?: string[];
   createdBy: string;
   createdAt: Date;
+  archived?: boolean;
 }
 
 export interface EventRegistration {

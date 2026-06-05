@@ -11,6 +11,7 @@ import { CareerSlotsModule } from './career-slots/career-slots.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EmbeddingService } from '../matching/embedding.service';
 import { EventIndexService } from './event-index.service';
+import { EventsSchedulerService } from '../schedulers/events-scheduler.service';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { EventIndexService } from './event-index.service';
     EventsRepository,
     EmbeddingService,
     EventIndexService,
+    EventsSchedulerService,
   ],
   exports: [EventsRepository],
 })

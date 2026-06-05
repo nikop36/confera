@@ -132,6 +132,57 @@ export class EventsRepository {
     });
   }
 
+  async archiveExpiredEvents(): Promise<number> {
+    const db = this.firebaseService.getFirestore();
+
+    const now = new Date();
+
+    const snapshot = await db
+      .collection('events')
+      .where('archived', '==', false)
+      .where('endAt', '<', now)
+      .get();
+
+    if (snapshot.empty) {
+      return 0;
+    }
+
+    const batch = db.batch();
+
+    snapshot.docs.forEach((doc) => {
+      batch.update(doc.ref, {
+        archived: true,
+      });
+    });
+
+    await batch.commit();
+
+    return snapshot.size;
+  }
+
+  async listRegisteredEvents(uid: string): Promise<Event[]> {
+    const db = this.firebaseService.getFirestore();
+
+    const regSnap = await db
+      .collectionGroup('registrations')
+      .where('uid', '==', uid)
+      .get();
+
+    const eventIds = regSnap.docs
+      .map((doc) => doc.ref.parent.parent?.id)
+      .filter(Boolean) as string[];
+
+    if (eventIds.length === 0) {
+      return [];
+    }
+
+    const eventDocs = await db.getAll(
+      ...eventIds.map((id) => db.collection('events').doc(id)),
+    );
+
+    return eventDocs.filter((doc) => doc.exists).map((doc) => this.mapDoc(doc));
+  }
+
   async createEvent(data: Omit<Event, 'id'>): Promise<Event> {
     const db = this.firebaseService.getFirestore();
     const ref = await db.collection('events').add(data);
@@ -285,6 +336,7 @@ export class EventsRepository {
       tags: (data['tags'] as string[] | undefined) ?? [],
       createdBy: data['createdBy'] as string,
       createdAt: (data['createdAt'] as FirebaseFirestore.Timestamp).toDate(),
+      archived: (data['archived'] as boolean | undefined) ?? false,
     };
   }
 }

@@ -18,10 +18,12 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { EventsModule } from './events/events.module';
 import { TagsModule } from './tags/tags.module';
 import { GuestsModule } from './guest/guest.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     FirebaseModule,
     AuthModule,
     UsersModule,
