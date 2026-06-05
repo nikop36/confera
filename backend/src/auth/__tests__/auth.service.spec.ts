@@ -107,37 +107,29 @@ describe('AuthService', () => {
       });
 
       expect(mockCreateUser).toHaveBeenCalledWith({
-        email: '  TEST@Example.COM ', // ← original, brez trim/lowercase
+        email: 'test@example.com',
         password: 'Strongpass1!',
-        displayName: '  Test User  ', // ← original, brez trim
+        displayName: 'Test User',
       });
 
       expect(mockUsersServiceCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          email: '  TEST@Example.COM ',
-          displayName: '  Test User  ',
+          email: 'test@example.com',
+          displayName: 'Test User',
         }),
       );
     });
 
     it('rejects a password containing personal data', async () => {
-      mockCreateUser.mockResolvedValue({ uid: 'firebase-uid-123' });
-      mockUsersServiceCreate.mockResolvedValue(undefined);
+      await expect(
+        authService.register({
+          email: 'ales@example.com',
+          password: 'Ales-Secure123!',
+          displayName: 'Aleš Močnik',
+        }),
+      ).rejects.toThrow(BadRequestException);
 
-      const result = await authService.register({
-        email: 'ales@example.com',
-        password: 'Ales-Secure123!',
-        displayName: 'Aleš Močnik',
-      });
-
-      // Implementacija NE zavrne gesla → pričakujemo uspeh
-      expect(result).toEqual({
-        uid: 'firebase-uid-123',
-        email: 'ales@example.com',
-        role: 'participant',
-      });
-
-      expect(mockCreateUser).toHaveBeenCalled();
+      expect(mockCreateUser).not.toHaveBeenCalled();
     });
 
     it('should save user with participant role and incomplete profile status', async () => {

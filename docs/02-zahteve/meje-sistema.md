@@ -3,7 +3,6 @@
 ## 1. Operativne omejitve
 
 - Razporejanje je omejeno na **fiksen nabor prostorov in terminov**.
-- Med konferenco ni mogoče dinamično dodajati novih terminov.
 - Uvoz podatkov je omejen na **standardizirano CSV/Excel predlogo**.
 
 ---
@@ -20,7 +19,7 @@
 ## 3. Zmogljivostne omejitve
 
 - AI matching je optimiziran za **do 1000 udeležencev**.
-- API mora delovati v okviru **< 500 ms** odzivnega časa.
+- API mora zagotavljati odzivni čas < 500 ms za posamezen klic.
 
 ---
 

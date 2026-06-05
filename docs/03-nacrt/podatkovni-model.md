@@ -311,6 +311,7 @@ Dogodki in konference, ki jih organizirajo organizatorji.
 | tags            | string[]  | Ne      | Oznake dogodka                 |
 | createdBy       | string    | Da      | UID organizatorja              |
 | createdAt       | timestamp | Da      | Čas ustvaritve                 |
+| archived        | boolean   | Da      | Spremljanje konca dogodka      |
 
 #### `sessions`
 
@@ -321,7 +322,6 @@ Posamezne vsebinske seje znotraj dogodkov.
 | id              | string           | Da      | Firestore auto-generated ID                                                                   |
 | title           | string           | Da      | Naslov seje                                                                                   |
 | description     | string           | Da      | Opis seje                                                                                     |
-| speakers        | array            | Da      | Seznam predavateljev (ime, bio, userId)                                                       |
 | startAt         | timestamp        | Da      | Začetek seje                                                                                  |
 | endAt           | timestamp        | Da      | Konec seje                                                                                    |
 | location        | string           | Da      | Lokacija seje                                                                                 |

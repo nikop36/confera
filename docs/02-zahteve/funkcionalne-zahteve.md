@@ -75,13 +75,6 @@
 - Organizator lahko pri ustvarjanju seje povabi predavatelja po imenu.
 - Sistem prikaže dropdown z ujemajočimi uporabniki vlog `organizer`, `industry` in `admin` (ne `participant`).
 - Če je vnešeno ime, ki ne ustreza nobenemu uporabniku v sistemu, se seja samodejno potrdi z gostujočim predavateljem.
-
-### 6.2 Potrjevanje predavatelja (NUJNO)
-- Povabljeni predavatelj (v sistemu) prejme sistemsko obvestilo in e-mail.
-- Predavatelj potrdi ali zavrne vabilo neposredno v aplikaciji.
-- Ob potrditvi organizator prejme obvestilo; seja ostane aktivna.
-- Ob zavrnitvi organizator prejme obvestilo; **seja se samodejno označi kot odpovedana**.
-
 ---
 
 ## 7. Karierni razgovori
@@ -124,7 +117,6 @@
 - Stopnja sprejetih srečanj (%).
 - Stopnja izvedenih srečanj (%).
 - Zasedenost terminov (%).
-- Povprečen čas do prvega srečanja.
 
 ### 9.2 Napredna statistika (ZAŽELENO)
 - Analiza mreženja.

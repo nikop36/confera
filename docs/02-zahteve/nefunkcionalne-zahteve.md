@@ -11,14 +11,12 @@
 ## 2. Razpoložljivost in zanesljivost
 
 - Sistem mora biti dostopen vsaj **99% časa** med konferenco.
-- Kritične operacije (matching, razporejanje) morajo imeti mehanizme za ponovni poskus.
 
 ---
 
 ## 3. Varnost
 
 - Avtentikacija prek Firebase Auth.
-- Vsi API klici morajo biti zaščiteni z JWT.
 - Vsi podatki morajo biti prenašani prek HTTPS.
 - Uporabniški podatki morajo biti shranjeni v varnem oblaku (Firebase/Supabase).
 

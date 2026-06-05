@@ -229,14 +229,16 @@ export default function EventsPage() {
   }, [t]);
 
   useEffect(() => {
-    if (user?.idToken) setShouldLoad(true);
-  }, [user?.idToken]);
+    if (!user?.idToken) return;
 
-  useEffect(() => {
-    if (!shouldLoad || !user?.idToken) return;
-    void loadEvents(user.idToken);
-    void loadTags(user.idToken);
-  }, [shouldLoad, user?.idToken]);
+    const token = user.idToken;
+    const initialLoad = window.setTimeout(() => {
+      void loadEvents(token);
+      void loadTags(token);
+    }, 0);
+
+    return () => window.clearTimeout(initialLoad);
+  }, [loadEvents, loadTags, user?.idToken]);
 
   // ── handlers ───────────────────────────────────────────────────────────────
 
