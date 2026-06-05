@@ -324,7 +324,7 @@ export default function RegisterPage() {
           </form>
 
           <p className="mt-6 text-[12px] text-center text-[#8e8e93]">
-            {t('auth.register.terms.prefix', 'By registering, you agree to the')}{' '}
+            {t('auth.register.terms.prefix', 'By registering, you accept the')}{' '}
             <button
               type="button"
               onClick={openPrivacyTermsModal}
@@ -332,14 +332,22 @@ export default function RegisterPage() {
             >
               {t('auth.register.terms.terms', 'terms of use')}
             </button>
-            {' '}in{' '}
+            {'. '}
+            {t(
+              'auth.register.terms.privacyPrefix',
+              'The',
+            )}{' '}
             <button
               type="button"
               onClick={openPrivacyTermsModal}
               className="border-0 bg-transparent p-0 text-[#7fa8c8] cursor-pointer hover:underline font-sans text-[12px]"
             >
               {t('auth.register.terms.privacy', 'privacy policy')}
-            </button>.
+            </button>{' '}
+            {t(
+              'auth.register.terms.privacySuffix',
+              'explains how your data is processed.',
+            )}
           </p>
         </motion.div>
       </div>

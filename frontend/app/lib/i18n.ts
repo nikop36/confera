@@ -373,9 +373,12 @@ const SL: Dictionary = {
   'auth.register.passwordPlaceholder': 'Min. 12 znakov',
   'auth.register.passwordHint':
     '12–128 znakov, velika in mala črka, številka ter poseben znak; brez presledkov.',
-  'auth.register.terms.prefix': 'Z registracijo se strinjate s',
-  'auth.register.terms.terms': 'pogoji uporabe',
-  'auth.register.terms.privacy': 'politiko zasebnosti',
+  'auth.register.terms.prefix': 'Z registracijo sprejemate',
+  'auth.register.terms.terms': 'pogoje uporabe',
+  'auth.register.terms.privacyPrefix': '',
+  'auth.register.terms.privacy': 'Politika zasebnosti',
+  'auth.register.terms.privacySuffix':
+    'pojasnjuje, kako obdelujemo vaše podatke.',
   'auth.register.passwordStrength.weak': 'Šibko',
   'auth.register.passwordStrength.medium': 'Srednje',
   'auth.register.passwordStrength.good': 'Dobro',
@@ -1354,9 +1357,12 @@ const EN: Dictionary = {
   'auth.register.passwordPlaceholder': 'Min. 12 characters',
   'auth.register.passwordHint':
     '12–128 characters, uppercase and lowercase letters, a number, and a special character; no whitespace.',
-  'auth.register.terms.prefix': 'By registering, you agree to the',
+  'auth.register.terms.prefix': 'By registering, you accept the',
   'auth.register.terms.terms': 'terms of use',
+  'auth.register.terms.privacyPrefix': 'The',
   'auth.register.terms.privacy': 'privacy policy',
+  'auth.register.terms.privacySuffix':
+    'explains how your data is processed.',
   'auth.register.passwordStrength.weak': 'Weak',
   'auth.register.passwordStrength.medium': 'Medium',
   'auth.register.passwordStrength.good': 'Good',

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLocale } from '../lib/i18n';
 
-const ACCEPTANCE_KEY = 'confera_privacy_terms_accepted_v1';
+const ACKNOWLEDGEMENT_KEY = 'confera_legal_notice_read_v2';
 const OPEN_EVENT = 'confera:legal-open';
 
 type LegalSection = {
@@ -17,160 +17,217 @@ type LegalContent = {
   title: string;
   intro: string;
   notice: string;
+  version: string;
   summaryTitle: string;
   summaryItems: string[];
   sections: LegalSection[];
-  accept: string;
+  acknowledge: string;
   close: string;
   openLabel: string;
 };
 
 const CONTENT: Record<'sl' | 'en', LegalContent> = {
   sl: {
-    eyebrow: 'Zasebnost in pogoji',
-    title: 'Pred uporabo Confere',
+    eyebrow: 'Pravne informacije',
+    title: 'Zasebnost in pogoji uporabe',
     intro:
-      'Confera obdeluje podatke, ki so potrebni za registracijo, profil, priporočila dogodkov, AI ujemanje udeležencev, povezave, povabila, obvestila in razporejanje srečanj.',
+      'To obvestilo pojasnjuje, kako se v Conferi obdelujejo osebni podatki, kako delujejo priporočila ter katera pravila veljajo pri uporabi aplikacije.',
     notice:
-      'To je delovni osnutek obvestila o zasebnosti in pogojev uporabe za aplikacijo. Pred produkcijsko uporabo mora organizator dogodka dodati svojo identiteto, kontakt za zahteve posameznikov in preveriti končno pravno besedilo.',
-    summaryTitle: 'Kratek povzetek',
+      'Pomembno: pred javno uporabo mora organizator v gradivih dogodka navesti svoje polno pravno ime, naslov, kontakt za varstvo osebnih podatkov in, kadar je imenovana, pooblaščeno osebo za varstvo podatkov.',
+    version: 'Različica 2.0 · velja od 5. junija 2026',
+    summaryTitle: 'Na kratko',
     summaryItems: [
-      'Račun: ime, e-pošta, vloga, UID računa in podatki za prijavo prek Firebase.',
-      'Profil: organizacija, opis, izbrane oznake, način srečanja ter slike, če jih dodate.',
-      'Uporaba: prijave na dogodke, povezave, povabila, obvestila, zahteve za vloge, razporedi in čas zadnje aktivnosti.',
-      'Namen: delovanje aplikacije, priporočila, AI ujemanje na osnovi oznak, varnost, administracija dogodka in osnovna statistika.',
+      'Obdelujemo podatke, ki so potrebni za račun, profil, dogodke, povezovanje in razporejanje srečanj.',
+      'Priporočila temeljijo predvsem na oznakah profila in dogodkov; o povezavi ali prijavi vedno odločite sami.',
+      'Podatkov ne prodajamo in jih ne uporabljamo za vedenjsko oglaševanje.',
+      'Svoj profil lahko popravite, račun pa izbrišete v nastavitvah.',
     ],
     sections: [
       {
-        title: 'Upravljavec in namen',
+        title: '1. Upravljavec in kontakt',
         items: [
-          'Upravljavec osebnih podatkov je organizator oziroma institucija, ki uporablja to instanco Confere za posamezno konferenco ali dogodek.',
-          'Confera je aplikacija za upravljanje konferenčnega mreženja: registracijo uporabnikov, profile, dogodke, povezave, povabila, obvestila, priporočila, AI ujemanje in razporejanje srečanj.',
-          'Kontakt za uveljavljanje pravic posameznikov mora določiti organizator dogodka pred javno uporabo sistema.',
+          'Upravljavec osebnih podatkov je organizator oziroma institucija, ki uporablja to namestitev Confere za svoj dogodek.',
+          'Pravno ime, naslov in kontakt upravljavca morajo biti objavljeni v uradnih informacijah ali registracijskem gradivu konkretnega dogodka.',
+          'Zahteve glede osebnih podatkov pošljite na kontakt za zasebnost, ki ga objavi organizator. Če je imenovana pooblaščena oseba za varstvo podatkov, organizator objavi tudi njen kontakt.',
         ],
       },
       {
-        title: 'Katere podatke obdelujemo',
+        title: '2. Podatki, ki jih obdelujemo',
         items: [
-          'Identifikacijski podatki: ime, e-pošta, vloga uporabnika in UID računa.',
-          'Profilni podatki: organizacija, opis, izbrane oznake, način srečanja in profilne slike, če jih uporabnik doda.',
-          'Podatki o uporabi: prijave na dogodke, povezave, povabila, zahteve za vloge, obvestila, čas zadnje aktivnosti in administrativni zapisi.',
-          'Tehnični podatki, ki jih zagotavljajo uporabljene storitve, kot so Firebase, Supabase in ponudnik e-pošte, kadar so omogočeni.',
+          'Podatki računa: ime, e-poštni naslov, uporabniška vloga, enolični identifikator računa in podatki, potrebni za varno prijavo.',
+          'Podatki profila: organizacija, predstavitev, interesne oznake, želeni način srečanja ter profilne slike, kadar jih dodate.',
+          'Podatki o dejavnosti: prijave na dogodke in termine, povezave, povabila, obvestila, zahteve za vloge, razporedi, odzivi in čas zadnje aktivnosti.',
+          'Tehnični in varnostni podatki: dnevniki dostopa, podatki o napakah ter podatki, ki jih ustvarijo ponudniki avtentikacije, gostovanja, podatkovne zbirke, shranjevanja slik in e-pošte.',
         ],
       },
       {
-        title: 'AI ujemanje, priporočila in avtomatizirana pomoč',
+        title: '3. Nameni in pravne podlage',
         items: [
-          'Ujemanje temelji predvsem na izbranih oznakah profila in dogodkov.',
-          'Sistem iz oznak zgradi iskalni oziroma embedding indeks, s katerim predlaga relevantne osebe in dogodke.',
-          'Rezultati so priporočila za lažje mreženje. Ne pomenijo avtomatske pravne, zaposlitvene, finančne ali podobno pomembne odločitve o uporabniku.',
-          'Uporabnik se sam odloči, ali bo priporočilo upošteval, poslal zahtevo za povezavo ali se prijavil na dogodek.',
+          'Izvajanje storitve: registracija, upravljanje računa, dogodkov, povezav, povabil in srečanj. Pravna podlaga je izvajanje uporabniškega razmerja oziroma ukrepov na vašo zahtevo.',
+          'Varnost, preprečevanje zlorab, administracija dogodka in omejena statistika delovanja. Pravna podlaga je zakoniti interes upravljavca za varno in učinkovito izvedbo dogodka.',
+          'Izpolnjevanje zakonskih obveznosti in obravnava zahtevkov. Pravna podlaga je veljavna pravna obveznost upravljavca.',
+          'Kadar je za dodatno, neobvezno obdelavo potrebna privolitev, bo ta zahtevana ločeno in jo boste lahko preklicali brez vpliva na zakonitost predhodne obdelave.',
         ],
       },
       {
-        title: 'Pravna podlaga, hramba in deljenje',
+        title: '4. Priporočila in AI ujemanje',
         items: [
-          'Podatki se obdelujejo za izvedbo storitve in pogodbenega oziroma uporabniškega razmerja, za zakonite interese organizacije dogodka in varnost sistema ter, kjer je potrebno, na podlagi privolitve.',
-          'Podatke hranimo toliko časa, kot je potrebno za izvedbo dogodka, delovanje računa, reševanje zahtevkov, varnost, revizijske zapise in zakonske obveznosti.',
-          'Podatke lahko obdelujejo tehnični ponudniki za avtentikacijo, bazo podatkov, shranjevanje slik, pošiljanje e-pošte, gostovanje in analitiko delovanja sistema.',
-          'Podatkov ne prodajamo oglaševalcem in jih ne uporabljamo za vedenjsko oglaševanje.',
+          'Confera primerja predvsem izbrane oznake profila, oznake dogodkov in osnovni opis profila, da razvrsti relevantne osebe in dogodke.',
+          'Za iskanje podobnosti se lahko ustvarijo matematične predstavitve besedila oziroma embeddingi. Ti se uporabljajo za razvrščanje priporočil, ne za ugotavljanje občutljivih osebnih lastnosti.',
+          'Priporočila nimajo pravnih ali podobno pomembnih učinkov. Sistem samodejno ne sklene povezave, ne prijavi uporabnika na dogodek in ne sprejme zaposlitvene ali druge pomembne odločitve.',
+          'Končno odločitev vedno sprejme uporabnik. Kakovost priporočil lahko izboljšate ali omejite s spreminjanjem podatkov in oznak v profilu.',
         ],
       },
       {
-        title: 'Pravice uporabnika',
+        title: '5. Obvezni in neobvezni podatki',
         items: [
-          'Uporabnik ima pravico do obveščenosti, dostopa, popravka, izbrisa, omejitve obdelave, ugovora in prenosljivosti podatkov, kadar to velja po GDPR.',
-          'Uporabnik lahko profilne podatke spremeni v aplikaciji; račun lahko izbriše v nastavitvah računa.',
-          'Če obdelava temelji na privolitvi, jo lahko uporabnik prekliče. Preklic ne vpliva na zakonitost predhodne obdelave.',
-          'Za dodatne zahteve glede osebnih podatkov se obrnite na organizatorja dogodka oziroma upravljavca te instance Confere.',
+          'Ime, e-poštni naslov in geslo so potrebni za ustvarjanje ter zaščito računa. Brez njih registracija ni mogoča.',
+          'Organizacija, predstavitev, oznake, način srečanja in slike so praviloma neobvezni, vendar lahko nepopoln profil zmanjša kakovost priporočil in možnosti mreženja.',
+          'Podatke vnašajte prostovoljno in ne vključujte posebnih vrst osebnih podatkov ali zaupnih informacij, ki niso potrebne za namen dogodka.',
         ],
       },
       {
-        title: 'Pogoji uporabe',
+        title: '6. Prejemniki, ponudniki in prenosi',
         items: [
-          'Aplikacijo uporabljajte samo za namen konference, mreženja, dogodkov in povezanih administrativnih procesov.',
-          'Uporabnik mora vnesti točne podatke in ne sme zlorabljati računov, profilov, povezav, povabil ali obvestil.',
-          'Prepovedano je nadlegovanje, pošiljanje neželenih sporočil, lažno predstavljanje, poskus nepooblaščenega dostopa ali uporaba podatkov drugih uporabnikov izven namena dogodka.',
-          'Organizator lahko omeji ali odstrani dostop v primeru zlorabe, varnostnega tveganja, kršitve pravil dogodka ali zahteve pristojnega organa.',
+          'Do podatkov dostopajo pooblaščene osebe organizatorja ter pogodbeni ponudniki, ki zagotavljajo avtentikacijo, podatkovno zbirko, gostovanje, shranjevanje slik in dostavo e-pošte.',
+          'Med tehnične ponudnike lahko sodijo Firebase oziroma Google Cloud, Supabase, ponudnik gostovanja aplikacije in ponudnik e-pošte, odvisno od nastavitev konkretne namestitve.',
+          'Če ponudnik obdeluje podatke zunaj Evropskega gospodarskega prostora, mora upravljavec zagotoviti ustrezno podlago in zaščitne ukrepe, na primer sklep o ustreznosti ali standardne pogodbene klavzule.',
+          'Javni oziroma drugim udeležencem vidni so samo podatki, ki so potrebni za funkcije skupnosti in mreženja. Podatkov ne prodajamo tretjim osebam.',
+        ],
+      },
+      {
+        title: '7. Hramba in varnost',
+        items: [
+          'Podatki računa in profila se hranijo do izbrisa računa oziroma do zaključka obdobja, v katerem organizator omogoča uporabo dogodkovne platforme.',
+          'Podatki o dogodkih, prijavah, povezavah in razporedih se hranijo toliko časa, kot je potrebno za izvedbo dogodka, podporo uporabnikom, reševanje sporov in dokumentiranje izvedbe.',
+          'Varnostni in revizijski zapisi se hranijo omejeno obdobje, določeno glede na varnostna tveganja in zakonske obveznosti. Organizator mora pred produkcijo določiti konkretne roke hrambe.',
+          'Uporabljajo se razumni tehnični in organizacijski ukrepi, vendar noben spletni sistem ne more zagotoviti popolne varnosti.',
+        ],
+      },
+      {
+        title: '8. Vaše pravice',
+        items: [
+          'Glede na okoliščine imate pravico do dostopa, popravka, izbrisa, omejitve obdelave, ugovora in prenosljivosti podatkov.',
+          'Profilne podatke lahko popravite v aplikaciji, račun pa izbrišete v nastavitvah. Za druge zahteve se obrnite na kontakt za zasebnost organizatorja.',
+          'Če menite, da se vaši podatki obdelujejo nezakonito, lahko vložite pritožbo pri Informacijskem pooblaščencu Republike Slovenije, Dunajska cesta 22, 1000 Ljubljana, gp.ip@ip-rs.si, www.ip-rs.si.',
+          'Upravljavec lahko pred izvedbo zahteve preveri vašo identiteto in mora odgovoriti v rokih, ki jih določa GDPR.',
+        ],
+      },
+      {
+        title: '9. Pogoji uporabe',
+        items: [
+          'Aplikacijo uporabljajte samo za sodelovanje na dogodku, strokovno mreženje in povezane organizacijske postopke.',
+          'Varujte svoje prijavne podatke, uporabljajte točne podatke in spoštujte zasebnost, dostojanstvo ter pravice drugih udeležencev.',
+          'Prepovedani so nadlegovanje, neželena sporočila, lažno predstavljanje, avtomatizirano zbiranje podatkov, poskusi nepooblaščenega dostopa in uporaba podatkov udeležencev zunaj namena dogodka.',
+          'Organizator lahko omeji ali odstrani dostop zaradi kršitve pravil, varnostnega tveganja, zaščite drugih uporabnikov ali izpolnitve zakonske obveznosti.',
+          'Funkcije in razpoložljivost aplikacije se lahko spremenijo. Organizator si prizadeva za zanesljivo delovanje, vendar ne zagotavlja neprekinjene dostopnosti ali uspešnosti posameznega priporočila.',
         ],
       },
     ],
-    accept: 'Razumem in sprejemam',
+    acknowledge: 'Sprejmem',
     close: 'Zapri',
-    openLabel: 'Zasebnost in pogoji',
+    openLabel: 'Pravne informacije',
   },
   en: {
-    eyebrow: 'Privacy and terms',
-    title: 'Before using Confera',
+    eyebrow: 'Legal information',
+    title: 'Privacy notice and terms of use',
     intro:
-      'Confera processes data needed for registration, profiles, event recommendations, AI participant matching, connections, invites, notifications, and meeting scheduling.',
+      'This notice explains how personal data is processed in Confera, how recommendations work, and which rules apply when using the application.',
     notice:
-      'This is a working draft privacy notice and terms text for the application. Before production use, the event organizer must add its controller identity, data-rights contact, and review the final legal wording.',
-    summaryTitle: 'Short summary',
+      'Important: before public use, the organizer must provide its full legal name, address, privacy contact and, where appointed, the contact details of its data protection officer in the official event materials.',
+    version: 'Version 2.0 · effective June 5, 2026',
+    summaryTitle: 'At a glance',
     summaryItems: [
-      'Account: name, email, user role, account UID, and Firebase sign-in data.',
-      'Profile: organization, bio, selected tags, meeting type, and images if you add them.',
-      'Usage: event registrations, connections, invites, notifications, role requests, schedules, and last activity time.',
-      'Purpose: app operation, recommendations, tag-based AI matching, security, event administration, and basic statistics.',
+      'We process data needed for accounts, profiles, events, networking and meeting scheduling.',
+      'Recommendations rely mainly on profile and event tags; you always decide whether to connect or register.',
+      'We do not sell personal data or use it for behavioural advertising.',
+      'You can correct your profile and delete your account in settings.',
     ],
     sections: [
       {
-        title: 'Controller and purpose',
+        title: '1. Controller and contact',
         items: [
-          'The personal-data controller is the organizer or institution operating this Confera instance for a specific conference or event.',
-          'Confera is an application for conference networking: user registration, profiles, events, connections, invites, notifications, recommendations, AI matching, and meeting scheduling.',
-          'The event organizer must define the contact point for data-subject rights before public production use.',
+          'The data controller is the organizer or institution operating this Confera installation for its event.',
+          'The controller’s legal name, address and contact details must be published in the official information or registration materials for the relevant event.',
+          'Send data-protection requests to the privacy contact published by the organizer. Where a data protection officer has been appointed, the organizer will also publish that contact.',
         ],
       },
       {
-        title: 'Data we process',
+        title: '2. Data we process',
         items: [
-          'Identity data: name, email, user role, and account UID.',
-          'Profile data: organization, bio, selected tags, meeting type, and profile images if added by the user.',
-          'Usage data: event registrations, connections, invites, role requests, notifications, last activity time, and administrative records.',
-          'Technical data provided by enabled services such as Firebase, Supabase, and the email provider.',
+          'Account data: name, email address, user role, unique account identifier and information needed for secure sign-in.',
+          'Profile data: organization, biography, interest tags, preferred meeting type and profile images where provided.',
+          'Activity data: event and slot registrations, connections, invites, notifications, role requests, schedules, responses and last activity time.',
+          'Technical and security data: access logs, error information and data generated by authentication, hosting, database, image-storage and email providers.',
         ],
       },
       {
-        title: 'AI matching, recommendations, and automated assistance',
+        title: '3. Purposes and legal bases',
         items: [
-          'Matching is based mainly on selected profile and event tags.',
-          'The system builds a search or embedding index from tags to recommend relevant people and events.',
-          'Results are networking recommendations. They are not automatic legal, employment, financial, or similarly significant decisions about the user.',
-          'The user decides whether to follow a recommendation, send a connection request, or register for an event.',
+          'Providing the service: registration and management of accounts, events, connections, invites and meetings. The legal basis is performance of the user relationship or steps taken at your request.',
+          'Security, abuse prevention, event administration and limited operational statistics. The legal basis is the controller’s legitimate interest in running a secure and effective event.',
+          'Compliance with legal obligations and handling claims. The legal basis is the controller’s applicable legal obligation.',
+          'Where consent is required for additional optional processing, it will be requested separately and may be withdrawn without affecting earlier lawful processing.',
         ],
       },
       {
-        title: 'Legal basis, retention, and sharing',
+        title: '4. Recommendations and AI matching',
         items: [
-          'Data is processed to provide the service and user relationship, for legitimate event-organization interests and system security, and, where required, user consent.',
-          'Data is retained for as long as needed to run the event, operate the account, resolve requests, maintain security, keep audit records, and meet legal obligations.',
-          'Data may be processed by technical providers for authentication, database storage, image storage, email delivery, hosting, and system-operation analytics.',
-          'We do not sell data to advertisers and do not use it for behavioural advertising.',
+          'Confera primarily compares selected profile tags, event tags and basic profile descriptions to rank relevant people and events.',
+          'Mathematical text representations, or embeddings, may be created to find similarities. They are used to rank recommendations, not to infer sensitive personal characteristics.',
+          'Recommendations do not have legal or similarly significant effects. The system does not automatically create connections, register users for events or make employment or other significant decisions.',
+          'The final decision always remains with the user. You can influence recommendation quality and scope by editing your profile information and tags.',
         ],
       },
       {
-        title: 'User rights',
+        title: '5. Required and optional data',
         items: [
-          'Users have rights to information, access, rectification, erasure, restriction, objection, and portability where applicable under GDPR.',
-          'Users can edit profile data in the app; account deletion is available in account settings.',
-          'Where processing is based on consent, the user may withdraw it. Withdrawal does not affect processing that already happened lawfully.',
-          'For additional personal-data requests, contact the event organizer or controller operating this Confera instance.',
+          'Your name, email address and password are required to create and protect an account. Registration is not possible without them.',
+          'Organization, biography, tags, meeting preference and images are generally optional, but an incomplete profile may reduce recommendation quality and networking functionality.',
+          'Provide information voluntarily and do not include special-category personal data or confidential information that is unnecessary for the event.',
         ],
       },
       {
-        title: 'Terms of use',
+        title: '6. Recipients, providers and transfers',
         items: [
-          'Use the app only for conference, networking, event, and related administrative purposes.',
-          'Users must provide accurate information and must not misuse accounts, profiles, connections, invites, or notifications.',
-          'Harassment, spam, impersonation, unauthorized-access attempts, or using other users’ data outside the event purpose is prohibited.',
-          'The organizer may restrict or remove access in case of misuse, security risk, breach of event rules, or a lawful authority request.',
+          'Data may be accessed by authorized organizer personnel and processors providing authentication, databases, hosting, image storage and email delivery.',
+          'Technical providers may include Firebase or Google Cloud, Supabase, the application hosting provider and the email provider, depending on the configuration of the specific installation.',
+          'Where a provider processes data outside the European Economic Area, the controller must ensure a valid transfer mechanism and safeguards, such as an adequacy decision or standard contractual clauses.',
+          'Only information needed for community and networking functions is visible to other participants. Personal data is not sold to third parties.',
+        ],
+      },
+      {
+        title: '7. Retention and security',
+        items: [
+          'Account and profile data is retained until the account is deleted or until the organizer ends the period during which the event platform remains available.',
+          'Event, registration, connection and schedule data is retained as needed to run the event, support users, resolve disputes and document delivery.',
+          'Security and audit logs are kept for a limited period based on security risks and legal obligations. The organizer must define specific retention periods before production use.',
+          'Reasonable technical and organizational safeguards are applied, but no online system can guarantee absolute security.',
+        ],
+      },
+      {
+        title: '8. Your rights',
+        items: [
+          'Depending on the circumstances, you may have rights of access, rectification, erasure, restriction, objection and data portability.',
+          'You can edit profile information in the application and delete your account in settings. Contact the organizer’s privacy contact for other requests.',
+          'If you believe your data is processed unlawfully, you may complain to the Information Commissioner of the Republic of Slovenia, Dunajska cesta 22, 1000 Ljubljana, gp.ip@ip-rs.si, www.ip-rs.si.',
+          'The controller may verify your identity before fulfilling a request and must respond within the periods required by the GDPR.',
+        ],
+      },
+      {
+        title: '9. Terms of use',
+        items: [
+          'Use the application only to participate in the event, network professionally and complete related organizational processes.',
+          'Protect your sign-in details, provide accurate information and respect the privacy, dignity and rights of other participants.',
+          'Harassment, spam, impersonation, automated data collection, unauthorized-access attempts and use of participant data outside the event purpose are prohibited.',
+          'The organizer may restrict or remove access to address rule violations, security risks, harm to other users or legal obligations.',
+          'Features and availability may change. The organizer aims to provide a reliable service but does not guarantee uninterrupted access or the outcome of any recommendation.',
         ],
       },
     ],
-    accept: 'I understand and accept',
+    acknowledge: 'I accept',
     close: 'Close',
-    openLabel: 'Privacy and terms',
+    openLabel: 'Legal information',
   },
 };
 
@@ -216,8 +273,8 @@ export default function PrivacyTermsModal() {
     };
   }, [open]);
 
-  function accept() {
-    window.localStorage.setItem(ACCEPTANCE_KEY, 'accepted');
+  function acknowledge() {
+    window.localStorage.setItem(ACKNOWLEDGEMENT_KEY, 'read');
     setOpen(false);
   }
 
@@ -275,6 +332,9 @@ export default function PrivacyTermsModal() {
                 <p className="mt-2 text-[13px] leading-relaxed text-[#6e6e73] sm:text-[14px]">
                   {content.intro}
                 </p>
+                <p className="mt-3 text-[11px] font-medium text-[#8e8e93]">
+                  {content.version}
+                </p>
               </div>
 
               <div
@@ -322,10 +382,10 @@ export default function PrivacyTermsModal() {
                 </button>
                 <button
                   type="button"
-                  onClick={accept}
+                  onClick={acknowledge}
                   className="rounded-full border-0 bg-[#0d0d0d] px-5 py-2 text-[13px] font-semibold text-white hover:bg-[#1f1f1f]"
                 >
-                  {content.accept}
+                  {content.acknowledge}
                 </button>
               </div>
             </motion.div>
