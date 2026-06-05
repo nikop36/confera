@@ -36,6 +36,7 @@ V AI ujemanje so vključeni samo profili s `profileStatus: 'complete'`. Uporabni
 z nepopolnim profilom (`incomplete`) aplikacijo normalno uporabljajo, vendar niso
 vidni v priporočilih in ne prejemajo ujemanj.
 
+Vhod za AI ujemanje udeležencev so samo profilne oznake (`tags`).
 ---
 
 ## Podatkovni indeks
@@ -49,11 +50,7 @@ participant_profile_index (
   email text,
   affiliation text,
   bio text,
-  interests text[],
-  goals text[],
-  competencies text[],
-  research_keywords text[],
-  meeting_type text,
+  tags text[],
   profile_text text not null,
   profile_embedding vector(384),
   embedding_model text,
@@ -65,15 +62,12 @@ participant_profile_index (
 Polje `profile_text` je normaliziran tekstovni opis profila. Primer:
 
 ```txt
-Ime: Aleš Močnik
-Organizacija: Univerza v Mariboru
-Opis: Zanima me AI mreženje.
-Področja interesa: Umetna inteligenca, Strojno učenje
-Cilji mreženja: Zaposlitev
-Kompetence: Backend
-Ključne besede: LLM
-Način srečanja: both
+Oznake: umetna inteligenca, strojno ucenje, llm
 ```
+
+V dejanski implementaciji `profile_text` vsebuje samo vrstico `Oznake: ...`.
+Ime, organizacija in opis so v tabeli shranjeni kot metapodatki za odgovor API-ja,
+ne kot vhod v embedding ali full-text iskanje.
 
 ---
 
@@ -109,8 +103,7 @@ Odgovor vsebuje rangirane profile in razloge:
     "displayName": "Petra Kos",
     "score": 0.031,
     "reasons": [
-      "Skupna področja interesa: Umetna inteligenca",
-      "Ujemanje ključnih besed: LLM"
+      "Skupne oznake: umetna-inteligenca"
     ]
   }
 ]
@@ -214,7 +207,7 @@ curl http://localhost:3000/matches/me \
 - Profili se indeksirajo ob shranjevanju profila, zato stari profili niso v indeksu,
   dokler jih uporabnik ponovno ne shrani.
 - SQL indeks trenutno ne pozna dogodkov ali omejitev urnika.
-- Razlogi za priporočila so razloženi na osnovi prekrivanja polj, ne celotne
+- Razlogi za priporočila so razloženi na osnovi skupnih oznak, ne celotne
   semantične analize.
 
 ---

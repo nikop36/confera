@@ -2,10 +2,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { getStoredUser, useHydrated, useStoredUser } from '../lib/auth';
+import { useHydrated, useStoredUser } from '../lib/auth';
 import { useT } from '../lib/i18n';
 
 type AdminNavItem = {
@@ -112,21 +112,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const t = useT();
   const hydrated = useHydrated();
   const user = useStoredUser();
-  const currentUser = hydrated ? user ?? getStoredUser() : null;
-  const router = useRouter();
+  const currentUser = hydrated ? user : null;
   const pathname = usePathname();
   const [statsNavOpen, setStatsNavOpen] = useState(false);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    if (!currentUser?.idToken) {
-      router.replace('/login');
-      return;
-    }
-    if (currentUser.role !== 'admin') {
-      router.replace('/home');
-    }
-  }, [currentUser?.idToken, currentUser?.role, hydrated, router]);
 
   if (!currentUser || currentUser.role !== 'admin') {
     return (

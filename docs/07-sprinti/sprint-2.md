@@ -27,13 +27,13 @@ Drugi sprint je bil osredotočen na vzpostavitev razvojnega okolja in gradnjo ad
 ---
 
 **Aleš:**
-V drugem sprintu sem razvijal uporabniški profil, strukturo interesnih področij in prvo različico AI ujemanja. V tem sklopu sem:
+V drugem sprintu sem razvijal uporabniški profil, strukturo profilnih oznak in prvo različico AI ujemanja. V tem sklopu sem:
 
 - Implementiral urejanje uporabniškega profila z osnovnimi podatki, opisom, afiliacijo in dodatnimi profilnimi polji.
 - Uredil nalaganje in prikaz profilnih slik z uporabo zunanjega storage sistema.
-- Dopolnil profil z interesi, cilji mreženja, kompetencami in raziskovalnimi področji.
+- Dopolnil profil z oznakami, ki opisujejo uporabnikova tematska zanimanja.
 - Pomagal oblikovati podatkovno strukturo, ki se uporablja kot osnova za priporočila.
-- Implementiral prvo različico AI priporočanja oseb na podlagi interesov.
+- Implementiral prvo različico AI priporočanja oseb na podlagi oznak.
 - Poskrbel, da so profilni podatki uporabni tako za prikaz uporabnika kot tudi za kasnejše ujemanje.
 
 ---

@@ -4,7 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { saveStoredUser } from '../lib/auth';
+import { saveStoredUser, useHydrated } from '../lib/auth';
+import {
+  getRegistrationErrorTranslationKey,
+  getSafeReturnPath,
+  normalizeDisplayName,
+  normalizeEmail,
+  normalizeInviteToken,
+  resolvePostAuthDestination,
+  validateRegistrationInput,
+} from '../lib/auth-validation';
 import { firebaseSignIn } from '../lib/firebase';
 import { saveStoredLocale, useT } from '../lib/i18n';
 
@@ -12,7 +21,12 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 function passwordStrength(pw: string) {
   if (!pw) return null;
-  const score = [pw.length >= 12, /[A-Z]/.test(pw), /\d/.test(pw), /[^A-Za-z0-9]/.test(pw)].filter(Boolean).length;
+  const score = [
+    pw.length >= 12 && pw.length <= 128,
+    /[a-z]/.test(pw) && /[A-Z]/.test(pw),
+    /\d/.test(pw),
+    /[^A-Za-z0-9\s]/.test(pw) && !/\s/.test(pw),
+  ].filter(Boolean).length;
   const levels = [
     { key: 'auth.register.passwordStrength.weak', fallback: 'Weak', color: '#d14242' },
     { key: 'auth.register.passwordStrength.weak', fallback: 'Weak', color: '#d14242' },
@@ -31,6 +45,12 @@ export default function RegisterPage() {
   const [showInvite, setShowInvite] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const hydrated = useHydrated();
+  const returnTo = hydrated
+    ? getSafeReturnPath(
+        new URLSearchParams(window.location.search).get('returnTo'),
+      )
+    : null;
 
   const strength = passwordStrength(form.password);
 
@@ -44,12 +64,30 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
     try {
-      const body: Record<string, string> = {
-        displayName: form.displayName,
-        email: form.email,
+      const normalizedForm = {
+        displayName: normalizeDisplayName(form.displayName),
+        email: normalizeEmail(form.email),
         password: form.password,
+        inviteToken: normalizeInviteToken(form.inviteToken),
       };
-      if (form.inviteToken) body.inviteToken = form.inviteToken;
+      const validationError = validateRegistrationInput(normalizedForm);
+      if (validationError) {
+        throw new Error(
+          t(
+            `auth.error.${validationError}`,
+            'Please check the entered registration data.',
+          ),
+        );
+      }
+
+      const body: Record<string, string> = {
+        displayName: normalizedForm.displayName,
+        email: normalizedForm.email,
+        password: normalizedForm.password,
+      };
+      if (normalizedForm.inviteToken) {
+        body.inviteToken = normalizedForm.inviteToken;
+      }
 
       const res = await fetch(`${API}/auth/register`, {
         method: 'POST',
@@ -60,21 +98,32 @@ export default function RegisterPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const msg = Array.isArray(data.message) ? data.message[0] : data.message;
-        throw new Error(msg ?? t('auth.error.registerFailed', 'Registration failed'));
+        throw new Error(
+          t(
+            getRegistrationErrorTranslationKey(
+              typeof msg === 'string' ? msg : undefined,
+            ),
+            t('auth.error.registerFailed', 'Registration failed'),
+          ),
+        );
       }
 
       const data = await res.json().catch(() => ({}));
-      const { idToken, uid } = await firebaseSignIn(form.email, form.password);
+      const { idToken, uid } = await firebaseSignIn(
+        normalizedForm.email,
+        normalizedForm.password,
+      );
       saveStoredLocale('sl');
 
-      saveStoredUser({
-        displayName: form.displayName,
-        email: form.email,
+      const storedUser = {
+        displayName: normalizedForm.displayName,
+        email: normalizedForm.email,
         uid: (data as { uid?: string }).uid ?? uid,
         idToken,
         role: (data as { role?: string }).role ?? 'participant',
-      });
-      router.push('/home');
+      };
+      saveStoredUser(storedUser);
+      router.replace(resolvePostAuthDestination(storedUser, returnTo));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error.generic', 'An error occurred'));
     } finally {
@@ -155,7 +204,16 @@ export default function RegisterPage() {
             <h2 className="text-[28px] font-bold text-[#0d0d0d] mb-1">{t('auth.register.title')}</h2>
             <p className="text-[14px] text-[#8e8e93]">
               {t('auth.register.hasAccount')}{' '}
-              <Link href="/login" className="text-[#7fa8c8] hover:underline">{t('auth.register.signIn')}</Link>
+              <Link
+                href={
+                  returnTo
+                    ? `/login?returnTo=${encodeURIComponent(returnTo)}`
+                    : '/login'
+                }
+                className="text-[#7fa8c8] hover:underline"
+              >
+                {t('auth.register.signIn')}
+              </Link>
             </p>
           </div>
 
@@ -168,6 +226,8 @@ export default function RegisterPage() {
                 value={form.displayName}
                 onChange={field('displayName')}
                 placeholder="Jana Novak"
+                autoComplete="name"
+                maxLength={80}
                 required
                 className="profile-input"
               />
@@ -181,6 +241,8 @@ export default function RegisterPage() {
                 value={form.email}
                 onChange={field('email')}
                 placeholder="jana@primer.si"
+                autoComplete="email"
+                maxLength={254}
                 required
                 className="profile-input"
               />
@@ -195,6 +257,8 @@ export default function RegisterPage() {
                   value={form.password}
                   onChange={field('password')}
                   placeholder={t('auth.register.passwordPlaceholder', 'Min. 12 characters')}
+                  autoComplete="new-password"
+                  maxLength={128}
                   required
                   className="profile-input pr-12"
                 />
@@ -252,6 +316,8 @@ export default function RegisterPage() {
                     value={form.inviteToken}
                     onChange={field('inviteToken')}
                     placeholder="INVITE-XXXX"
+                    autoComplete="off"
+                    maxLength={128}
                     className="profile-input font-mono"
                   />
                 </motion.div>

@@ -6,7 +6,7 @@
 
 ## O projektu
 
-**Confera** je spletna platforma, ki povezuje udeležence konference iz akademske sfere, industrije in javne uprave. Sistem avtomatizira razporejanje srečanj na podlagi interesov in razpoložljivosti ter vključuje AI modul za večkriterijsko ujemanje udeležencev (multi-objective matching).
+**Confera** je spletna platforma, ki povezuje udeležence konference iz akademske sfere, industrije in javne uprave. Sistem avtomatizira razporejanje srečanj na podlagi izbranih oznak in razpoložljivosti ter vključuje AI modul za ujemanje udeležencev.
 
 ---
 

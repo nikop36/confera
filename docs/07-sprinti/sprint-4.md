@@ -33,7 +33,7 @@ V četrtem sprintu sem nadgrajeval statistični panel, razširil AI priporočila
 - Razširitev administratorske statistike v več ločenih podstrani za pregled, operativo, uporabo, ujemanje, vključenost in poročila.
 - Dodajanje časovnih filtrov, grafov, opisov metrik in izvozov poročil v CSV/JSON obliki.
 - Izboljšave prikaza statističnih grafov, da so bolj razumljivi in uporabni za administratorje.
-- Implementacijo priporočanja dogodkov na podlagi uporabnikovega profila, interesov in oznak dogodkov.
+- Implementacijo priporočanja dogodkov na podlagi uporabnikovih profilnih oznak in oznak dogodkov.
 - Pripravo kataloga oznak za dogodke z berljivimi imeni in tehničnimi identifikatorji.
 - Prikaz priporočenih dogodkov na profilu uporabnika in povezavo do podrobnosti dogodka.
 - Začetek avtomatiziranega preverjanja kakovosti AI priporočil s testnimi podatki in metrikami.

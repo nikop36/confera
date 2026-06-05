@@ -24,11 +24,8 @@ const EXPORTABLE_PROFILE_FIELDS: Array<keyof (User & UserProfile)> = [
   'email',
   'affiliation',
   'bio',
-  'interests',
-  'goals',
   'meetingType',
-  'competencies',
-  'researchKeywords',
+  'tags',
 ];
 
 @Injectable()

@@ -18,7 +18,7 @@ V tretjem sprintu sem se posvetil razvoju sistema notifikacij, email integracija
 Tretji sprint je bil najobsežnejši — zgradil sem tri večje funkcionalnosti. Uspešno sem:
 
 - Implementiral stran Skupnost s pregledom vseh udeležencev, iskanjem po imenu in instituciji, filtriranjem po vlogi in AI ujemanjem.
-- Zgradil razprostranljive kartice udeležencev s kolegami, interesi, cilji in gumbom za povezovanje.
+- Zgradil razprostranljive kartice udeležencev s kolegi, oznakami in gumbom za povezovanje.
 - Napisal celoten NestJS backend modul za dogodke: CRUD, atomska registracija za seje in pridobivanje `EventWithMeta` z `isRegistered` poljem za klicatelja.
 - Zgradil frontend stran z razporedom dogodkov po časovni osi, `EventCard` in `EventFormModal` za admine in organizatorje.
 - Implementiral backend modul za seje s konferenčnim programom in atomsko registracijo (Firestore transakcija), ki prepreči dvojno prijavo in prepoljnitev.

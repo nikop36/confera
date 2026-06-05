@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
 import EventCard, { type EventItem } from '../components/EventCard';
 import EventFormModal, { type EventFormValues } from '../components/EventFormModal';
@@ -38,15 +37,8 @@ function groupByTime(events: EventItem[]): TimeGroup[] {
 export default function EventsPage() {
   const user = useStoredUser();
   const t = useT();
-  const router = useRouter();
   const isAdminOrOrganizer =
     user?.role === 'admin' || user?.role === 'organizer';
-
-  useEffect(() => {
-    if (user && user.role === 'participant') {
-      void router.replace('/home');
-    }
-  }, [user, router]);
 
   const [events, setEvents] = useState<EventItem[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);

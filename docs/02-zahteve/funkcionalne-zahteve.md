@@ -8,7 +8,8 @@
 - Uporabnik ima eno izmed vlog: *udeleženec*, *organizator*, *zaposlovalec*.
 
 ### 1.2 Uporabniški profil (NUJNO)
-- Uporabnik lahko ureja svoj profil: ime, opis, vloga, interesi, kompetence, cilji.
+- Uporabnik lahko ureja svoj profil: ime, opis, vloga in oznake (`tags`).
+- Polja `interests`, `goals` in `competencies` niso več del trenutnega uporabniškega profila.
 - Uporabnik določi svojo razpoložljivost za srečanja.
 - Sistem omogoča nalaganje profilne slike (opcijsko).
 
@@ -20,9 +21,9 @@
 - Organizator lahko uvozi udeležence prek standardizirane CSV/Excel predloge.
 - Sistem preveri skladnost predloge in zavrne napačno oblikovane datoteke.
 
-### 2.2 Upravljanje interesnih področij (NUJNO)
-- Organizator lahko definira seznam interesnih področij in kompetenc.
-- Uporabniki lahko izberejo več interesov in kompetenc.
+### 2.2 Upravljanje oznak (NUJNO)
+- Organizator lahko definira seznam profilnih oznak.
+- Uporabniki lahko izberejo več oznak.
 
 ---
 
@@ -33,13 +34,13 @@
 
 ### 3.2 Izračun podobnosti (NUJNO)
 - Sistem izračuna podobnost med udeleženci s kosinusno metriko.
-- Rezultat se kombinira z dodatnimi kriteriji: vloga, razpoložljivost, cilji.
+- Rezultat temelji na hibridnem iskanju nad izbranimi oznakami.
 
 ### 3.3 Prikaz razlage ujemanja (NUJNO)
-- Uporabnik vidi razlago ujemanja (skupni interesi, kompatibilni cilji).
+- Uporabnik vidi razlago ujemanja na osnovi skupnih oznak.
 
 ### 3.4 Napredni matching (ZAŽELENO)
-- Uteževanje kriterijev (interesi, cilji, vloga, razpoložljivost).
+- Uteževanje oznak in semantične podobnosti.
 - Semantično bogatejši embedding model.
 
 ---
@@ -134,7 +135,7 @@
 ## 10. Dodatne funkcionalnosti
 
 ### 10.1 Napredni filtri (ZAŽELENO)
-- Filtri po interesih, vlogi, kompetencah, razpoložljivosti.
+- Filtri po oznakah, vlogi in razpoložljivosti.
 
 ### 10.2 Gamifikacija (DODATNO)
 - Značke, točke, napredovanje.

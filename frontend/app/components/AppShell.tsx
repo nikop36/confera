@@ -139,8 +139,6 @@ type SidebarNotification = {
 
 type ProfileRecommendationSource = {
   tags?: string[];
-  interests?: string[];
-  goals?: string[];
 };
 
 type CacheEntry<T> = {
@@ -257,8 +255,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       };
 
       (source?.tags ?? []).forEach((value) => pushUnique(value));
-      (source?.interests ?? []).forEach((value) => pushUnique(value));
-      (source?.goals ?? []).forEach((value) => pushUnique(value));
       RECOMMENDATION_FALLBACK_KEYS.forEach((key) => pushUnique(t(key), key));
 
       setRecommendations(

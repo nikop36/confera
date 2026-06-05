@@ -279,9 +279,7 @@ describe('EventsService', () => {
         uid: 'u1',
         bio: 'AI engineer',
         affiliation: 'FERI',
-        interests: ['Umetna inteligenca', 'Podatkovna znanost'],
-        competencies: ['Backend'],
-        researchKeywords: ['LLM', 'Semantično iskanje'],
+        tags: ['artificial-intelligence', 'data-science', 'llm'],
       });
 
       const now = Date.now();
@@ -332,9 +330,7 @@ describe('EventsService', () => {
       mockFindByUid.mockResolvedValue({
         uid: 'u2',
         bio: 'AI engineer',
-        interests: ['Umetna inteligenca'],
-        competencies: [],
-        researchKeywords: ['LLM'],
+        tags: ['artificial-intelligence', 'llm'],
       });
       const now = Date.now();
       mockListEvents.mockResolvedValue([

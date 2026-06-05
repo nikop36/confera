@@ -3,6 +3,7 @@ import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import SmoothScroll from "./components/SmoothScroll";
+import AuthAccessGuard from "./components/AuthAccessGuard";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -32,7 +33,9 @@ export default function RootLayout({
       className={`${cormorant.variable} ${dmSans.variable} h-full`}
     >
       <body className="min-h-full flex flex-col">
-        <SmoothScroll>{children}</SmoothScroll>
+        <SmoothScroll>
+          <AuthAccessGuard>{children}</AuthAccessGuard>
+        </SmoothScroll>
       </body>
     </html>
   );

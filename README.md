@@ -3,7 +3,7 @@
 [![Frontend CI/CD](https://github.com/nikop36/confera/actions/workflows/frontend.yml/badge.svg)](https://github.com/nikop36/confera/actions/workflows/frontend.yml)
 [![Backend CI/CD](https://github.com/nikop36/confera/actions/workflows/backend.yml/badge.svg)](https://github.com/nikop36/confera/actions/workflows/backend.yml)
 
-Confera is a conference networking platform for participant profiles, interest-based matching, meeting scheduling, research fair management, and career interviews.
+Confera is a conference networking platform for participant profiles, tag-based matching, meeting scheduling, research fair management, and career interviews.
 
 ## CI/CD
 

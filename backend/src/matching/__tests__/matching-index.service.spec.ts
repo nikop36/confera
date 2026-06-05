@@ -25,11 +25,8 @@ describe('MatchingIndexService', () => {
     createdAt: new Date('2026-05-18T10:00:00.000Z'),
     affiliation: 'Univerza v Mariboru',
     bio: 'Zanima me AI mreženje.',
-    interests: ['Umetna inteligenca', 'Strojno učenje'],
-    goals: ['Zaposlitev'],
-    competencies: ['Backend'],
-    researchKeywords: ['LLM'],
     meetingType: 'both',
+    tags: ['umetna-inteligenca', 'strojno-ucenje'],
   };
 
   beforeEach(() => {
@@ -53,12 +50,8 @@ describe('MatchingIndexService', () => {
         profile.email,
         profile.affiliation,
         profile.bio,
-        profile.interests,
-        profile.goals,
-        profile.competencies,
-        profile.researchKeywords,
-        profile.meetingType,
-        expect.stringContaining('Področja interesa: Umetna inteligenca'),
+        profile.tags,
+        expect.stringContaining('Oznake: umetna inteligenca'),
         expect.stringMatching(/^\[/),
         embeddingService.model,
         expect.stringMatching(/^[a-f0-9]{64}$/),
@@ -77,6 +70,31 @@ describe('MatchingIndexService', () => {
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
+  it('should remove a profile from the SQL matching index when it has no tags', async () => {
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    await service.upsertProfile({ ...profile, tags: [] });
+
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockQuery.mock.calls[0]?.[0]).toContain(
+      'delete from participant_profile_index',
+    );
+    expect(mockQuery.mock.calls[0]?.[1]).toEqual(['uid-1']);
+  });
+
+  it('should return no matches when the current profile has no tags', async () => {
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    const result = await service.findMatches({ ...profile, tags: [] }, 5);
+
+    expect(result).toEqual([]);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockQuery.mock.calls[0]?.[0]).toContain(
+      'delete from participant_profile_index',
+    );
+    expect(mockQuery.mock.calls[0]?.[1]).toEqual(['uid-1']);
+  });
+
   it('should return ranked matches with explanation reasons', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({
       rows: [
@@ -85,11 +103,7 @@ describe('MatchingIndexService', () => {
           display_name: 'Dr. Petra Kos',
           affiliation: 'Univerza v Ljubljani',
           bio: 'Raziskujem LLM sisteme.',
-          interests: ['Umetna inteligenca'],
-          goals: ['Raziskovalno sodelovanje'],
-          competencies: ['Strojno učenje'],
-          research_keywords: ['LLM'],
-          meeting_type: 'online',
+          tags: ['umetna-inteligenca', 'llm'],
           score: '0.031',
         },
       ],
@@ -101,7 +115,7 @@ describe('MatchingIndexService', () => {
     const secondCall = mockQuery.mock.calls[1] as [string, unknown[]];
     expect(secondCall[0]).toContain('hybrid_profile_search');
     expect(secondCall[1]).toEqual([
-      expect.stringContaining('Ime: Aleš Močnik'),
+      expect.stringContaining('Oznake: umetna inteligenca'),
       expect.stringMatching(/^\[/),
       'uid-1',
       5,
@@ -112,11 +126,7 @@ describe('MatchingIndexService', () => {
       score: 0.031,
     });
     expect(result[0]?.reasons).toEqual(
-      expect.arrayContaining([
-        'Skupna področja interesa: Umetna inteligenca',
-        'Ujemanje ključnih besed: LLM',
-        'Združljiva preferenca za način srečanja',
-      ]),
+      expect.arrayContaining(['Skupne oznake: umetna-inteligenca']),
     );
   });
 

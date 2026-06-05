@@ -17,11 +17,7 @@ type PublicProfile = {
   role: string;
   bio?: string;
   affiliation?: string;
-  interests?: string[];
-  goals?: string[];
   meetingType?: 'online' | 'in-person' | 'both';
-  competencies?: string[];
-  researchKeywords?: string[];
   tags?: string[];
   roleProfile?: Record<string, unknown>;
 };
@@ -47,19 +43,8 @@ const AVATAR_GRADIENTS = [
   { from: '#a18cd1', to: '#fbc2eb', text: '#3d3d3d' },
 ];
 
-const CHIP_COLORS = [
-  'bg-[#eff6ff] text-[#1e40af]',
-  'bg-[#f0fdf4] text-[#166534]',
-  'bg-[#fdf4ff] text-[#7e22ce]',
-  'bg-[#fff7ed] text-[#c2410c]',
-];
-
 function avatarGradient(uid: string) {
   return AVATAR_GRADIENTS[uid.charCodeAt(0) % AVATAR_GRADIENTS.length];
-}
-
-function chipColor(i: number) {
-  return CHIP_COLORS[i % CHIP_COLORS.length];
 }
 
 function initials(name: string) {
@@ -372,58 +357,6 @@ export default function PublicProfilePage() {
           <div className="bg-white border border-[#e5e7eb] rounded-[20px] px-5 py-4 mb-3">
             <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-3">{t('eventForm.field.tags')}</p>
             <TagPills tags={profileTags} />
-          </div>
-        )}
-
-        {/* Interests + Goals */}
-        {((profile.interests ?? []).length > 0 || (profile.goals ?? []).length > 0) && (
-          <div className="bg-white border border-[#e5e7eb] rounded-[20px] px-5 py-4 mb-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {(profile.interests ?? []).length > 0 && (
-                <div>
-                  <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">{t('profilePublic.interests', 'Interests')}</p>
-                  <div className="flex flex-wrap gap-[5px]">
-                    {(profile.interests ?? []).map((v, i) => (
-                      <span key={v} className={`px-[8px] py-[3px] rounded-full text-[10px] font-medium ${chipColor(i)}`}>{v}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(profile.goals ?? []).length > 0 && (
-                <div>
-                  <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">{t('profilePublic.goals', 'Goals')}</p>
-                  <div className="flex flex-wrap gap-[5px]">
-                    {(profile.goals ?? []).map((v, i) => (
-                      <span key={v} className={`px-[8px] py-[3px] rounded-full text-[10px] font-medium ${chipColor((i + 2) % 4)}`}>{v}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Competencies */}
-        {(profile.competencies ?? []).length > 0 && (
-          <div className="bg-white border border-[#e5e7eb] rounded-[20px] px-5 py-4 mb-3">
-            <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">{t('profilePublic.competencies', 'Competencies')}</p>
-            <div className="flex flex-wrap gap-[5px]">
-              {(profile.competencies ?? []).map((v, i) => (
-                <span key={v} className={`px-[8px] py-[3px] rounded-full text-[10px] font-medium ${chipColor(i)}`}>{v}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Research keywords */}
-        {(profile.researchKeywords ?? []).length > 0 && (
-          <div className="bg-white border border-[#e5e7eb] rounded-[20px] px-5 py-4 mb-3">
-            <p className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-[0.06em] mb-2">{t('profilePublic.research', 'Research topics')}</p>
-            <div className="flex flex-wrap gap-[5px]">
-              {(profile.researchKeywords ?? []).map((v, i) => (
-                <span key={v} className={`px-[8px] py-[3px] rounded-full text-[10px] font-medium ${chipColor(i)}`}>{v}</span>
-              ))}
-            </div>
           </div>
         )}
 

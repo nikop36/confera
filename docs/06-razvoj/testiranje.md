@@ -69,7 +69,7 @@ npm run test:api:flow
 
 ## End-to-end testi — Playwright
 
-Playwright pokriva celoten tok (frontend → backend → API → baza) z uporabniškimi scenariji. Testi živijo v `tests/playwright/`.
+Playwright pokriva celoten tok (frontend → backend → API → baza) z uporabniškimi scenariji. Testi živijo v `tests/e2e/`.
 
 ### Vzpostavitev
 
@@ -78,6 +78,20 @@ Zagotovi, da je v root `.env` nastavljena spremenljivka:
 ```
 PLAYWRIGHT_BASE_URL=http://localhost:3001
 ```
+
+Za teste povezav morata biti v `.env` nastavljena tudi dva obstoječa testna uporabnika:
+
+```
+TEST_EMAIL=...
+TEST_PASSWORD=...
+ORGANIZER_EMAIL=...
+ORGANIZER_PASSWORD=...
+```
+
+Pred zagonom mora biti aplikacija lokalno dostopna:
+
+- frontend: `http://localhost:3001`
+- backend API: `http://localhost:3000`
 
 ### Zagon
 
@@ -91,6 +105,13 @@ npm run test:e2e:ui
 # Prikaz poročila zadnjega zagona
 npm run test:e2e:report
 ```
+
+### Pokriti e2e scenariji
+
+| Datoteka | Scenarij |
+|---|---|
+| `tests/e2e/connections.spec.ts` | Uporabnik pošlje zahtevo za povezavo, prejemnik jo potrdi, oba uporabnika vidita sprejeto povezavo |
+| `tests/e2e/connections.spec.ts` | Podvojena pending zahteva za povezavo je zavrnjena z napako `400` |
 
 ---
 
@@ -115,6 +136,8 @@ npm run test:e2e:report
 | `src/matching/__tests__/matching.service.spec.ts` | Orkestracija endpointa za priporočila |
 | `src/matching/__tests__/matching-index.service.spec.ts` | Sinhronizacija SQL indeksa in razlage priporočil |
 | `src/role-requests/__tests__/role-requests.service.spec.ts` | Logika zahtev za vloge |
+| `src/role-requests/__tests__/role-requests.repository.spec.ts` | Normalizacija datumov zahtev za vloge iz Firestore zapisov |
+| `tests/e2e/connections.spec.ts` | E2E tok pošiljanja, potrditve in zavrnitve podvojene zahteve za povezavo |
 | `src/app.controller.spec.ts` | Endpoint za zdravje sistema |
 
 
@@ -154,14 +177,14 @@ npm run test:e2e:report
 | Enak vhod v prototipni embedding model | Vrne enak 384-dimenzionalni vektor |
 | Neprazen vhod v prototipni embedding model | Vrne normaliziran vektor |
 | Pretvorba v SQL vektor | Vrne format, združljiv s `pgvector` |
-| Gradnja tekstovnega profila | Združi ime, organizacijo, opis, interese, cilje, kompetence in ključne besede |
-| Manjkajoča profilna polja | Uporabi nadomestno vrednost `Ni navedeno` |
+| Gradnja tekstovnega profila | Zgradi AI vhod samo iz profilnih oznak (`tags`) |
+| Manjkajoče oznake | Profil se odstrani iz `participant_profile_index`, iskanje pa vrne prazen seznam |
 | Matching baza ni nastavljena | `MatchingService` vrže `ServiceUnavailableException` |
 | Profil ne obstaja | `MatchingService` vrže `NotFoundException` |
 | Obstoječ profil | `MatchingService` pokliče `MatchingIndexService.findMatches` |
 | SQL indeksiranje profila | `MatchingIndexService` pripravi `insert into participant_profile_index` z embeddingom in hashom |
 | Iskanje priporočil | Pokliče `hybrid_profile_search` in vrne rangirane zadetke |
-| Razlage priporočil | Vrne razloge na osnovi skupnih interesov, ciljev, ključnih besed in načina srečanja |
+| Razlage priporočil | Vrne razloge na osnovi skupnih oznak |
 | Napaka pri sinhronizaciji indeksa | `safeUpsertProfile` ne prekine shranjevanja profila |
 | Kakovost priporočil dogodkov | Izračuna Precision/Recall/MRR/NDCG in primerjavo proti baseline modelu |
 
@@ -335,7 +358,7 @@ npm run test:e2e:report
 
 | Primer | Pričakovan rezultat |
 |---|---|
-| Pridobitev skupnostnih uporabnikov | Vrne samo ne-admin uporabnike; vključena so samo javna polja (`uid`, `displayName`, `affiliation`, `role`, `bio`, `interests`, `goals`, `meetingType`); email NI vključen |
+| Pridobitev skupnostnih uporabnikov | Vrne samo ne-admin uporabnike; vključena so samo javna polja (`uid`, `displayName`, `affiliation`, `role`, `bio`, `tags`, `meetingType`); email NI vključen |
 | Ni ne-admin uporabnikov | Vrne prazen seznam `[]` |
 | Brisanje uporabnika kot admin | Uporabnik izbrisan; pokliče se `deleteAccountData` |
 | Brisanje — admin ne sme izbrisati samega sebe | Vrže napako: *"Admins cannot delete their own account here"* |
@@ -365,7 +388,7 @@ npm run test:e2e:report
 
 | Primer | Pričakovan rezultat |
 |---|---|
-| Uvoz veljavnega CSV | Polja `bio`, `affiliation`, `interests`, `meetingType` uspešno posodobljena; `interests` razdeljen na seznam |
+| Uvoz veljavnega CSV | Polja `bio`, `affiliation`, `tags`, `meetingType` uspešno posodobljena; `tags` razdeljen na seznam |
 | Odstranitev prepovedanih polj | Polja `role`, `uid`, `email` se ignorirajo in se ne posredujejo v update |
 | Neveljaven meetingType | Vrže `BadRequestException` |
 | CSV brez veljavnih polj | Vrže `BadRequestException` |
@@ -393,4 +416,3 @@ npm run test:e2e:report
 | `connections.service.ts` | > 80% |
 | `events.service.ts` | > 80% |
 | `scheduling.service.ts` | > 80% |
-

@@ -124,8 +124,7 @@ export class UsersService {
       affiliation?: string;
       role: string;
       bio?: string;
-      interests?: string[];
-      goals?: string[];
+      tags?: string[];
       meetingType?: MeetingType;
     }>
   > {
@@ -138,8 +137,7 @@ export class UsersService {
         affiliation: user.affiliation,
         role: user.role,
         bio: user.bio,
-        interests: user.interests,
-        goals: user.goals,
+        tags: user.tags,
         meetingType: user.meetingType,
       }));
   }

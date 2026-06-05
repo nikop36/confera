@@ -191,8 +191,7 @@ describe('UsersService', () => {
           role: UserRoleEnum.PARTICIPANT,
           bio: 'Researcher',
           affiliation: 'UL',
-          interests: ['AI'],
-          goals: ['Networking'],
+          tags: ['ai', 'networking'],
           meetingType: 'both',
           profileStatus: 'complete',
           createdAt: new Date(),
@@ -216,8 +215,7 @@ describe('UsersService', () => {
         affiliation: 'UL',
         role: 'participant',
         bio: 'Researcher',
-        interests: ['AI'],
-        goals: ['Networking'],
+        tags: ['ai', 'networking'],
         meetingType: 'both',
       });
       // must not include email

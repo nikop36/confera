@@ -61,15 +61,17 @@ Obe obliki (CSV, Excel) vrneta enako strukturo: `Record<string, unknown>[]` z im
 
 ## Sanitizacija profilnih polj (`sanitizeImportRow`)
 
-Pri uvozu profilnih podatkov (ločena funkcionalnost — uvoz polj kot `bio`, `interests` itd.) se vsaka vrstica preide skozi `sanitizeImportRow`:
+Pri uvozu profilnih podatkov (ločena funkcionalnost — uvoz polj kot `bio`, `tags` itd.) se vsaka vrstica preide skozi `sanitizeImportRow`:
 
 - Samo polja iz `IMPORTABLE_FIELDS` se prenesejo naprej — vsa ostala so tiho zavržena (whitelist pristop)
 - Polja nizov so omejena na 500 znakov
-- Array polja (`interests`, `goals`, `competencies`, `researchKeywords`) so kodirana kot `|`-ločene vrednosti; vsaka vrednost max 100 znakov, skupaj max 20 elementov
+- Array polje `tags` je kodirano kot `|`-ločene vrednosti; vsaka vrednost max 100 znakov, skupaj max 20 elementov
 - `meetingType` mora biti ena od dovoljenih vrednosti (`online`, `in-person`, `both`)
 
-**Zakaj whitelist in ne blacklist?** Whitelist pristop pomeni, da morebitno novo polje v bazi nikoli ne bo nehote prepisano prek uvoza. 
+Polja `interests`, `goals`, `competencies` in `researchKeywords` niso več del
+trenutnega profila in naj se ne uporabljajo v novih uvoznih predlogah.
 
+**Zakaj whitelist in ne blacklist?** Whitelist pristop pomeni, da morebitno novo polje v bazi nikoli ne bo nehote prepisano prek uvoza. 
 
 
 

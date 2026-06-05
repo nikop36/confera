@@ -15,41 +15,25 @@ describe('profile search document helpers', () => {
     createdAt: new Date('2026-05-18T10:00:00.000Z'),
     affiliation: 'Univerza v Mariboru',
     bio: 'Zanima me AI mreženje.',
-    interests: ['Umetna inteligenca', 'Strojno učenje'],
-    goals: ['Zaposlitev'],
-    competencies: ['Backend'],
-    researchKeywords: ['LLM'],
     meetingType: 'both',
+    tags: ['umetna-inteligenca', 'strojno-ucenje'],
   };
 
-  it('should build a normalized text document from profile fields', () => {
+  it('should build a normalized text document from profile tags only', () => {
     const result = buildProfileSearchText(profile);
 
-    expect(result).toContain('Ime: Aleš Močnik');
-    expect(result).toContain('Organizacija: Univerza v Mariboru');
-    expect(result).toContain(
-      'Področja interesa: Umetna inteligenca, Strojno učenje',
-    );
-    expect(result).toContain('Ključne besede: LLM');
-    expect(result).toContain('Oznake: Ni navedeno');
+    expect(result).toBe('Oznake: umetna inteligenca, strojno ucenje');
+    expect(result).not.toContain('Ime:');
+    expect(result).not.toContain('Področja interesa:');
   });
 
-  it('should use fallback text for missing optional values', () => {
+  it('should use fallback text when tags are missing', () => {
     const result = buildProfileSearchText({
       ...profile,
-      affiliation: undefined,
-      bio: undefined,
-      interests: undefined,
-      goals: undefined,
-      competencies: undefined,
-      researchKeywords: undefined,
-      meetingType: undefined,
+      tags: undefined,
     });
 
-    expect(result).toContain('Organizacija: Ni navedeno');
-    expect(result).toContain('Opis: Ni navedeno');
-    expect(result).toContain('Področja interesa: Ni navedeno');
-    expect(result).toContain('Način srečanja: both');
+    expect(result).toBe('Oznake: Ni navedeno');
   });
 
   it('should create a stable hash for equal profile text', () => {

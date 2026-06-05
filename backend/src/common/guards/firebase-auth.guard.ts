@@ -14,9 +14,14 @@ export class FirebaseAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const authHeader = request.headers.authorization;
-    const token = authHeader?.split('Bearer ')[1];
+    const tokenMatch = /^Bearer ([^\s]+)$/u.exec(authHeader ?? '');
+    const token = tokenMatch?.[1];
 
-    if (!token) throw new UnauthorizedException('No token provided');
+    if (!token) {
+      throw new UnauthorizedException(
+        'A valid Bearer authentication token is required',
+      );
+    }
 
     try {
       const decoded = await this.firebaseService.getAuth().verifyIdToken(token);

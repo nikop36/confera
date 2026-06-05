@@ -46,7 +46,8 @@ describe('Profile Import — Integration', () => {
   describe('CSV import', () => {
     it('should parse and import valid CSV fields', async () => {
       const csv = Buffer.from(
-        'bio,affiliation,interests,meetingType\n' + 'Researcher,FRI,AI|ML,both',
+        'bio,affiliation,tags,meetingType\n' +
+          'Researcher,FRI,ai|machine-learning,both',
       );
 
       const file = createUploadedFileFixture(csv);
@@ -54,19 +55,14 @@ describe('Profile Import — Integration', () => {
       const result = await exportService.importProfile('uid-123', file);
 
       expect(result.updatedFields).toEqual(
-        expect.arrayContaining([
-          'bio',
-          'affiliation',
-          'interests',
-          'meetingType',
-        ]),
+        expect.arrayContaining(['bio', 'affiliation', 'tags', 'meetingType']),
       );
       expect(mockUpdateProfile).toHaveBeenCalledWith(
         'uid-123',
         expect.objectContaining({
           bio: 'Researcher',
           affiliation: 'FRI',
-          interests: ['AI', 'ML'],
+          tags: ['ai', 'machine-learning'],
           meetingType: 'both',
         }),
       );

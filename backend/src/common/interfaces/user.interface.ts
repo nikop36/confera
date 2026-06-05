@@ -22,11 +22,7 @@ export interface UserProfile {
   affiliation?: string;
   language?: string;
   timezone?: string;
-  interests?: string[];
-  goals?: string[];
   meetingType?: MeetingType;
-  competencies?: string[];
-  researchKeywords?: string[];
   tags?: string[];
   roleProfile?: Record<string, unknown>;
 }

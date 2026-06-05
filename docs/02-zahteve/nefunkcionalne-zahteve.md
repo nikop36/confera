@@ -34,7 +34,7 @@
 ## 5. Vzdrževanje in nadgradljivost
 
 - Koda mora slediti načelom modularnosti (NestJS moduli).
-- Sistem mora omogočati enostavno dodajanje novih interesov, vlog in kriterijev matchinga.
+- Sistem mora omogočati enostavno dodajanje novih profilnih oznak, vlog in kriterijev matchinga.
 - Dokumentacija mora biti vzdrževana v `docs/`.
 
 ---

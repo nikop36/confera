@@ -388,10 +388,6 @@ export class EventsService {
         });
     };
 
-    add(caller?.interests);
-    add(caller?.goals);
-    add(caller?.competencies);
-    add(caller?.researchKeywords);
     add(caller?.tags);
     return tags;
   }
@@ -399,21 +395,9 @@ export class EventsService {
   private buildUserEmbeddingText(
     caller: Awaited<ReturnType<UsersRepository['findByUid']>>,
   ): string {
-    const interests = caller?.interests ?? [];
-    const competencies = caller?.competencies ?? [];
-    const keywords = caller?.researchKeywords ?? [];
     const tags = caller?.tags ?? [];
 
-    const fields = [
-      `bio: ${caller?.bio ?? ''}`,
-      `affiliation: ${caller?.affiliation ?? ''}`,
-      `interests: ${interests.join(', ')}`,
-      `competencies: ${competencies.join(', ')}`,
-      `keywords: ${keywords.join(', ')}`,
-      `priority_interests: ${interests.join(', ')}`,
-      `priority_keywords: ${keywords.join(', ')}`,
-      `tags: ${tags.join(', ')}`,
-    ];
+    const fields = [`tags: ${tags.join(', ')}`];
 
     return fields
       .map((field) => field.trim())

@@ -48,7 +48,7 @@ sequenceDiagram
     FE->>API: PATCH /users/me s podatki profila
     API->>Auth: Preveri žeton zahteve
     Auth-->>API: Vrne ID prijavljenega uporabnika
-    API->>API: Preveri vlogo, interese, kompetence in razpoložljivost
+    API->>API: Preveri vlogo, oznake in razpoložljivost
     API->>DB: Posodobi users/{userId}
     DB-->>API: Potrdi posodobitev
     API-->>FE: Vrne posodobljen profil
@@ -69,9 +69,9 @@ sequenceDiagram
     FE->>API: GET /matches/me
     API->>DB: Naloži profil trenutnega udeleženca
     API->>DB: Naloži profile kandidatov za ujemanje
-    API->>DB: Naloži interese in kompetence
+    API->>DB: Naloži izbrane oznake
     API->>Match: Izračuna podobnost in kompatibilnost
-    Match->>Match: Primerja interese, vloge, cilje in razpoložljivost
+    Match->>Match: Primerja oznake z hibridnim iskanjem
     Match-->>API: Vrne razvrščena ujemanja z razlagami
     API-->>FE: Vrne priporočene udeležence
     FE-->>P: Prikaže ujemanja in razloge zanje

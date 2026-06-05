@@ -268,7 +268,7 @@ export default function HeroSection() {
         >
           {t(
             'hero.subtitle',
-            'Confera connects conference participants by interest areas — automated scheduling between academia, industry, and public sector.',
+            'Confera connects conference participants by selected tags — automated scheduling between academia, industry, and public sector.',
           )}
         </motion.p>
 

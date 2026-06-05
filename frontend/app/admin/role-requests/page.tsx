@@ -14,7 +14,7 @@ type RoleRequest = {
   requestedRole: 'organizer' | 'industry';
   reason?: string;
   status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
+  createdAt: string | { seconds?: number; _seconds?: number };
 };
 
 const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -22,12 +22,27 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
   industry:  { bg: '#dbeafe', text: '#1d4ed8' },
 };
 
-function daysAgo(dateStr: string, t: ReturnType<typeof useT>) {
-  const diff = Date.now() - new Date(dateStr).getTime();
+function daysAgo(value: RoleRequest['createdAt'], t: ReturnType<typeof useT>) {
+  const date = toDate(value);
+  if (!date) return t('common.unknownDate', 'unknown date');
+
+  const diff = Date.now() - date.getTime();
   const days = Math.floor(diff / 86400000);
   if (days === 0) return t('common.today', 'today');
   if (days === 1) return t('common.oneDayAgo', '1 day ago');
   return t('common.daysAgo', '{{count}} days ago').replace('{{count}}', String(days));
+}
+
+function toDate(value: RoleRequest['createdAt']): Date | null {
+  if (typeof value === 'string') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const seconds = value.seconds ?? value._seconds;
+  if (typeof seconds === 'number') return new Date(seconds * 1000);
+
+  return null;
 }
 
 function initials(email: string) {
